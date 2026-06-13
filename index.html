@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Grape Escape – Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --accent: #FF385C;
+    --accent-light: #FFF0F2;
+    --verde: #008A05; --verde-light: #E6F4E6;
+    --nero: #222222; --grigio: #717171; --grigio-light: #F7F7F7;
+    --bianco: #FFFFFF; --oro: #C08B00;
+    --rosso-alert: #C13515; --rosso-alert-light: #FDF0EC;
+    --border: #DDDDDD;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 20px rgba(0,0,0,0.12);
+    --bg-scontrino: #fff6f5;
+    --bg-autofattura: #fff8f5;
+    --bg-fattura-pm: #f5fbf5;
+    --bg-alloggiati: #fffdf0;
+    --bg-ross: #f7f7f7;
+    --bg-manuale: #f8f5ff;
+    --br-scontrino: #FF385C;
+    --br-autofattura: #FF6B35;
+    --br-fattura-pm: #008A05;
+    --br-alloggiati: #C08B00;
+    --br-ross: #999;
+    --br-manuale: #7B5EA7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #F7F7F7; color: var(--nero); min-height: 100vh; }
+
+  .header { background: white; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
+  .header-brand { font-size: 17px; font-weight: 700; color: var(--nero); letter-spacing: -0.01em; }
+  .header-brand span { color: var(--accent); }
+  .header-date { font-size: 12px; color: var(--grigio); font-weight: 400; }
+
+  .oggi-section { background: linear-gradient(165deg, #ffffff 0%, #FFF0F2 100%); padding: 18px 20px 22px; color: var(--nero); border-bottom: 1px solid var(--border); }
+  .oggi-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grigio); margin-bottom: 4px; font-weight: 500; }
+  .oggi-headline { font-size: 28px; font-weight: 700; line-height: 1.15; margin-bottom: 3px; letter-spacing: -0.02em; }
+  .oggi-sub { font-size: 13px; color: var(--grigio); font-weight: 400; }
+  .oggi-pills { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .pill { display: flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .pill-urgent { background: var(--accent); color: white; }
+  .pill-todo { background: var(--grigio-light); color: var(--grigio); border: 1px solid var(--border); }
+  .pill-done { background: var(--verde-light); color: var(--verde); }
+  .pill-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  .main { padding: 0 14px 110px; }
+
+  .section-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grigio); padding: 18px 0 8px; border-bottom: 1px solid var(--border); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+  .section-label-count { background: var(--grigio-light); color: var(--grigio); font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border); }
+
+  .task-card { border-radius: 14px; padding: 14px 15px; margin-bottom: 9px; display: flex; gap: 12px; align-items: flex-start; background: white; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .task-card.tipo-scontrino   { background: var(--bg-scontrino);   border-top: 3px solid var(--br-scontrino); }
+  .task-card.tipo-autofattura { background: var(--bg-autofattura); border-top: 3px solid var(--br-autofattura); }
+  .task-card.tipo-fattura-pm  { background: var(--bg-fattura-pm);  border-top: 3px solid var(--br-fattura-pm); }
+  .task-card.tipo-alloggiati  { background: var(--bg-alloggiati);  border-top: 3px solid var(--br-alloggiati); }
+  .task-card.tipo-ross        { background: var(--bg-ross);        border-top: 3px solid var(--br-ross); }
+  .task-card.tipo-manuale     { background: var(--bg-manuale);     border-top: 3px solid var(--br-manuale); }
+  .task-card.done-card        { background: var(--grigio-light); opacity: 0.6; border-top: 3px solid var(--verde); }
+
+  .task-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; margin-top: 1px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .task-check.urgent { border-color: var(--accent); }
+  .task-check.done { background: var(--verde); border-color: var(--verde); }
+  .task-check.done::after { content: '✓'; color: white; font-size: 11px; font-weight: 700; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-tipo { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+  .tipo-scontrino   { color: var(--br-scontrino); }
+  .tipo-autofattura { color: var(--br-autofattura); }
+  .tipo-fattura-pm  { color: var(--verde); }
+  .tipo-alloggiati  { color: var(--oro); }
+  .tipo-ross        { color: var(--grigio); }
+  .tipo-manuale     { color: #7B5EA7; }
+
+  .task-titolo { font-size: 15px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; color: var(--nero); }
+  .task-titolo.done { text-decoration: line-through; color: var(--grigio); }
+
+  .task-scadenza-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .countdown { font-size: 11px; color: var(--grigio); font-weight: 500; }
+  .countdown.urgente { color: var(--accent); font-weight: 700; }
+
+  .task-meta { font-size: 12px; color: var(--grigio); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .task-meta-sep { color: var(--border); }
+  .task-importo { font-family: 'Inter', monospace; font-size: 15px; font-weight: 700; color: var(--nero); margin-bottom: 8px; letter-spacing: -0.01em; }
+
+  .calcolo-box { background: var(--grigio-light); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; margin-bottom: 8px; font-size: 12px; color: var(--grigio); }
+  .calcolo-box strong { color: var(--nero); font-weight: 700; }
+
+  .cohost-box { background: var(--verde-light); border: 1px solid #B8E4B8; border-radius: 10px; padding: 9px 12px; margin-bottom: 8px; }
+  .cohost-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--verde); font-weight: 700; margin-bottom: 3px; }
+  .cohost-importo { font-size: 17px; font-weight: 700; color: var(--nero); letter-spacing: -0.01em; }
+
+  .filter-bar-role { background: white; padding: 10px 16px; display: flex; gap: 7px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; border-bottom: 1px solid var(--border); }
+  .filter-bar-tipo  { background: var(--grigio-light); padding: 8px 16px 10px; display: flex; gap: 7px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; border-bottom: 1px solid var(--border); }
+
+  .role-filter { background: white; border: 1.5px solid var(--border); border-radius: 20px; color: var(--grigio); font-size: 12px; font-weight: 600; padding: 5px 14px; cursor: pointer; transition: all 0.15s; font-family: 'Inter', sans-serif; white-space: nowrap; flex-shrink: 0; }
+  .role-filter:hover { border-color: var(--nero); color: var(--nero); }
+  .role-filter.active { background: var(--nero); border-color: var(--nero); color: white; }
+
+  .tipo-filter { background: white; border: 1.5px solid var(--border); border-radius: 20px; color: var(--grigio); font-size: 11px; font-weight: 600; padding: 4px 12px; cursor: pointer; transition: all 0.15s; font-family: 'Inter', sans-serif; white-space: nowrap; flex-shrink: 0; }
+  .tipo-filter:hover { border-color: var(--nero); color: var(--nero); }
+  .tipo-filter.active { background: var(--nero); border-color: var(--nero); color: white; }
+
+  .copy-btn { display: inline-flex; align-items: center; gap: 5px; background: var(--grigio-light); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-family: 'Inter', monospace; color: var(--nero); cursor: pointer; transition: background 0.15s; margin-right: 6px; margin-bottom: 4px; font-weight: 500; }
+  .copy-btn:active { background: var(--border); }
+  .copy-btn.copied { background: var(--verde-light); color: var(--verde); border-color: #B8E4B8; }
+  .copy-icon { font-size: 11px; opacity: 0.5; }
+
+  .task-link { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 600; padding: 5px 10px; border: 1.5px solid #FFD0D8; border-radius: 8px; background: var(--accent-light); margin-right: 6px; margin-bottom: 4px; }
+
+  .scadenza { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+  .scadenza-oggi    { background: #FFF0F2; color: var(--accent); }
+  .scadenza-domani  { background: #FFF8E6; color: #996A00; }
+  .scadenza-ok      { background: var(--verde-light); color: var(--verde); }
+  .scadenza-scaduto { background: #FDECEA; color: var(--rosso-alert); }
+
+  .alert-banner { background: #FFF0F2; border-left: 3px solid var(--accent); padding: 12px 14px; margin: 14px 0 8px; border-radius: 0 10px 10px 0; }
+  .alert-banner-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+  .alert-banner-text { font-size: 12px; color: #8B1A2A; }
+
+  .batch-banner { background: #F8F5FF; border-left: 3px solid #7B5EA7; padding: 12px 14px; margin: 8px 0; border-radius: 0 10px 10px 0; }
+  .batch-banner-title { font-size: 13px; font-weight: 700; color: #5A3E88; margin-bottom: 3px; }
+  .batch-banner-text { font-size: 12px; color: #6B5499; line-height: 1.5; }
+
+  .recupera-header { background: var(--grigio-light); border-radius: 12px 12px 0 0; padding: 14px 16px 10px; margin-top: 24px; border: 1px solid var(--border); border-bottom: none; }
+  .recupera-title { font-size: 13px; font-weight: 700; color: var(--nero); margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; }
+  .recupera-subtitle { font-size: 12px; color: var(--grigio); line-height: 1.4; }
+  .recupera-body { background: var(--grigio-light); border-radius: 0 0 12px 12px; padding: 8px 8px 4px; margin-bottom: 16px; border: 1px solid var(--border); border-top: none; }
+  .task-card.recupera { background: white; opacity: 0.8; border-top: none; border: 1px solid var(--border); }
+  .riporta-btn { display: inline-flex; align-items: center; gap: 4px; background: white; border: 1.5px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 11px; color: var(--grigio); cursor: pointer; margin-top: 6px; font-family: 'Inter', sans-serif; font-weight: 500; }
+  .riporta-btn:active { background: var(--border); }
+
+  .finestra-banner { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin: 10px 0 16px; box-shadow: var(--shadow); }
+  .finestra-title { font-size: 14px; font-weight: 700; color: var(--nero); margin-bottom: 4px; }
+  .finestra-text  { font-size: 12px; color: var(--grigio); line-height: 1.5; }
+  .finestra-giorni { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .finestra-giorno { display: flex; flex-direction: column; align-items: center; background: var(--grigio-light); border: 1.5px solid var(--border); border-radius: 10px; padding: 7px 8px; min-width: 52px; }
+  .finestra-giorno.best { background: var(--accent); border-color: var(--accent); color: white; }
+  .finestra-giorno.busy { background: #FFF0F2; border-color: #FFD0D8; }
+  .finestra-giorno.semi { background: #FFFBF0; border-color: #FFE9A0; }
+  .finestra-giorno-nome { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .finestra-giorno-data { font-size: 14px; font-weight: 700; margin: 2px 0; }
+  .finestra-giorno-icona { font-size: 14px; margin: 1px 0; }
+  .finestra-giorno-dettaglio { font-size: 9px; text-align: center; line-height: 1.3; margin-top: 2px; opacity: 0.75; max-width: 52px; }
+
+  .gruppo-header { display: flex; align-items: center; gap: 8px; padding: 10px 0 6px; margin-top: 4px; }
+  .gruppo-data { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--grigio); }
+  .gruppo-line { flex: 1; height: 1px; background: var(--border); }
+  .gruppo-count { font-size: 10px; background: var(--grigio-light); color: var(--grigio); padding: 2px 7px; border-radius: 10px; font-weight: 700; border: 1px solid var(--border); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .archivio-ruolo { font-size: 18px; font-weight: 700; padding: 20px 0 4px; border-bottom: 2px solid var(--nero); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: baseline; letter-spacing: -0.01em; }
+  .archivio-ruolo-totale { font-size: 14px; color: var(--grigio); font-weight: 500; }
+  .archivio-casa { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grigio); padding: 14px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+  .archivio-casa-totale { font-size: 13px; color: var(--accent); font-weight: 700; }
+
+  .nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); display: flex; padding: 8px 0 20px; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--grigio); cursor: pointer; padding: 6px 0; }
+  .nav-item.active { color: var(--accent); }
+  .nav-icon { font-size: 20px; height: 22px; display: flex; align-items: center; }
+  .nav-icon svg { width: 22px; height: 22px; display: block; }
+
+  .fab { position: fixed; bottom: 80px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: white; font-size: 26px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(255,56,92,0.4); z-index: 200; transition: transform 0.15s; }
+  .fab:active { transform: scale(0.93); }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: flex-end; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 20px 20px 0 0; padding: 24px 20px 40px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.01em; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grigio); margin-bottom: 6px; display: block; font-weight: 600; }
+  .form-hint { font-size: 11px; color: var(--grigio); margin-top: 4px; line-height: 1.4; }
+  .form-input, .form-select { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 15px; background: white; color: var(--nero); appearance: none; }
+  .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  .btn-primary { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .btn-secondary { width: 100%; padding: 12px; background: transparent; color: var(--grigio); border: none; font-family: 'Inter', sans-serif; font-size: 14px; cursor: pointer; margin-top: 8px; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--grigio); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 15px; }
+
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--nero); color: white; padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.2s; z-index: 400; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .delete-btn { background: none; border: none; color: var(--grigio); font-size: 13px; cursor: pointer; padding: 2px 6px; margin-left: 4px; opacity: 0.5; flex-shrink: 0; }
+
+  .task-card.selected { border: 2px solid var(--accent) !important; box-shadow: 0 0 0 4px rgba(255,56,92,0.15) !important; }
+  .task-card.selected::before { content: 'In lavorazione'; position: absolute; top: -9px; left: 12px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; }
+  .task-card { position: relative; }
+  .task-card.flash { animation: flashCard 1.8s ease; }
+  @keyframes flashCard {
+    0%   { box-shadow: 0 0 0 0 rgba(255,56,92,0.0); }
+    15%  { box-shadow: 0 0 0 3px rgba(255,56,92,0.6); transform: scale(1.015); }
+    100% { box-shadow: 0 0 0 0 rgba(255,56,92,0.0); transform: scale(1); }
+  }
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FF385C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grape Escape">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay" style="display:flex;position:fixed;inset:0;background:#F7F7F7;z-index:1000;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-md);padding:28px 22px;max-width:360px;width:100%">
+    <div style="font-size:22px;font-weight:700;margin-bottom:4px;letter-spacing:-0.02em">The Grape <span style="color:var(--accent)">Escape</span></div>
+    <div style="font-size:13px;color:var(--grigio);margin-bottom:20px;line-height:1.4">Accedi con la tua email per sincronizzare i task su PC e telefono.</div>
+    <div>
+      <label class="form-label">Email</label>
+      <input id="login-email" class="form-input" type="email" placeholder="tu@email.com" value="silvia.greco@gmail.com" style="margin-bottom:12px">
+      <label class="form-label">Password</label>
+      <input id="login-password" class="form-input" type="password" placeholder="scegli una password" style="margin-bottom:4px">
+      <div style="font-size:11px;color:var(--grigio);margin-bottom:12px">La prima volta la password la crei tu: scrivila e premi Entra.</div>
+      <button class="btn-primary" onclick="doLogin()">Entra</button>
+    </div>
+    <div id="login-msg" style="font-size:12px;color:var(--grigio);margin-top:12px;line-height:1.4"></div>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:10px;color:var(--grigio);text-align:center;line-height:1.5">© 2026 Silvia Greco · The Grape Escape<br>Tutti i diritti riservati. Riproduzione vietata.</div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-brand">The Grape <span>Escape</span></div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="header-date" id="header-date"></div>
+    <button onclick="logout()" title="Esci" style="background:none;border:none;color:var(--grigio);font-size:11px;font-weight:600;cursor:pointer;padding:4px 6px">Esci</button>
+  </div>
+</div>
+
+<div id="view-oggi" class="view active">
+  <div class="oggi-section">
+    <div class="oggi-label">Dashboard operativa</div>
+    <div class="oggi-headline" id="oggi-headline">—</div>
+    <div class="oggi-sub" id="oggi-sub">—</div>
+    <div class="oggi-pills" id="oggi-pills"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button onclick="downloadICS()" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--nero);cursor:pointer;display:inline-flex;align-items:center;gap:6px">📅 Scadenze al calendario</button>
+      <button id="btn-notifiche" onclick="attivaNotifiche()" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--nero);cursor:pointer;display:inline-flex;align-items:center;gap:6px">🔔 Attiva notifiche</button>
+    </div>
+  </div>
+  <div class="filter-bar-role">
+    <button class="role-filter active" id="rf-tutti"  onclick="setRoleFilter('tutti')">Tutti</button>
+    <button class="role-filter"        id="rf-host"   onclick="setRoleFilter('host')">🏠 HOST</button>
+    <button class="role-filter"        id="rf-pm"     onclick="setRoleFilter('pm')">👔 PM</button>
+    <button class="role-filter"        id="rf-altro"  onclick="setRoleFilter('altro')">Altro</button>
+  </div>
+  <div class="filter-bar-tipo">
+    <button class="tipo-filter active" id="tf-tutte"      onclick="setTipoFilter('tutte')">Tutte</button>
+    <button class="tipo-filter"        id="tf-scontrino"   onclick="setTipoFilter('scontrino')">🧾 Scontrini</button>
+    <button class="tipo-filter"        id="tf-autofattura" onclick="setTipoFilter('autofattura')">📄 Autofatture</button>
+    <button class="tipo-filter"        id="tf-fattura-pm"  onclick="setTipoFilter('fattura-pm')">💶 Fee PM</button>
+    <button class="tipo-filter"        id="tf-alloggiati"  onclick="setTipoFilter('alloggiati')">🏛 Alloggiati</button>
+    <button class="tipo-filter"        id="tf-manuale"     onclick="setTipoFilter('manuale')">✏️ Altro</button>
+  </div>
+  <div class="main" id="main-oggi"></div>
+</div>
+
+<div id="view-archivio" class="view">
+  <div class="main" id="main-archivio" style="padding-top:4px"></div>
+</div>
+
+<div id="view-regole" class="view">
+  <div class="main" id="main-regole" style="padding-top:4px"></div>
+</div>
+
+<div id="view-case" class="view">
+  <div class="main" id="main-case" style="padding-top:4px"></div>
+</div>
+
+<div id="view-conti" class="view">
+  <div class="main" id="main-conti" style="padding-top:4px"></div>
+</div>
+
+<button class="fab" onclick="openModal()" title="Aggiungi task">+</button>
+
+<div class="nav-bottom">
+  <div class="nav-item active" onclick="switchView('oggi',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div>Oggi
+  </div>
+  <div class="nav-item" onclick="switchView('regole',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4a2 2 0 0 1 2-2h11v18H7a2 2 0 0 0-2 2V4z"/><path d="M9 6h6M9 9.5h6"/></svg></div>Regole
+  </div>
+  <div class="nav-item" onclick="switchView('case',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg></div>Case
+  </div>
+  <div class="nav-item" onclick="switchView('conti',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="18" y1="20" x2="18" y2="9"/><line x1="3" y1="20" x2="21" y2="20"/></svg></div>Conti
+  </div>
+  <div class="nav-item" onclick="switchView('archivio',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></div>Archivio
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuovo task</div>
+
+    <div class="form-group">
+      <label class="form-label">Tipo</label>
+      <select class="form-select" id="f-tipo" onchange="onTipoChange()">
+        <option value="scontrino">🧾 Scontrino fiscale</option>
+        <option value="autofattura">📄 Autofattura TD17</option>
+        <option value="fattura-pm">💶 Fattura fee PM</option>
+        <option value="alloggiati">🏛 Alloggiati Web</option>
+        <option value="ross">📊 ROSS1000 / ISTAT</option>
+        <option value="manuale">✏️ Task manuale</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Casa</label>
+      <select class="form-select" id="f-casa">
+        <option value="Ca' Balenga">Ca' Balenga</option>
+        <option value="La Ciucarina">La Ciucarina</option>
+        <option value="Appartamento del Palio">Appartamento del Palio</option>
+        <option value="Casa Amalia">Casa Amalia</option>
+        <option value="La Tana del Tasso">La Tana del Tasso</option>
+        <option value="Tenuta del Mulino">Tenuta del Mulino</option>
+        <option value="Villa Omedè">Villa Omedè</option>
+        <option value="—">Tutte / nessuna</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="fg-ospite">
+      <label class="form-label">Ospite</label>
+      <input class="form-input" type="text" id="f-ospite" placeholder="Nome Cognome">
+    </div>
+
+    <div class="form-group" id="fg-canale">
+      <label class="form-label">Canale</label>
+      <select class="form-select" id="f-canale" onchange="onTipoChange()">
+        <option value="Airbnb">Airbnb</option>
+        <option value="Booking">Booking</option>
+        <option value="VRBO">VRBO</option>
+        <option value="b&b.it">b&b.it</option>
+        <option value="Diretto">Diretto</option>
+        <option value="—">—</option>
+      </select>
+    </div>
+
+    <!-- Lordo OTA (sempre visibile per fattura-pm) -->
+    <div class="form-group" id="fg-importo">
+      <label class="form-label" id="f-importo-label">Importo (€)</label>
+      <input class="form-input" type="number" step="0.01" id="f-importo" placeholder="0,00">
+      <div class="form-hint" id="f-importo-hint" style="display:none"></div>
+    </div>
+
+    <!-- Compenso cohost (solo fattura-pm + Airbnb) -->
+    <div class="form-group" id="fg-cohost" style="display:none">
+      <label class="form-label">Compenso cohost (da email Airbnb)</label>
+      <input class="form-input" type="number" step="0.01" id="f-cohost" placeholder="es. 166,56">
+      <div class="form-hint">Cerca "Compenso cohost" nell'email di Airbnb. Questo è l'importo che fatturi al proprietario.</div>
+    </div>
+
+    <div class="form-group" id="fg-codice">
+      <label class="form-label">Codice prenotazione</label>
+      <input class="form-input" type="text" id="f-codice" placeholder="es. HMHDF9">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Scadenza</label>
+      <input class="form-input" type="date" id="f-scadenza">
+    </div>
+
+    <div class="form-group" id="fg-link">
+      <label class="form-label">Link diretto</label>
+      <select class="form-select" id="f-link">
+        <option value="">Nessuno</option>
+        <option value="ade">→ ADE (Scontrino / Autofattura)</option>
+        <option value="passgo">→ Passgo (Fattura PM)</option>
+        <option value="alloggiati">→ Alloggiati Web</option>
+        <option value="ross">→ ROSS1000</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Note (opzionale)</label>
+      <input class="form-input" type="text" id="f-note" placeholder="es. pagamento Booking da Paola Conti">
+    </div>
+
+    <button class="btn-primary" onclick="salvaTask()">Salva task</button>
+    <button class="btn-secondary" onclick="closeModal()">Annulla</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── COSTANTI ─────────────────────────────────────────────────────────────────
+
+const LINK_MAP = {
+  ade:        { url: 'https://ivaservizi.agenziaentrate.gov.it/portale/', label: '→ Apri ADE' },
+  passgo:     { url: 'https://www.passweb.it',                           label: '→ Apri Passgo' },
+  alloggiati: { url: 'https://alloggiati.poliziadistato.it',             label: '→ Alloggiati Web' },
+  ross:       { url: 'https://www.ross1000.it',                          label: '→ ROSS1000 (solo se non usi Kross)' },
+};
+
+const VAPID_PUBLIC = 'BDa9X0eLGwV5dMM2jcaa26TRTmm_oizrKrfq4b6KvWZmqjdK-WIOnuSBk1FuR_DZDnnkzVcDcPE6MWIkQSJ9cjY';
+
+const TIPO_CONFIG = {
+  scontrino:    { label: '🧾 Scontrino',     cls: 'tipo-scontrino',   defaultLink: 'ade',       accorpabile: false, perché: 'giorno del check-in' },
+  autofattura:  { label: '📄 Autofattura',   cls: 'tipo-autofattura', defaultLink: 'passgo',    accorpabile: true,  perché: 'entro il 15 del mese successivo alla prenotazione' },
+  'fattura-pm': { label: '💶 Fee PM',        cls: 'tipo-fattura-pm',  defaultLink: 'passgo',    accorpabile: true,  perché: 'entro 12 giorni dal check-in' },
+  alloggiati:   { label: '🏛 Alloggiati',    cls: 'tipo-alloggiati',  defaultLink: 'alloggiati',accorpabile: false, perché: 'entro 24h dall\'arrivo' },
+  ross:         { label: '📊 ROSS / ISTAT',  cls: 'tipo-ross',        defaultLink: 'ross',      accorpabile: false, perché: 'entro il 10 del mese' },
+  manuale:      { label: '✏️ Promemoria',    cls: 'tipo-manuale',     defaultLink: '',          accorpabile: true,  perché: 'scadenza flessibile' },
+};
+
+const CASE_HOST = ["Ca' Balenga", "La Ciucarina"];
+const CASE_PM   = ["Appartamento del Palio","Casa Amalia","La Tana del Tasso","Tenuta del Mulino","Villa Omedè"];
+const CASE_SELF = ["Ca' Balenga", "Appartamento del Palio"]; // self check-in: non richiede presenza fisica
+
+// fee % per casa / canale (per il calcolo suggerito Booking)
+const FEE_PM = {
+  "Appartamento del Palio": { Airbnb:0.20, Booking:0.20, default:0.20 },
+  "Casa Amalia":            { Airbnb:0.25, Booking:0.25, default:0.25 },
+  "La Tana del Tasso":      { Airbnb:0.26, Booking:0.26, default:0.26 },
+  "Tenuta del Mulino":      { Airbnb:0.20, Booking:0.20, default:0.20 },
+  "Villa Omedè":            { Airbnb:0.30, Booking:0.30, default:0.30 },
+};
+
+// ─── STORAGE (Supabase cloud + sync realtime) ────────────────────────────────
+
+const SUPA_URL = 'https://vjurwiqeiummanltsdtt.supabase.co';
+const SUPA_KEY = 'sb_publishable_4qqE8U3ZNGCpaj4CI4cOMg_tim_JTta';
+const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let TASKS = [];
+let CURRENT_USER = null;
+let realtimeBound = false;
+
+// loadTasks restituisce CLONI (così le mutazioni non toccano TASKS finché non salvi → i delete si rilevano)
+function loadTasks() { return TASKS.map(t => ({ ...t })); }
+
+function rowToTask(r) {
+  return { id:r.id, tipo:r.tipo, casa:r.casa, ospite:r.ospite, canale:r.canale,
+    importo:r.importo, cohost:r.cohost, codice:r.codice, dataDoc:r.data_doc,
+    scadenza:r.scadenza, link:r.link, note:r.note, completato:r.completato,
+    completatoIl:r.completato_il, completatoAlle:r.completato_alle, inBatch:r.in_batch, creatoIl:r.creato_il };
+}
+function taskToRow(t) {
+  return { id:String(t.id), user_id: CURRENT_USER ? CURRENT_USER.id : null,
+    tipo:t.tipo||null, casa:t.casa||null, ospite:t.ospite||null, canale:t.canale||null,
+    importo:(t.importo??null), cohost:(t.cohost??null), codice:t.codice||null, data_doc:t.dataDoc||null,
+    scadenza:t.scadenza||null, link:t.link||null, note:t.note||null, completato:!!t.completato,
+    completato_il:t.completatoIl||null, completato_alle:t.completatoAlle||null,
+    in_batch:!!t.inBatch, creato_il:t.creatoIl||new Date().toISOString() };
+}
+
+async function saveTasks(arr) {
+  const oldIds = new Set(TASKS.map(t => String(t.id)));
+  const newIds = new Set(arr.map(t => String(t.id)));
+  const toDelete = [...oldIds].filter(id => !newIds.has(id));
+  TASKS = arr;
+  if (!CURRENT_USER) return;
+  try {
+    if (arr.length) { const { error } = await sb.from('tasks').upsert(arr.map(taskToRow)); if (error) throw error; }
+    if (toDelete.length) { const { error } = await sb.from('tasks').delete().in('id', toDelete); if (error) throw error; }
+  } catch (e) { console.error('Sync error', e); showToast('⚠ Errore di sincronizzazione'); }
+}
+
+async function reloadTasksFromCloud(render) {
+  const { data, error } = await sb.from('tasks').select('*');
+  if (error) { console.error(error); return; }
+  TASKS = (data || []).map(rowToTask);
+  if (render) renderOggi();
+}
+
+async function applyMigrations() {
+  const patches = [];
+  const f4 = TASKS.find(t => t.id === 'f4' && t.note && t.note.includes('Cerca email'));
+  if (f4) {
+    f4.note = 'Check-in 27/07, check-out 01/08 (5 notti, 3A+1B). Airbnb paga il 28/07: CSV movimenti → riga "Compenso co-host" HMKDK5T4NZ → inserisci importo. Fattura entro 12 gg dal check-in = entro l\'8 ago.';
+    patches.push(taskToRow(f4));
+  }
+  if (patches.length && CURRENT_USER) {
+    const { error } = await sb.from('tasks').upsert(patches);
+    if (error) console.error('Migration error', error);
+  }
+}
+
+async function initData() {
+  const { data, error } = await sb.from('tasks').select('*');
+  if (error) { console.error(error); showToast('⚠ Errore caricamento dati'); return; }
+  if (data && data.length) {
+    TASKS = data.map(rowToTask);
+    await applyMigrations();
+  } else {
+    // prima volta su questo account: semina i dati attuali nel cloud
+    TASKS = SEED_TASKS();
+    const { error: e2 } = await sb.from('tasks').upsert(TASKS.map(taskToRow));
+    if (e2) console.error('Seed error', e2);
+  }
+  bindRealtime();
+  renderOggi();
+}
+
+function bindRealtime() {
+  if (realtimeBound) return;
+  realtimeBound = true;
+  sb.channel('tasks-rt')
+    .on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, () => {
+      clearTimeout(window._rtTimer);
+      window._rtTimer = setTimeout(() => reloadTasksFromCloud(true), 400);
+    })
+    .subscribe();
+}
+
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+function showLogin() { document.getElementById('login-overlay').style.display = 'flex'; }
+function showApp()   { document.getElementById('login-overlay').style.display = 'none'; }
+
+async function checkAuth() {
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) { CURRENT_USER = session.user; showApp(); await initData(); }
+  else { showLogin(); }
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('login-msg');
+  if (!email || !password) { msg.textContent = 'Inserisci email e password.'; return; }
+  if (password.length < 6) { msg.textContent = 'La password deve avere almeno 6 caratteri.'; return; }
+  msg.textContent = 'Accesso in corso…';
+  // prova ad accedere
+  let { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    // primo accesso: crea l'account
+    const reg = await sb.auth.signUp({ email, password });
+    if (reg.error) { msg.textContent = '⚠ ' + reg.error.message; return; }
+    if (reg.data.session) { data = reg.data; }
+    else { msg.textContent = 'Conferma l\'email che ti ho inviato, poi premi di nuovo Entra.'; return; }
+  }
+  CURRENT_USER = data.user;
+  msg.textContent = '';
+  showApp();
+  await initData();
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  CURRENT_USER = null; TASKS = [];
+  showLogin();
+}
+
+// ─── EXPORT CALENDARIO (.ics) — promemoria nativi sul telefono ────────────────
+function icsEscape(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, ' '); }
+
+function downloadICS() {
+  const tasks = loadTasks().filter(x => !x.completato && x.scadenza);
+  if (!tasks.length) { showToast('Nessuna scadenza da esportare'); return; }
+  const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  let lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//The Grape Escape//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  tasks.forEach(x => {
+    const d = x.scadenza.replace(/-/g, '');
+    const cfg = TIPO_CONFIG[x.tipo] || TIPO_CONFIG.manuale;
+    const tipoLabel = cfg.label.replace(/^[^\s]+\s/, '');
+    const titolo = `${tipoLabel}: ${x.casa}${x.ospite ? ' · ' + x.ospite : ''}`;
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + x.id + '@grape-escape');
+    lines.push('DTSTAMP:' + dtstamp);
+    lines.push('DTSTART;VALUE=DATE:' + d);
+    lines.push('DTEND;VALUE=DATE:' + d);
+    lines.push('SUMMARY:' + icsEscape(titolo));
+    if (x.note) lines.push('DESCRIPTION:' + icsEscape(x.note));
+    lines.push('BEGIN:VALARM');
+    lines.push('TRIGGER:-P1D');
+    lines.push('ACTION:DISPLAY');
+    lines.push('DESCRIPTION:' + icsEscape(titolo));
+    lines.push('END:VALARM');
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'grape-escape-scadenze.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('📅 Calendario esportato (' + tasks.length + ' scadenze)');
+}
+
+// ─── DATE UTILS ───────────────────────────────────────────────────────────────
+
+function today()   { return new Date().toISOString().slice(0,10); }
+function inDays(n) { const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function daysDiff(iso) {
+  const t = new Date(); t.setHours(0,0,0,0);
+  const s = new Date(iso + 'T00:00:00');
+  return Math.round((s - t) / 86400000);
+}
+
+const MESI_S = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const MESI_L = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const GIORNI_S = ['dom','lun','mar','mer','gio','ven','sab'];
+const GIORNI_L = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+
+function isoToDate(iso) { return new Date(iso + 'T12:00:00'); }
+function formatShort(iso) { const d=isoToDate(iso); return `${d.getDate()} ${MESI_S[d.getMonth()]}`; }
+function formatLong(iso)  { const d=isoToDate(iso); return `${GIORNI_L[d.getDay()]} ${d.getDate()} ${MESI_L[d.getMonth()]} ${d.getFullYear()}`; }
+
+function gruppoLabel(iso) {
+  const diff = daysDiff(iso);
+  if (diff < 0)  return `⚠ Scaduto il ${formatShort(iso)}`;
+  if (diff === 0) return 'Oggi';
+  if (diff === 1) return 'Domani';
+  if (diff === 2) return 'Dopodomani';
+  return `entro ${formatShort(iso)}`;
+}
+
+function scadenzaHTML(iso) {
+  if (!iso) return '';
+  const diff = daysDiff(iso);
+  let badge, countdown;
+
+  if (diff < 0) {
+    badge     = `<span class="scadenza scadenza-scaduto">⚠ Scad. ${formatShort(iso)}</span>`;
+    countdown = `<span class="countdown urgente">in ritardo di ${Math.abs(diff)} ${Math.abs(diff)===1?'giorno':'giorni'}</span>`;
+  } else if (diff === 0) {
+    badge     = `<span class="scadenza scadenza-oggi">Scade oggi</span>`;
+    countdown = `<span class="countdown urgente">entro stasera</span>`;
+  } else if (diff === 1) {
+    badge     = `<span class="scadenza scadenza-domani">Domani</span>`;
+    countdown = `<span class="countdown urgente">hai 1 giorno</span>`;
+  } else if (diff <= 7) {
+    badge     = `<span class="scadenza scadenza-domani">entro ${formatShort(iso)}</span>`;
+    countdown = `<span class="countdown">${diff}gg</span>`;
+  } else {
+    badge     = `<span class="scadenza scadenza-ok">entro ${formatShort(iso)}</span>`;
+    countdown = '';
+  }
+
+  return `<div class="task-scadenza-row">${badge}${countdown}</div>`;
+}
+
+// ─── FINESTRA BUROCRAZIA ──────────────────────────────────────────────────────
+
+function addDays(iso, n) {
+  const d = isoToDate(iso); d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0,10);
+}
+
+function calcolaFinestra(tasks) {
+  const giorni = Array.from({length:7}, (_,i) => inDays(i));
+  // per ogni giorno: check-in in presenza e self separati
+  const presenza = {}, self = {};
+  giorni.forEach(g => { presenza[g] = 0; self[g] = 0; });
+
+  tasks.filter(x => !x.completato && x.scadenza).forEach(task => {
+    const isCheckin = task.tipo === 'alloggiati' || task.tipo === 'scontrino';
+    if (!isCheckin) return;
+    // alloggiati: scadenza = check-in +1 giorno → il giorno di impegno è il giorno prima
+    const giornoImpegno = task.tipo === 'alloggiati' ? addDays(task.scadenza, -1) : task.scadenza;
+    if (!presenza.hasOwnProperty(giornoImpegno)) return;
+    if (CASE_SELF.includes(task.casa)) {
+      self[giornoImpegno]++;
+    } else {
+      presenza[giornoImpegno]++;
+    }
+  });
+
+  // Il giorno migliore è quello con meno check-in in PRESENZA (self non pesa)
+  const candidati = giorni.slice(1);
+  const minP = Math.min(...candidati.map(g => presenza[g]));
+  const bestDay = candidati.find(g => presenza[g] === minP);
+  return { giorni, presenza, self, bestDay };
+}
+
+function finestraBannerHTML(tasks) {
+  const hasFuture = tasks.some(x => !x.completato);
+  if (!hasFuture) return '';
+  const { giorni, presenza, self, bestDay } = calcolaFinestra(tasks);
+
+  const giorniHTML = giorni.map(g => {
+    const d = isoToDate(g);
+    const nP = presenza[g], nS = self[g];
+    const isBest = g === bestDay;
+
+    let cls, icona, dettaglio;
+    if (isBest) {
+      cls = 'best';
+      icona = '✨';
+      dettaglio = nP === 0 && nS === 0 ? 'libera' : nS > 0 ? `self ok` : '';
+    } else if (nP >= 2) {
+      cls = 'busy';
+      icona = '🔴';
+      dettaglio = `${nP} check-in`;
+    } else if (nP === 1) {
+      cls = 'semi';
+      icona = '🟡';
+      dettaglio = '1 check-in';
+    } else if (nS > 0) {
+      cls = '';
+      icona = '🟢';
+      dettaglio = `${nS} self`;
+    } else {
+      cls = '';
+      icona = '🟢';
+      dettaglio = 'libera';
+    }
+
+    return `<div class="finestra-giorno ${cls}">
+      <div class="finestra-giorno-nome">${GIORNI_S[d.getDay()]}</div>
+      <div class="finestra-giorno-data">${d.getDate()}</div>
+      <div class="finestra-giorno-icona">${icona}</div>
+      <div class="finestra-giorno-dettaglio">${dettaglio}</div>
+    </div>`;
+  }).join('');
+
+  const bd = isoToDate(bestDay);
+  const nPbest = presenza[bestDay], nSbest = self[bestDay];
+  const bestLabel = bestDay===today()?'oggi':bestDay===inDays(1)?'domani':`${GIORNI_L[bd.getDay()]} ${bd.getDate()}`;
+  const motivazione = nPbest === 0
+    ? (nSbest > 0 ? `nessun check-in in presenza (${nSbest} self, non serve esserci)` : 'nessun check-in previsto')
+    : `solo ${nPbest} check-in in presenza`;
+
+  // Task inamovibili che cadono nel giorno migliore (scadenza esatta)
+  const inamovibiliBestDay = tasks.filter(x =>
+    !x.completato && x.scadenza === bestDay &&
+    TIPO_CONFIG[x.tipo] && !TIPO_CONFIG[x.tipo].accorpabile
+  );
+
+  // Task accorpabili aperti — solo entro 14 giorni per non sommergere
+  const accorpabili = tasks.filter(x =>
+    !x.completato && x.scadenza >= today() && x.scadenza <= inDays(14) &&
+    TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile
+  ).sort((a,b) => a.scadenza.localeCompare(b.scadenza));
+
+  // Task anticipabili: scadenza > 14gg ma accorpabili — conviene farli nella finestra
+  const anticipabili = tasks.filter(x =>
+    !x.completato && x.scadenza > inDays(14) &&
+    TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile
+  ).sort((a,b) => a.scadenza.localeCompare(b.scadenza));
+
+  // Riga lista: link AL TASK dentro l'app (apre la card con dettagli e pulsanti Copia)
+  const taskRow = (x, scadLabel, isAnticipo) => {
+    const cfg = TIPO_CONFIG[x.tipo] || TIPO_CONFIG.manuale;
+    const tipoLabel = cfg.label;
+    const anticipoBadge = isAnticipo
+      ? `<span style="font-size:9px;background:#FFF8E6;color:#996A00;border:1px solid #FFE9A0;border-radius:4px;padding:1px 5px;margin-left:6px">anticipo</span>`
+      : '';
+    return `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--nero)">${tipoLabel} <span style="color:var(--grigio);font-weight:400">· ${x.casa}</span></div>
+        <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'} · scade ${scadLabel}${anticipoBadge}</div>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;border:1px solid #FFD0D8;background:var(--accent-light);border-radius:6px;padding:3px 8px">Apri ↓</span>
+    </div>`;
+  };
+
+  let todoHTML = '';
+  const oggiList = [...inamovibiliBestDay, ...accorpabili];
+  if (oggiList.length > 0) {
+    todoHTML += `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">`;
+    todoHTML += `<div style="font-size:12px;font-weight:700;color:var(--nero);margin-bottom:4px">✅ Da fare ${bestLabel === 'oggi' ? 'oggi' : bestLabel === 'domani' ? 'domani' : bestLabel}</div>`;
+    oggiList.forEach(x => {
+      const d = isoToDate(x.scadenza);
+      const diff = daysDiff(x.scadenza);
+      const scadLabel = diff <= 0 ? 'oggi' : diff === 1 ? 'domani' : `${d.getDate()} ${MESI_S[d.getMonth()]}`;
+      todoHTML += taskRow(x, scadLabel, false);
+    });
+    todoHTML += `</div>`;
+  }
+  if (anticipabili.length > 0) {
+    todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
+    todoHTML += `<div style="font-size:12px;font-weight:700;color:var(--oro);margin-bottom:4px">⏩ Già che ci sei, puoi anticipare</div>`;
+    anticipabili.forEach(x => {
+      const d = isoToDate(x.scadenza);
+      const scadLabel = `${d.getDate()} ${MESI_S[d.getMonth()]}`;
+      todoHTML += taskRow(x, scadLabel, true);
+    });
+    todoHTML += `</div>`;
+  }
+
+  return `<div class="finestra-banner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="finestra-title">🗓 Quando fare burocrazia</div>
+      <div style="background:var(--accent-light);color:var(--accent);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #FFD0D8">${bestLabel}</div>
+    </div>
+    <div class="finestra-text">${motivazione}.</div>
+    <div class="finestra-giorni">${giorniHTML}</div>
+    <div style="font-size:10px;color:var(--grigio);margin-top:6px">🔴 2+ check-in · 🟡 1 check-in · 🟢 libera</div>
+    ${todoHTML}
+  </div>`;
+}
+
+// ─── BATCH SUGGERIMENTO ────────────────────────────────────────────────────────
+
+function batchSuggestHTML(tasks) {
+  const t = today();
+  const aperti = tasks.filter(x => !x.completato && x.scadenza >= t && x.scadenza <= inDays(7)
+    && TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile);
+  if (aperti.length < 2) return '';
+  const scadenze = aperti.map(x => x.scadenza).sort();
+  const maxScad = scadenze[scadenze.length-1], minScad = scadenze[0];
+  if (minScad === maxScad) return '';
+  const d = isoToDate(maxScad);
+  const maxLabel = maxScad===inDays(1)?'domani':`${GIORNI_L[d.getDay()]} ${d.getDate()} ${MESI_S[d.getMonth()]}`;
+  const lista = aperti.map(x => {
+    const cfg = TIPO_CONFIG[x.tipo];
+    const ospLabel = x.ospite && x.ospite !== x.casa ? ` · ${x.ospite}` : '';
+    const scadD = isoToDate(x.scadenza);
+    return `<div style="margin-top:3px;padding-left:8px">• ${x.casa}${ospLabel} <span style="opacity:0.7">(${cfg?.label?.replace(/^[^\s]+\s/,'')||x.tipo}, entro ${scadD.getDate()} ${MESI_S[scadD.getMonth()]})</span></div>`;
+  }).join('');
+  return `<div class="batch-banner">
+    <div class="batch-banner-title">💡 Puoi fare ${aperti.length} task accorpabili in un'unica sessione — entro ${maxLabel}</div>
+    <div class="batch-banner-text" style="font-size:12px;margin-top:6px">${lista}</div>
+  </div>`;
+}
+
+// ─── RENDER OGGI ──────────────────────────────────────────────────────────────
+
+let currentRoleFilter = 'tutti';
+let currentTipoFilter = 'tutte';
+
+function setRoleFilter(role) {
+  currentRoleFilter = role;
+  ['tutti','host','pm','altro'].forEach(r => {
+    document.getElementById('rf-'+r).classList.toggle('active', r === role);
+  });
+  renderOggi();
+}
+
+function setTipoFilter(tipo) {
+  currentTipoFilter = tipo;
+  ['tutte','scontrino','autofattura','fattura-pm','alloggiati','manuale'].forEach(t => {
+    const el = document.getElementById('tf-' + t);
+    if (el) el.classList.toggle('active', t === tipo);
+  });
+  renderOggi();
+}
+
+function filterTasks(tasks) {
+  let out = tasks;
+  if (currentRoleFilter === 'host')  out = out.filter(x => CASE_HOST.includes(x.casa));
+  else if (currentRoleFilter === 'pm')    out = out.filter(x => CASE_PM.includes(x.casa));
+  else if (currentRoleFilter === 'altro') out = out.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
+  if (currentTipoFilter !== 'tutte') out = out.filter(x => x.tipo === currentTipoFilter);
+  return out;
+}
+
+function filterByRole(tasks) { return filterTasks(tasks); }
+
+function renderOggi() {
+  const allTasks = loadTasks();
+  const tasks = filterByRole(allTasks);
+  const t = today(), w = inDays(7);
+
+  const SOGLIA_BATCH = 14; // giorni — oltre questa soglia va in "Da recuperare"
+  const scadutiTutti = tasks.filter(x => !x.completato && x.scadenza && x.scadenza < t);
+  const scaduti      = scadutiTutti.filter(x => x.inBatch !== true  && Math.abs(daysDiff(x.scadenza)) <= SOGLIA_BATCH);
+  const daRecuperare = scadutiTutti.filter(x => x.inBatch === true  || Math.abs(daysDiff(x.scadenza)) > SOGLIA_BATCH);
+  const urgenti      = tasks.filter(x => !x.completato && x.scadenza === t);
+  const settimana    = tasks.filter(x => !x.completato && x.scadenza > t && x.scadenza <= w);
+  const prossimamente= tasks.filter(x => !x.completato && x.scadenza > w);
+  const fatti        = tasks.filter(x => x.completato && x.completatoIl === t);
+
+  document.getElementById('header-date').textContent = formatLong(t);
+
+  const nUrgenti = scaduti.length + urgenti.length;
+  document.getElementById('oggi-headline').innerHTML =
+    nUrgenti===0 ? 'Tutto in ordine<br>oggi. ✓' : `${nUrgenti} ${nUrgenti===1?'cosa urgente':'cose urgenti'}<br>oggi.`;
+  document.getElementById('oggi-sub').textContent =
+    `${fatti.length} completate · ${settimana.length} questa settimana · ${daRecuperare.length} da recuperare`;
+
+  const pillsEl = document.getElementById('oggi-pills');
+  pillsEl.innerHTML = '';
+  if (nUrgenti>0)        pillsEl.innerHTML += `<div class="pill pill-urgent"><div class="pill-dot"></div>${nUrgenti} urgent${nUrgenti===1?'e':'i'}</div>`;
+  if (settimana.length>0)pillsEl.innerHTML += `<div class="pill pill-todo"><div class="pill-dot"></div>${settimana.length} in scadenza</div>`;
+  if (fatti.length>0)    pillsEl.innerHTML += `<div class="pill pill-done"><div class="pill-dot"></div>${fatti.length} fatt${fatti.length===1?'a':'e'}</div>`;
+
+  let html = '';
+
+  if (scaduti.length > 0) {
+    html += `<div class="alert-banner"><div class="alert-banner-title">⚠ ${scaduti.length} task in ritardo recente</div><div class="alert-banner-text">${scaduti.map(x=>`${x.casa}${x.ospite?' / '+x.ospite:''}`).join(' — ')}</div></div>`;
+  }
+
+  const daFare = [...scaduti, ...urgenti];
+  if (daFare.length > 0) {
+    html += sectionLabelHTML('Da fare oggi', daFare.length);
+    daFare.forEach(task => { html += taskCardHTML(task, true); });
+  }
+
+  html += batchSuggestHTML(tasks);
+
+  if (settimana.length > 0) {
+    html += sectionLabelHTML('In scadenza questa settimana', settimana.length);
+    const perData = {};
+    settimana.forEach(task => { if (!perData[task.scadenza]) perData[task.scadenza]=[]; perData[task.scadenza].push(task); });
+    Object.keys(perData).sort().forEach(data => {
+      const g = perData[data];
+      html += `<div class="gruppo-header"><div class="gruppo-data">${gruppoLabel(data)}</div><div class="gruppo-line"></div><div class="gruppo-count">${g.length}</div></div>`;
+      g.forEach(task => { html += taskCardHTML(task, false); });
+    });
+  }
+
+  html += finestraBannerHTML(tasks);
+
+  if (prossimamente.length > 0) {
+    html += sectionLabelHTML('Prossimamente', prossimamente.length);
+    const perData = {};
+    prossimamente.forEach(task => { if (!perData[task.scadenza]) perData[task.scadenza]=[]; perData[task.scadenza].push(task); });
+    Object.keys(perData).sort().forEach(data => {
+      const g = perData[data];
+      html += `<div class="gruppo-header"><div class="gruppo-data">${gruppoLabel(data)}</div><div class="gruppo-line"></div><div class="gruppo-count">${g.length}</div></div>`;
+      g.forEach(task => { html += taskCardHTML(task, false); });
+    });
+  }
+
+  if (fatti.length > 0) {
+    html += sectionLabelHTML('Completate oggi', fatti.length);
+    fatti.forEach(task => { html += taskCardHTML(task, false, true); });
+  }
+
+  // SEZIONE DA RECUPERARE
+  if (daRecuperare.length > 0) {
+    const totale = daRecuperare.reduce((s,x) => s + (x.importo||0), 0);
+    html += `<div class="recupera-header">
+      <div class="recupera-title">
+        📦 Da recuperare in batch
+        <span style="font-family:'Inter',monospace;font-size:12px">${daRecuperare.length} task · ${fmtEuro(totale)} €</span>
+      </div>
+      <div class="recupera-subtitle">Queste pratiche sono in ritardo — le farai tutte insieme quando hai una finestra. Nessuna urgenza aggiuntiva.</div>
+    </div>
+    <div class="recupera-body">`;
+    daRecuperare.forEach(task => { html += taskCardHTML(task, false, false, true); });
+    html += `</div>`;
+  }
+
+  if (daFare.length===0 && settimana.length===0 && prossimamente.length===0 && daRecuperare.length===0 && fatti.length===0) {
+    html += `<div class="empty"><div class="empty-icon">🍇</div><div class="empty-text">Nessun task per oggi.<br>Aggiungi qualcosa con il +</div></div>`;
+  }
+
+  html += `<div style="text-align:center;font-size:10px;color:var(--grigio);opacity:0.7;padding:18px 8px 4px">© 2026 Silvia Greco · The Grape Escape — Tutti i diritti riservati</div>`;
+  document.getElementById('main-oggi').innerHTML = html;
+}
+
+function sectionLabelHTML(label, count) {
+  return `<div class="section-label">${label}<span class="section-label-count">${count}</span></div>`;
+}
+
+function taskCardHTML(task, urgent, done, isBatch) {
+  const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
+  const checkCls  = done ? 'done' : (urgent ? 'urgent' : '');
+  const cardCls   = done ? 'done-card' : isBatch ? `recupera tipo-${task.tipo}` : `tipo-${task.tipo}`;
+  const titoloCls = done ? 'done' : '';
+  const isPM = task.tipo === 'fattura-pm';
+  const isAirbnb = task.canale === 'Airbnb';
+  const isBooking = task.canale === 'Booking';
+
+  // meta: canale + codice
+  let metaParts = [];
+  if (task.canale && task.canale !== '—') metaParts.push(task.canale);
+  if (task.codice) metaParts.push(`cod. ${task.codice}`);
+  const meta = metaParts.join(' <span class="task-meta-sep">·</span> ');
+
+  let extra = '';
+
+  if (!done) {
+    // Scadenza + countdown
+    extra += scadenzaHTML(task.scadenza);
+
+    if (meta) extra += `<div class="task-meta">${meta}</div>`;
+
+    // --- FATTURA PM AIRBNB ---
+    if (isPM && isAirbnb) {
+      if (task.cohost) {
+        // Compenso cohost noto: mostralo copiabile — questo è l'importo da fatturare
+        extra += `<div class="cohost-box">
+          <div class="cohost-label">Compenso cohost Airbnb (importo da fatturare)</div>
+          <div class="cohost-importo">${fmtEuro(task.cohost)} €</div>
+          <button class="copy-btn" onclick="copyVal('${task.cohost}',this)" style="margin-top:6px"><span class="copy-icon">⎘</span> Copia importo</button>
+        </div>`;
+      } else {
+        // Compenso cohost ancora sconosciuto: istruzioni per trovarlo
+        extra += `<div class="cohost-box" style="border-color:#B8973A;background:#FDFAF0">
+          <div class="cohost-label" style="color:#B8973A">⏳ Compenso cohost — in arrivo da Airbnb</div>
+          <div style="font-size:12px;color:var(--grigio);margin-top:4px">Airbnb paga il giorno dopo il check-in: trovi l'importo nell'<strong>email di pagamento Airbnb</strong> oppure nel CSV movimenti (riga "Compenso co-host"${task.codice ? ` per cod. <strong>${task.codice}</strong>` : ''}). Inserisci l'importo e fattura entro 12 gg dal check-in.</div>
+        </div>`;
+      }
+    }
+    // --- FATTURA PM BOOKING: calcolo manuale dal rendiconto ---
+    else if (isPM && isBooking) {
+      const pct = FEE_PM[task.casa];
+      const aliq = pct ? (pct.Booking*100) : null;
+      if (task.importo) {
+        // Lordo inserito: calcola la fee
+        const calcolato = pct ? fmtEuro(task.importo * pct.Booking) : null;
+        extra += `<div class="calcolo-box">
+          <div style="margin-bottom:4px">Lordo da rendiconto Booking: <strong>${fmtEuro(task.importo)} €</strong></div>
+          ${aliq && calcolato ? `<div>Fee PM <strong>${aliq}%</strong> → <strong style="color:var(--verde)">${calcolato} €</strong> — questo è il tuo compenso da fatturare</div>` : '<div>Inserisci il lordo dal rendiconto Booking per calcolare la fee.</div>'}
+        </div>`;
+        extra += `<button class="copy-btn" onclick="copyVal('${task.importo}',this)"><span class="copy-icon">⎘</span> Copia lordo</button>`;
+        if (pct && task.importo) extra += `<button class="copy-btn" onclick="copyVal('${(task.importo*pct.Booking).toFixed(2)}',this)"><span class="copy-icon">⎘</span> Copia fee PM</button>`;
+      } else {
+        // Lordo non ancora inserito
+        extra += `<div class="calcolo-box" style="border-color:#B8973A;background:#FDFAF0">
+          <div style="font-size:12px;color:var(--grigio)">Scarica il rendiconto Booking${task.codice ? ` (nr. <strong>${task.codice}</strong>)` : ''}, trova il payout per questa casa e inserisci il lordo nel task per calcolare la fee${aliq ? ` (${aliq}%)` : ''}.</div>
+        </div>`;
+      }
+    }
+    // --- TUTTI GLI ALTRI con importo (esclusi scontrino e autofattura che hanno griglia dedicata) ---
+    else if (task.importo && task.tipo !== 'scontrino' && task.tipo !== 'autofattura') {
+      extra += `<div class="task-importo">${fmtEuro(task.importo)} €</div>`;
+      extra += `<button class="copy-btn" onclick="copyVal('${task.importo}',this)"><span class="copy-icon">⎘</span> Copia importo</button>`;
+    }
+
+    // "Copia cod." standalone solo per tipi che non hanno già la griglia dedicata
+    if (task.codice && task.tipo !== 'scontrino' && task.tipo !== 'autofattura' && task.tipo !== 'alloggiati')
+      extra += `<button class="copy-btn" onclick="copyVal('${task.codice}',this)"><span class="copy-icon">⎘</span> Copia cod.</button>`;
+
+    // --- SCONTRINO: solo importo copiabile + dicitura ADE ---
+    if (task.tipo === 'scontrino') {
+      if (task.codice) {
+        const canaleTxt = task.canale === 'Booking' ? 'Booking.com' : task.canale;
+        const descADE = `PRENOTAZIONE ${canaleTxt} ${task.codice}`;
+        extra += `<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">`;
+        if (task.importo) {
+          extra += `<div style="background:rgba(255,255,255,0.7);border:1px solid var(--border);border-radius:8px;padding:7px 10px">
+            <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">Importo</div>
+            <div style="font-family:'Inter',monospace;font-size:14px;font-weight:600">${fmtEuro(task.importo)} €</div>
+            <button class="copy-btn" onclick="copyVal('${task.importo.toFixed(2)}',this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
+          </div>`;
+        }
+        extra += `<div style="background:rgba(255,255,255,0.7);border:1px solid var(--border);border-radius:8px;padding:7px 10px">
+          <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">Descrizione ADE</div>
+          <div style="font-family:'Inter',monospace;font-size:11px;font-weight:600">${descADE}</div>
+          <button class="copy-btn" onclick="copyVal(${JSON.stringify(descADE)},this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
+        </div>`;
+        extra += `</div>`;
+      } else {
+        extra += `<div style="font-size:11px;color:var(--grigio);margin-top:6px">⚠ Recupera codice prenotazione da Airbnb/Booking per generare la descrizione ADE.</div>`;
+      }
+    }
+
+    // --- AUTOFATTURA TD17: griglia campi copiabili per Passgo (sempre 4 campi fissi) ---
+    if (task.tipo === 'autofattura') {
+      const iva    = task.importo ? task.importo * 0.22 : null;
+      const totale = task.importo ? task.importo * 1.22 : null;
+      const missingStyle = `background:rgba(255,255,255,0.4);border:1px dashed var(--border);border-radius:8px;padding:7px 10px`;
+      const presentStyle = `background:rgba(255,255,255,0.7);border:1px solid var(--border);border-radius:8px;padding:7px 10px`;
+      const doveData = task.canale === 'Booking'
+        ? 'Booking → Fatture → PDF allegato'
+        : 'Airbnb → Conto → Fatture host';
+      const doveImponibile = task.canale === 'Booking'
+        ? 'Booking → Fatture → PDF → riga commissioni'
+        : 'Airbnb → Conto → Fatture host → importo commissione';
+
+      const fieldBox = (label, value, copyVal_, placeholder) => value != null
+        ? `<div style="${presentStyle}">
+            <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">${label}</div>
+            <div style="font-family:'Inter',monospace;font-size:12px;font-weight:600">${value}</div>
+            <button class="copy-btn" onclick="copyVal(${JSON.stringify(String(copyVal_))},this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
+           </div>`
+        : `<div style="${missingStyle}">
+            <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">${label}</div>
+            <div style="font-size:11px;color:var(--grigio);font-style:italic">${placeholder}</div>
+           </div>`;
+
+      extra += `<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">`;
+      extra += fieldBox('Data documento', task.dataDoc, task.dataDoc, doveData);
+      extra += fieldBox('Commissione €', task.importo ? fmtEuro(task.importo)+' €' : null, task.importo ? task.importo.toFixed(2) : null, doveImponibile);
+      extra += `</div>`;
+    }
+
+    const linkKey = task.link || cfg.defaultLink;
+    const li = linkKey ? LINK_MAP[linkKey] : null;
+    if (li) extra += `<br><a class="task-link" href="${li.url}" target="_blank">${li.label}</a>`;
+    if (task.note) {
+      const isWarn = task.note.startsWith('⚠') || task.note.startsWith('⏸');
+      if (task.tipo === 'manuale' || isWarn) {
+        // Promemoria / avvisi: nota completa in un box leggibile (è il "problema" da risolvere)
+        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${task.note}</div>`;
+      } else {
+        extra += `<div style="font-size:11px;color:var(--grigio);margin-top:4px;line-height:1.4">${task.note}</div>`;
+      }
+    }
+    if (isBatch)
+      extra += `<button class="riporta-btn" onclick="riportaInLista('${task.id}')">↑ Riporta in lista urgente</button>`;
+    else if (!done && !urgent && daysDiff(task.scadenza) < 0)
+      extra += `<button class="riporta-btn" onclick="spostaInBatch('${task.id}')" style="color:#999;border-color:#ddd">→ Sposta in batch</button>`;
+
+  } else {
+    // card completata (archivio / oggi fatte)
+    if (meta) extra += `<div class="task-meta">${meta}</div>`;
+    let doneMeta = [];
+    if (task.completatoAlle) doneMeta.push(`Fatto alle ${task.completatoAlle}`);
+    const val = task.cohost || task.importo;
+    if (val) doneMeta.push(`${fmtEuro(val)} €`);
+    if (task.note) doneMeta.push(task.note);
+    if (doneMeta.length) extra += `<div class="task-meta">${doneMeta.join(' · ')}</div>`;
+    extra += `<button class="riporta-btn" onclick="toggleTask('${task.id}')" style="color:var(--grigio);border-color:#ddd;margin-top:6px">↩ Annulla — rimetti in lista</button>`;
+  }
+
+  const badgeBase = 'font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border-radius:4px;padding:2px 6px;margin-left:8px;vertical-align:middle';
+  const ruoloBadge = CASE_HOST.includes(task.casa)
+    ? `<span style="${badgeBase};background:#FFE9EC;color:var(--accent)">HOST</span>`
+    : CASE_PM.includes(task.casa)
+    ? `<span style="${badgeBase};background:var(--verde-light);color:var(--verde)">PM</span>`
+    : `<span style="${badgeBase};background:var(--grigio-light);color:var(--grigio)">TUTTE</span>`;
+
+  return `<div class="task-card ${cardCls}" data-id="${task.id}">
+    <div class="task-check ${checkCls}" onclick="toggleTask('${task.id}')"></div>
+    <div class="task-body">
+      <div class="task-tipo ${cfg.cls}">${cfg.label}${ruoloBadge}</div>
+      <div class="task-titolo ${titoloCls}">${task.casa}${task.ospite?' · '+task.ospite:''}</div>
+      ${extra}
+    </div>
+  </div>`;
+}
+
+// ─── ARCHIVIO HOST / PM ────────────────────────────────────────────────────────
+
+function riepilogoMensileHTML(tasks) {
+  const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const withScad = tasks.filter(x => x.scadenza);
+  if (!withScad.length) return '';
+  const months = {};
+  withScad.forEach(x => { const m = x.scadenza.slice(0,7); (months[m] = months[m] || []).push(x); });
+  const keys = Object.keys(months).sort().reverse();
+
+  let html = `<div class="section-label" style="padding-top:6px">Riepilogo adempimenti</div>`;
+  keys.forEach(mk => {
+    const [yy, mm] = mk.split('-');
+    const label = `${MESI_L[parseInt(mm,10)-1]} ${yy}`;
+    const list = months[mk];
+
+    const roleBlock = (titolo, emoji, filterFn) => {
+      const items = list.filter(filterFn);
+      if (!items.length) return '';
+      const done = items.filter(x => x.completato);
+      const pend = items.filter(x => !x.completato);
+      const pendLinks = pend.map(x => {
+        const t = (TIPO_CONFIG[x.tipo]?.label || x.tipo).replace(/^[^\s]+\s/, '');
+        const who = x.ospite ? ' ' + x.ospite : '';
+        return `<span onclick="goToTask('${x.id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline;text-underline-offset:2px;white-space:nowrap">${t}${who}</span>`;
+      }).join(' <span style="color:var(--border)">·</span> ');
+      let s = `<div style="margin-top:7px"><div style="font-size:12px;font-weight:700">${emoji} ${titolo}</div>`;
+      if (pend.length === 0 && done.length) {
+        s += `<div style="font-size:11px;color:var(--verde);margin-top:2px">✓ tutto fatto (${done.length})</div>`;
+      } else {
+        if (done.length) s += `<div style="font-size:11px;color:var(--verde);margin-top:2px">✓ ${done.length} fatt${done.length===1?'o':'i'}</div>`;
+        if (pend.length) s += `<div style="font-size:11px;color:var(--grigio);margin-top:3px;line-height:1.7">⚠ <span style="color:var(--accent);font-weight:700">${pend.length} da fare</span> — tocca per andarci: ${pendLinks}</div>`;
+      }
+      return s + `</div>`;
+    };
+
+    let block = '';
+    block += roleBlock('HOST', '🏡', x => CASE_HOST.includes(x.casa));
+    block += roleBlock('PM', '🤝', x => CASE_PM.includes(x.casa));
+    block += roleBlock('Altro', '✏️', x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
+    if (!block) return;
+    html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:0;border-top:3px solid var(--nero)">
+      <div style="font-size:14px;font-weight:700">${label}</div>${block}</div>`;
+  });
+  return html;
+}
+
+function renderArchivio() {
+  const tasks = loadTasks();
+  const fatti = tasks.filter(x => x.completato);
+  const main = document.getElementById('main-archivio');
+  const riepilogo = riepilogoMensileHTML(tasks);
+
+  if (fatti.length === 0) {
+    main.innerHTML = riepilogo + `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Nessun task completato ancora.</div></div>`;
+    return;
+  }
+
+  function sezioneHTML(titolo, emoji, caseLista) {
+    const taskDiRuolo = fatti.filter(x => caseLista.includes(x.casa) || (caseLista.length===0 && !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa)));
+    if (taskDiRuolo.length === 0) return '';
+
+    const totaleRuolo = taskDiRuolo.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
+
+    let html = `<div class="archivio-ruolo">${emoji} ${titolo}<span class="archivio-ruolo-totale">${fmtEuro(totaleRuolo)} €</span></div>`;
+
+    // raggruppa per casa
+    const perCasa = {};
+    taskDiRuolo.forEach(x => { if (!perCasa[x.casa]) perCasa[x.casa]=[]; perCasa[x.casa].push(x); });
+
+    Object.keys(perCasa).sort().forEach(casa => {
+      const lista = perCasa[casa].sort((a,b)=>b.completatoIl.localeCompare(a.completatoIl));
+      const totaleCasa = lista.reduce((s,x)=>s+(x.cohost||x.importo||0),0);
+      html += `<div class="archivio-casa">${casa}<span class="archivio-casa-totale">${fmtEuro(totaleCasa)} €</span></div>`;
+      lista.forEach(task => {
+        const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
+        const val = task.cohost || task.importo;
+        const metaParts = [];
+        if (task.completatoIl) metaParts.push(formatShort(task.completatoIl));
+        if (task.completatoAlle) metaParts.push(`ore ${task.completatoAlle}`);
+        if (task.ospite) metaParts.push(task.ospite);
+        if (task.canale && task.canale!=='—') metaParts.push(task.canale);
+        if (val) metaParts.push(`${fmtEuro(val)} €`);
+        if (task.note) metaParts.push(task.note);
+        html += `<div class="task-card done-card" style="margin-bottom:6px">
+          <div class="task-check done"></div>
+          <div class="task-body">
+            <div class="task-tipo ${cfg.cls}">${cfg.label}</div>
+            <div class="task-titolo done">${task.ospite || task.casa}</div>
+            <div class="task-meta">${metaParts.join(' · ')}</div>
+          </div>
+          <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
+        </div>`;
+      });
+    });
+    return html;
+  }
+
+  let html = riepilogo + `<div class="section-label" style="padding-top:14px">Completati nel dettaglio</div>`;
+  html += sezioneHTML('Host', '🏡', CASE_HOST);
+  html += sezioneHTML('Property Manager', '🤝', CASE_PM);
+
+  // task senza casa riconosciuta (manuali ecc)
+  const altri = fatti.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
+  if (altri.length > 0) {
+    html += `<div class="archivio-ruolo">✏️ Altri<span class="archivio-ruolo-totale"></span></div>`;
+    altri.sort((a,b)=>b.completatoIl.localeCompare(a.completatoIl)).forEach(task => {
+      const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
+      html += `<div class="task-card done-card" style="margin-bottom:6px">
+        <div class="task-check done"></div>
+        <div class="task-body">
+          <div class="task-tipo ${cfg.cls}">${cfg.label}</div>
+          <div class="task-titolo done">${task.casa}${task.ospite?' · '+task.ospite:''}</div>
+          <div class="task-meta">${task.completatoIl?formatShort(task.completatoIl)+' ':''}${task.note||''}</div>
+        </div>
+        <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
+      </div>`;
+    });
+  }
+
+  main.innerHTML = html;
+}
+
+function fmtEuro(n) {
+  if (!n && n !== 0) return '0,00';
+  return parseFloat(n).toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ─── AZIONI ───────────────────────────────────────────────────────────────────
+
+function toggleTask(id) {
+  const tasks = loadTasks();
+  const idx = tasks.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const task = tasks[idx];
+  const now = new Date();
+  task.completato = !task.completato;
+  task.completatoIl   = task.completato ? today() : null;
+  task.completatoAlle = task.completato ? `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` : null;
+  tasks[idx] = task;
+  saveTasks(tasks);
+  renderOggi();
+  showToast(task.completato ? '✓ Task completato' : 'Task rimesso in lista');
+}
+
+function riportaInLista(id) {
+  const tasks = loadTasks();
+  const idx = tasks.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  tasks[idx].inBatch = false;
+  saveTasks(tasks);
+  renderOggi();
+  showToast('Task riportato in lista urgente');
+}
+
+function spostaInBatch(id) {
+  const tasks = loadTasks();
+  const idx = tasks.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  tasks[idx].inBatch = true;
+  saveTasks(tasks);
+  renderOggi();
+  showToast('Task spostato in Da recuperare');
+}
+
+function deleteTask(id) {
+  saveTasks(loadTasks().filter(x => x.id !== id));
+  renderArchivio();
+  showToast('Task eliminato');
+}
+
+function copyVal(val, btn) {
+  const s = String(val);
+  const done = () => {
+    btn.classList.add('copied');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span class="copy-icon">✓</span> Copiato!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(s).then(done).catch(() => fallbackCopy(s, done));
+  } else {
+    fallbackCopy(s, done);
+  }
+}
+function fallbackCopy(s, done) {
+  const ta = document.createElement('textarea');
+  ta.value = s; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+
+function openModal() {
+  document.getElementById('f-scadenza').value = today();
+  onTipoChange();
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  resetForm();
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function onTipoChange() {
+  const tipo   = document.getElementById('f-tipo').value;
+  const canale = document.getElementById('f-canale').value;
+  const cfg    = TIPO_CONFIG[tipo];
+  document.getElementById('f-link').value = cfg.defaultLink || '';
+
+  const isPM      = tipo === 'fattura-pm';
+  const isAirbnb  = canale === 'Airbnb';
+  const isBooking = canale === 'Booking';
+
+  document.getElementById('fg-ospite').style.display  = tipo!=='ross' ? '' : 'none';
+  document.getElementById('fg-canale').style.display  = !['ross','manuale'].includes(tipo) ? '' : 'none';
+  document.getElementById('fg-codice').style.display  = ['scontrino','autofattura','fattura-pm'].includes(tipo) ? '' : 'none';
+  document.getElementById('fg-link').style.display    = '';
+
+  // importo
+  const fgImp = document.getElementById('fg-importo');
+  const fImpLabel = document.getElementById('f-importo-label');
+  const fImpHint  = document.getElementById('f-importo-hint');
+  fgImp.style.display = !['alloggiati','ross'].includes(tipo) ? '' : 'none';
+
+  if (isPM && isAirbnb) {
+    fImpLabel.textContent = 'Lordo prenotazione (opzionale)';
+    fImpHint.textContent  = '';
+    fImpHint.style.display = 'none';
+  } else if (isPM && isBooking) {
+    fImpLabel.textContent = 'Lordo Booking (incasso ospite)';
+    fImpHint.textContent  = "Inserisci il lordo che l'ospite ha pagato su Booking. La fee verrà calcolata automaticamente.";
+    fImpHint.style.display = '';
+  } else {
+    fImpLabel.textContent = 'Importo (€)';
+    fImpHint.style.display = 'none';
+  }
+
+  // cohost
+  document.getElementById('fg-cohost').style.display = (isPM && isAirbnb) ? '' : 'none';
+}
+
+function resetForm() {
+  ['f-ospite','f-importo','f-cohost','f-codice','f-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-tipo').value   = 'scontrino';
+  document.getElementById('f-casa').value   = "Ca' Balenga";
+  document.getElementById('f-canale').value = 'Airbnb';
+  document.getElementById('f-link').value   = '';
+  onTipoChange();
+}
+
+function salvaTask() {
+  const scadenza = document.getElementById('f-scadenza').value;
+  if (!scadenza) { showToast('⚠ Inserisci una scadenza'); return; }
+  const task = {
+    id:       Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+    tipo:     document.getElementById('f-tipo').value,
+    casa:     document.getElementById('f-casa').value,
+    ospite:   document.getElementById('f-ospite').value.trim(),
+    canale:   document.getElementById('f-canale').value,
+    importo:  document.getElementById('f-importo').value  ? parseFloat(document.getElementById('f-importo').value)  : null,
+    cohost:   document.getElementById('f-cohost').value   ? parseFloat(document.getElementById('f-cohost').value)   : null,
+    codice:   document.getElementById('f-codice').value.trim(),
+    scadenza, link: document.getElementById('f-link').value,
+    note:     document.getElementById('f-note').value.trim(),
+    completato:false, completatoIl:null, completatoAlle:null,
+    creatoIl: new Date().toISOString(),
+  };
+  const tasks = loadTasks();
+  tasks.push(task);
+  saveTasks(tasks);
+  closeModal();
+  renderOggi();
+  showToast('✓ Task aggiunto');
+}
+
+// ─── NAVIGAZIONE ──────────────────────────────────────────────────────────────
+
+function switchView(name, navEl) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  navEl.classList.add('active');
+  if (name === 'archivio') renderArchivio();
+  if (name === 'oggi') renderOggi();
+  if (name === 'regole') renderRegole();
+  if (name === 'case') renderCase();
+  if (name === 'conti') renderConti();
+}
+
+// Salta alla card del task dentro l'app (dalla finestra burocrazia) e la evidenzia
+function goToTask(id) {
+  const oggiView = document.getElementById('view-oggi');
+  if (!oggiView.classList.contains('active')) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    oggiView.classList.add('active');
+    const navOggi = document.querySelector('.nav-item');
+    if (navOggi) navOggi.classList.add('active');
+    renderOggi();
+  }
+  setTimeout(() => {
+    const el = document.querySelector('.task-card[data-id="' + id + '"]');
+    if (!el) return;
+    // togli la selezione precedente, evidenzia questa in modo persistente
+    document.querySelectorAll('.task-card.selected').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('flash');
+    void el.offsetWidth; // forza il restart dell'animazione
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 1800);
+  }, 70);
+}
+
+// ─── CONTI (conteggi fiscali 2026) ─────────────────────────────────────────────
+
+const SOGLIA_FORFETTARIO = 85000;
+// Aliquote effettive (forfettario start-up 5%)
+const RATE_IMPOSTA_HOST = 0.05 * 0.40;  // 2,0% del lordo
+const RATE_IMPOSTA_PM   = 0.05 * 0.86;  // 4,3% del lordo
+const RATE_ACCANT_HOST  = 0.07;          // imposta + INPS (stima)
+const RATE_ACCANT_PM    = 0.15;          // imposta + INPS (stima)
+
+function pmCompenso(x) {
+  if (x.cohost != null) return x.cohost;
+  if (x.importo != null && FEE_PM[x.casa]) {
+    const f = FEE_PM[x.casa][x.canale] || FEE_PM[x.casa].default;
+    return x.importo * f;
+  }
+  return 0;
+}
+
+function renderConti() {
+  const tasks = loadTasks();
+
+  const scontrini = tasks.filter(x => x.tipo === 'scontrino');
+  const pmTasks   = tasks.filter(x => x.tipo === 'fattura-pm');
+  const autof     = tasks.filter(x => x.tipo === 'autofattura');
+
+  const hostRicavi  = scontrini.reduce((s,x) => s + (x.importo || 0), 0);
+  const pmCompensi  = pmTasks.reduce((s,x) => s + pmCompenso(x), 0);
+  const ivaAutof    = autof.reduce((s,x) => s + (x.importo ? x.importo * 0.22 : 0), 0);
+
+  const hostImposta = hostRicavi * RATE_IMPOSTA_HOST;
+  const pmImposta   = pmCompensi * RATE_IMPOSTA_PM;
+  const hostAccant  = hostRicavi * RATE_ACCANT_HOST;
+  const pmAccant    = pmCompensi * RATE_ACCANT_PM;
+  const accantTot   = hostAccant + pmAccant;
+
+  const versoSoglia = hostRicavi + pmCompensi;
+  const nettoStimato = (hostRicavi - hostAccant) + (pmCompensi - pmAccant) - ivaAutof;
+
+  // dati mancanti → l'estimate è parziale
+  const pmMancanti   = pmTasks.filter(x => pmCompenso(x) === 0).length;
+  const autofMancanti = autof.filter(x => x.importo == null).length;
+  const mancanti = pmMancanti + autofMancanti;
+
+  const pctSoglia = Math.min(100, (versoSoglia / SOGLIA_FORFETTARIO) * 100);
+  const soglieColor = pctSoglia > 90 ? 'var(--accent)' : pctSoglia > 70 ? 'var(--oro)' : 'var(--verde)';
+
+  let html = `<div class="oggi-section" style="margin:0 -14px 8px;border-radius:0">
+    <div class="oggi-label">Conti 2026 · stima</div>
+    <div style="font-size:13px;color:var(--grigio);margin-bottom:6px">Netto stimato in tasca</div>
+    <div style="font-size:34px;font-weight:700;letter-spacing:-0.02em;line-height:1">${fmtEuro(nettoStimato)} €</div>
+    <div class="oggi-sub" style="margin-top:6px">dopo tasse, INPS e IVA autofatture · su tutti i task ${mancanti>0?`· ${mancanti} importi ancora mancanti`:''}</div>
+  </div>`;
+
+  // SOGLIA 85K
+  html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:8px;border-top:3px solid ${soglieColor}">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:13px;font-weight:700">Soglia forfettario 85.000 €</span>
+      <span style="font-size:13px;font-weight:700;color:${soglieColor}">${fmtEuro(versoSoglia)} €</span>
+    </div>
+    <div style="background:var(--grigio-light);border-radius:20px;height:10px;overflow:hidden">
+      <div style="width:${pctSoglia}%;height:100%;background:${soglieColor};border-radius:20px"></div>
+    </div>
+    <div style="font-size:11px;color:var(--grigio)">${pctSoglia.toFixed(0)}% della soglia · mancano ${fmtEuro(Math.max(0, SOGLIA_FORFETTARIO - versoSoglia))} € · PM + scontrini host</div>
+  </div>`;
+
+  // DA ACCANTONARE
+  html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:8px;border-top:3px solid var(--oro);background:#FFFBF0">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:13px;font-weight:700">💰 Da tenere da parte (tasse + INPS)</span>
+      <span style="font-size:16px;font-weight:700;color:var(--oro)">${fmtEuro(accantTot)} €</span>
+    </div>
+    <div style="font-size:11px;color:var(--grigio);line-height:1.5">Host ${fmtEuro(hostAccant)} € (7%) · PM ${fmtEuro(pmAccant)} € (15%). Di cui imposta sostitutiva ~${fmtEuro(hostImposta + pmImposta)} €, il resto INPS.</div>
+  </div>`;
+
+  // HOST
+  html += contoSezioneHTML('🏠 HOST — incassi tue case (scontrini)', 'var(--accent)', hostRicavi, [
+    ['Ricavi (lordo scontrini)', fmtEuro(hostRicavi)+' €'],
+    ['Imponibile (40%)', fmtEuro(hostRicavi*0.40)+' €'],
+    ['Imposta 5% → 2% del lordo', fmtEuro(hostImposta)+' €'],
+    ['Accantonamento consigliato (7%)', fmtEuro(hostAccant)+' €'],
+  ], scontrini.map(x => ({ casa: x.casa, ospite: x.ospite, val: x.importo })));
+
+  // PM
+  html += contoSezioneHTML('👔 PM — compensi fatturati ai proprietari', 'var(--verde)', pmCompensi, [
+    ['Compensi PM totali', fmtEuro(pmCompensi)+' €'],
+    ['Imponibile (86%)', fmtEuro(pmCompensi*0.86)+' €'],
+    ['Imposta 5% → 4,3% del lordo', fmtEuro(pmImposta)+' €'],
+    ['Accantonamento consigliato (15%)', fmtEuro(pmAccant)+' €'],
+  ], pmTasks.map(x => ({ casa: x.casa, ospite: x.ospite, val: pmCompenso(x) || null })));
+
+  // AUTOFATTURE
+  html += contoSezioneHTML('📄 Autofatture — IVA versata (costo)', 'var(--br-autofattura)', ivaAutof, [
+    ['Commissioni totali', fmtEuro(autof.reduce((s,x)=>s+(x.importo||0),0))+' €'],
+    ['IVA 22% versata (costo reale)', fmtEuro(ivaAutof)+' €'],
+  ], autof.map(x => ({ casa: x.casa, ospite: x.ospite, val: x.importo ? x.importo*0.22 : null })));
+
+  html += `<div style="font-size:11px;color:var(--grigio);text-align:center;padding:16px 8px;line-height:1.5">Stima per accantonare, non sostituisce il commercialista. Solo 2026 (forfettario). Il 2025 con cedolare su Ca' Balenga si recupera a parte.</div>`;
+
+  document.getElementById('main-conti').innerHTML = html;
+}
+
+function contoSezioneHTML(titolo, color, totale, righe, dettaglio) {
+  let h = `<div class="section-label" style="color:${color}">${titolo}<span class="section-label-count">${fmtEuro(totale)} €</span></div>`;
+  h += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:0;border-top:3px solid ${color}">`;
+  righe.forEach((r, i) => {
+    const strong = i === righe.length - 1;
+    h += `<div style="display:flex;justify-content:space-between;padding:7px 0;${i<righe.length-1?'border-bottom:1px solid var(--grigio-light)':''}">
+      <span style="font-size:12px;color:${strong?'var(--nero)':'var(--grigio)'};${strong?'font-weight:600':''}">${r[0]}</span>
+      <span style="font-size:13px;font-weight:${strong?'700':'600'};color:var(--nero)">${r[1]}</span>
+    </div>`;
+  });
+  if (dettaglio && dettaglio.length) {
+    h += `<div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--grigio);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Dettaglio</div>`;
+    dettaglio.forEach(d => {
+      h += `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--grigio-light)">
+        <span style="font-size:11px;color:var(--grigio);flex:1;min-width:0">${d.casa}${d.ospite?' · '+d.ospite:''}</span>
+        <span style="font-size:12px;font-weight:600;color:${d.val!=null?'var(--nero)':'var(--grigio)'};white-space:nowrap">${d.val!=null?fmtEuro(d.val)+' €':'— da inserire'}</span>
+      </div>`;
+    });
+  }
+  h += `</div>`;
+  return h;
+}
+
+// ─── REGOLE (la bibbia fiscale) ────────────────────────────────────────────────
+
+const REGOLE = [
+  {
+    icon: '🧾', titolo: 'Scontrino (documento commerciale)', ruolo: 'HOST',
+    cosa: 'Emetti uno scontrino/documento commerciale per ogni soggiorno nelle TUE case (Ca\' Balenga, La Ciucarina).',
+    quando: 'Il giorno del check-in.',
+    dove: 'Portale Agenzia Entrate → Documento commerciale online.',
+    causale: 'Descrizione: «PRENOTAZIONE [Canale] [codice prenotazione]». Importo = totale incassato dall\'ospite.',
+    note: 'È l\'unico documento che NON si può accorpare: va fatto subito, a ridosso del soggiorno.'
+  },
+  {
+    icon: '📄', titolo: 'Autofattura TD17 (reverse charge)', ruolo: 'HOST',
+    cosa: 'Autofattura per le commissioni che Airbnb/Booking trattengono sulle TUE case. Serve a versare l\'IVA sulla commissione (reverse charge da fornitore UE).',
+    quando: 'Entro il 15 del mese successivo a quello in cui la prenotazione è stata confermata (Airbnb) o alla data fattura mensile (Booking).',
+    dove: 'Passepartout / Passgo → emissione autofattura tipo documento TD17.',
+    causale: 'Imponibile = commissione del canale. IVA 22% calcolata sopra. Dati documento = numero e data della fattura del canale (Airbnb: Conto → Fatture host; Booking: PDF allegato alla mail mensile).',
+    note: 'Accorpabile: puoi farne più di una nella stessa sessione. L\'IVA versata qui è un costo reale da sottrarre ai guadagni.'
+  },
+  {
+    icon: '💶', titolo: 'Fattura Fee PM (compenso gestione)', ruolo: 'PM',
+    cosa: 'Fattura il TUO compenso da property manager al proprietario, per le case che gestisci (Palio, Casa Amalia, Tana del Tasso, Tenuta del Mulino, Villa Omedè).',
+    quando: 'Airbnb: entro 12 giorni dal check-in dell\'ospite. Booking: entro 12 giorni dal pagamento della tua fee da parte del proprietario.',
+    dove: 'Passepartout / Passgo → fattura elettronica al proprietario.',
+    causale: 'Airbnb: l\'importo da fatturare è il «compenso cohost» indicato nella mail di prenotazione. Booking: prendi il lordo dal rendiconto e applica la tua percentuale di fee (vedi sezione "Case in gestione" qui sotto).',
+    note: 'Le fatture Booking puoi cumularle in un\'unica fattura; le Airbnb no, una per prenotazione. Su Airbnb NON usare il lordo: usa il compenso cohost già netto della commissione.'
+  },
+  {
+    icon: '🏛', titolo: 'Schedine Alloggiati Web', ruolo: 'HOST + PM',
+    cosa: 'Comunicazione degli ospiti alla Questura per ogni check-in, su tutte le case.',
+    quando: 'Entro 24 ore dall\'arrivo (entro le 6 del mattino se il soggiorno è di 1 sola notte).',
+    dove: 'Portale Alloggiati Web della Polizia di Stato.',
+    causale: 'Dati anagrafici e documento di ogni ospite. Non c\'è importo.',
+    note: 'Adempimento di pubblica sicurezza, indipendente dalla fiscalità. Va fatto sempre, anche per la cedolare.'
+  },
+  {
+    icon: '📊', titolo: 'ROSS 1000 / ISTAT (flussi turistici)', ruolo: 'HOST + PM',
+    cosa: 'Comunicazione mensile dei flussi turistici (arrivi e presenze) di tutte le case.',
+    quando: 'Entro il 10 del mese successivo (per i movimenti del mese precedente).',
+    dove: 'Portale regionale ROSS 1000 (o tramite Kross, se gestisce l\'invio).',
+    causale: 'Numero di ospiti e notti per struttura. Nessun importo.',
+    note: 'Riepilogo statistico, non fiscale.'
+  },
+  {
+    icon: '🏖', titolo: 'Tassa di soggiorno — dichiarazione annuale', ruolo: 'HOST + PM',
+    cosa: 'Riepilogo annuale degli incassi della tassa di soggiorno versata dagli ospiti, al Comune.',
+    quando: 'Dichiarazione annuale (verifica la scadenza esatta sul sito del Comune di Asti — di norma entro il 30 giugno).',
+    dove: 'Portale / modulistica del Comune competente.',
+    causale: 'Totale notti soggette e importo tassa incassato/versato.',
+    note: 'Da non confondere con i versamenti periodici della tassa stessa.'
+  },
+];
+
+const SOGLIE_FISCALI = [
+  { label: 'Coefficiente redditività PM', val: '86% del lordo', desc: 'Intermediazione / gestione' },
+  { label: 'Coefficiente redditività HOST', val: '40% del lordo', desc: 'Affitti brevi / casa vacanza' },
+  { label: 'Imposta sostitutiva', val: '5%', desc: 'Regime forfettario start-up (primi 5 anni)' },
+  { label: 'Tasse PM (5% × 86%)', val: '≈ 4,3% del lordo', desc: 'Solo imposta, senza INPS' },
+  { label: 'Tasse HOST (5% × 40%)', val: '≈ 2% del lordo', desc: 'Solo imposta, senza INPS' },
+  { label: 'Da accantonare PM (con INPS)', val: '≈ 15% del lordo', desc: 'Imposta + contributi' },
+  { label: 'Da accantonare HOST (con INPS)', val: '≈ 7% del lordo', desc: 'Imposta + contributi' },
+  { label: 'Soglia regime forfettario', val: '85.000 € / anno', desc: 'Ricavi totali — oltre si esce dal forfettario' },
+];
+
+const CASE_GESTIONE = [
+  { casa:'Appartamento del Palio', luogo:'Palio', prop:'Ana Krapovickas (e Lucho Mariani)', feeOTA:'20%', feePropDir:'20%', feePMDir:'30%', extra:'PriceLabs €15/mese', avvio:'07/04/2025', scadenza:'07/07/2026, poi rinnovo annuale', recesso:'preavviso 15 giorni', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
+  { casa:'Casa Amalia', luogo:'Viarigi', prop:'Paola Conti', feeOTA:'25%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'01/03/2026', scadenza:'28/02/2027, poi rinnovo automatico 12 mesi', recesso:'preavviso 30 giorni', penale:'Recesso anticipato della proprietaria: €500' },
+  { casa:'La Tana del Tasso', luogo:'Callianetto', prop:'Saba Sarfraz (contratto intestato a Erik Zoetmulder)', feeOTA:'26%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'~01/04/2026', scadenza:'~01/04/2027, rinnovo automatico annuale', recesso:'preavviso 60 giorni', penale:'Recesso solo se non ci sono prenotazioni future; compensi maturati sempre dovuti' },
+  { casa:'Tenuta del Mulino', luogo:'Montemagno', prop:'Umberto Di Capua', feeOTA:'20%', feePropDir:'20%', feePMDir:'25%', extra:'Check-in €15 per soggiorni sotto 7 notti', avvio:'25/02/2025', scadenza:'25/02/2027, rinnovo automatico', recesso:'preavviso 3 mesi', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
+  { casa:'Villa Omedè', luogo:'Omedè', prop:'Andrea Grosso', feeOTA:'30%', feePropDir:'25%', feePMDir:'35%', extra:'Pulizie/lavanderia €300/soggiorno (le anticipi tu)', avvio:'15/05/2026', scadenza:'30/09/2026 (incarico stagionale)', recesso:'preavviso 15 giorni, solo se senza prenotazioni confermate', penale:'Recesso illegittimo: €1.000 + compensi prenotazioni attive + €300/soggiorno' },
+];
+
+function renderRegole() {
+  const main = document.getElementById('main-regole');
+  let html = `<div class="oggi-section" style="margin:0 -14px 8px;border-radius:0">
+    <div class="oggi-label">La tua bibbia fiscale</div>
+    <div style="font-size:22px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px">Regole HOST & PM</div>
+    <div class="oggi-sub">Cosa fare, quando, dove e con quale causale. In caso di dubbio, parti da qui.</div>
+  </div>`;
+
+  REGOLE.forEach(r => {
+    const ruoloColor = r.ruolo === 'HOST' ? 'var(--accent)' : r.ruolo === 'PM' ? 'var(--verde)' : 'var(--grigio)';
+    const ruoloBg    = r.ruolo === 'HOST' ? '#FFE9EC' : r.ruolo === 'PM' ? 'var(--verde-light)' : 'var(--grigio-light)';
+    html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:8px;border-top:3px solid ${ruoloColor}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px">${r.icon}</span>
+        <span style="font-size:15px;font-weight:700;flex:1">${r.titolo}</span>
+        <span style="font-size:9px;font-weight:700;letter-spacing:0.06em;background:${ruoloBg};color:${ruoloColor};border-radius:4px;padding:2px 7px">${r.ruolo}</span>
+      </div>
+      ${regolaRow('Cosa', r.cosa)}
+      ${regolaRow('Quando', r.quando)}
+      ${regolaRow('Dove', r.dove)}
+      ${regolaRow('Causale / importo', r.causale)}
+      ${r.note ? `<div style="font-size:11px;color:var(--grigio);background:var(--grigio-light);border-radius:8px;padding:7px 10px;line-height:1.45">💡 ${r.note}</div>` : ''}
+    </div>`;
+  });
+
+  html += `<div class="section-label" style="margin-top:8px">Numeri & soglie</div>`;
+  html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:0;border-top:3px solid var(--oro)">`;
+  SOGLIE_FISCALI.forEach((s, i) => {
+    html += `<div style="display:flex;align-items:baseline;gap:8px;padding:8px 0;${i < SOGLIE_FISCALI.length-1 ? 'border-bottom:1px solid var(--grigio-light)' : ''}">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:var(--nero)">${s.label}</div>
+        <div style="font-size:11px;color:var(--grigio)">${s.desc}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--nero);white-space:nowrap">${s.val}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  html += `<div style="font-size:11px;color:var(--grigio);text-align:center;padding:16px 8px;line-height:1.5">Le percentuali fiscali sono una stima per accantonare. Conferma sempre con il commercialista i casi cedolare secca e i documenti in attesa.</div>`;
+
+  main.innerHTML = html;
+}
+
+// ─── CASE IN GESTIONE (scheda dedicata) ───────────────────────────────────────
+function renderCase() {
+  const main = document.getElementById('main-case');
+  let html = `<div class="oggi-section" style="margin:0 -14px 8px;border-radius:0">
+    <div class="oggi-label">Property management</div>
+    <div style="font-size:22px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px">Case in gestione</div>
+    <div class="oggi-sub">Proprietari, percentuali e clausole di ogni contratto.</div>
+  </div>`;
+  const chip = (lbl, val) => `<span style="font-size:10px;font-weight:700;color:var(--verde);background:var(--verde-light);border:1px solid #B8E4B8;border-radius:6px;padding:3px 8px;white-space:nowrap">${lbl} ${val}</span>`;
+  CASE_GESTIONE.forEach(c => {
+    html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:7px;border-top:3px solid var(--verde)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <span style="font-size:15px;font-weight:700">${c.casa}</span>
+        <span style="font-size:11px;color:var(--grigio)">${c.luogo}</span>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--nero)">${c.prop}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:1px 0 3px">
+        ${chip('OTA', c.feeOTA)} ${chip('Diretta prop.', c.feePropDir)} ${chip('Diretta PM', c.feePMDir)}
+      </div>
+      ${c.extra && c.extra !== '—' ? regolaRow('Extra', c.extra) : ''}
+      ${regolaRow('Avvio', c.avvio)}
+      ${regolaRow('Scadenza', c.scadenza)}
+      ${regolaRow('Recesso', c.recesso)}
+      ${regolaRow('Penale', c.penale)}
+    </div>`;
+  });
+  html += `<div style="font-size:11px;color:var(--grigio);text-align:center;padding:16px 8px;line-height:1.5">Le % usate nei conteggi Fee PM sono quelle OTA (Airbnb/Booking).</div>`;
+  main.innerHTML = html;
+}
+
+function regolaRow(label, val) {
+  return `<div style="display:flex;gap:10px;align-items:baseline">
+    <span style="font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--grigio);min-width:88px;flex-shrink:0">${label}</span>
+    <span style="font-size:12px;color:var(--nero);line-height:1.45">${val}</span>
+  </div>`;
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ─── DATI DI ESEMPIO ─────────────────────────────────────────────────────────
+
+const DATA_VERSION = '2026-06-13-v3';
+
+function SEED_TASKS() {
+  const now = new Date().toISOString();
+
+  const reali = [
+    // ── SCONTRINI CA' BALENGA — check-in già avvenuti, tutti batch (>14gg) ──
+    { id:'r1',  tipo:'scontrino',   casa:"Ca' Balenga",          ospite:'Jensen Mette',               canale:'Booking', importo:377.80,  cohost:null, codice:'332/2026',    scadenza:'2026-04-01', link:'ade',       note:'prenotazione Booking.com 332/2026',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'r2',  tipo:'scontrino',   casa:"Ca' Balenga",          ospite:'Blös Anja',                  canale:'Booking', importo:255.78,  cohost:null, codice:'349/2026',    scadenza:'2026-04-17', link:'ade',       note:'prenotazione Booking.com 349/2026',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'r3',  tipo:'scontrino',   casa:"Ca' Balenga",          ospite:'Jennifer Laroche',           canale:'Airbnb',  importo:668.00,  cohost:null, codice:'HMX2S9TY38',  scadenza:'2026-04-23', link:'ade',       note:'prenotazione Airbnb HMX2S9TY38',    completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'r4',  tipo:'scontrino',   casa:"Ca' Balenga",          ospite:'Noguet Brechbühl Véronique', canale:'Booking', importo:400.95,  cohost:null, codice:'329/2026',    scadenza:'2026-04-27', link:'ade',       note:'prenotazione Booking.com 329/2026',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'r5',  tipo:'scontrino',   casa:"Ca' Balenga",          ospite:'Grumme Bisserka',            canale:'Booking', importo:615.53,  cohost:null, codice:'344/2026',    scadenza:'2026-05-07', link:'ade',       note:'prenotazione Booking.com 344/2026',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── SCONTRINO LA CIUCARINA — check-in 11/06, 1 giorno in ritardo ──
+    { id:'s1',  tipo:'scontrino',   casa:'La Ciucarina',         ospite:'Angel Lamar Oliveras',       canale:'Airbnb',  importo:634.32,  cohost:null, codice:'HMHDF9XMCR',  scadenza:'2026-06-11', link:'ade',       note:'Check-in 11/06, check-out 14/06.',    completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'af4', tipo:'autofattura', casa:'La Ciucarina',         ospite:'Angel Lamar Oliveras',       canale:'Airbnb',  importo:93.14,   cohost:null, codice:'HMHDF9XMCR',  dataDoc:null, scadenza:'2026-07-15', link:'passgo',    note:'Commissione 93,14 € (ricavata dal payout netto 507,76 €, fee host 15,5%). Conferma n. e data dalla fattura IVA Airbnb di giugno.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── AUTOFATTURE TD17 AIRBNB — batch ──
+    // Jennifer Laroche: confermata gen 2026 → scad 15/02/2026 (già batch)
+    { id:'r6',  tipo:'autofattura', casa:"Ca' Balenga",          ospite:'Jennifer Laroche',           canale:'Airbnb',  importo:103.54,  cohost:null, codice:'HMX2S9TY38',  dataDoc:'14/01/2026', scadenza:'2026-02-15', link:'passgo',    note:'⚠ Emetti in ritardo — consulta commercialista per la data. N. fattura fornitore: AIUC-18019050-IT-1069944', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── AUTOFATTURE TD17 — nuove prenotazioni La Ciucarina (scad. 15 mese successivo alla conferma) ──
+    { id:'af2', tipo:'autofattura', casa:'La Ciucarina',         ospite:'Yuen Seng So',               canale:'Airbnb',  importo:60.45,   cohost:null, codice:'HM2ANAEW4H',  dataDoc:'07/06/2026', scadenza:'2026-07-15', link:'passgo',    note:'Commissione 60,45 € (servizio host 15,5%, da mail conferma 07/06). N. fattura e data esatta dalla fattura IVA Airbnb di giugno.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'af1', tipo:'autofattura', casa:'La Ciucarina',         ospite:'Francesca Loss',             canale:'Airbnb',  importo:77.04,   cohost:null, codice:'HMXNBRYTX2',  dataDoc:'11/06/2026', scadenza:'2026-07-15', link:'passgo',    note:'Commissione 77,04 € (servizio host 15,5%, da mail conferma 11/06). N. fattura e data esatta dalla fattura IVA Airbnb di giugno.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    // Jan Van Veen: confermata giugno 2026 → scad 15/07/2026
+    { id:'r7',  tipo:'autofattura', casa:'La Ciucarina',         ospite:'Jan Van Veen',               canale:'Airbnb',  importo:133.92,  cohost:null, codice:'HMKANPNZFF',  dataDoc:null,         scadenza:'2026-07-15', link:'passgo',    note:'Recupera n. fattura: Airbnb → Conto → Fatture host → giugno 2026', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── AUTOFATTURA TD17 BOOKING — rendiconto mensile La Ciucarina (scad. 15/06) ──
+    { id:'af3', tipo:'autofattura', casa:'La Ciucarina',         ospite:'Rendiconto Booking maggio',  canale:'Booking', importo:60.54,   cohost:null, codice:'1655943394',  dataDoc:'03/06/2026', scadenza:'2026-06-15', link:'passgo',    note:'Fattura mensile Booking nr. 1655943394, periodo 01/05–31/05/2026. Commissioni 54,65 + costo transazione 5,89 = 60,54 €.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── FATTURA FEE PM — Iselin Stundal, Villa Omedè, check-in 14/06 ──
+    { id:'f5',  tipo:'fattura-pm',  casa:'Villa Omedè',          ospite:'Iselin Stundal',             canale:'Airbnb',  importo:null,    cohost:895.11, codice:'HMQ8F5A5S3',  scadenza:'2026-06-26', link:'',          note:'', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── CONTRATTO PALIO — scadenza 07/07/2026 (rinnovo automatico se non disdici) ──
+    { id:'cp1', tipo:'manuale',     casa:'Appartamento del Palio',ospite:'⚠ Contratto in scadenza — decide entro il 22 giu', canale:'—', importo:null, cohost:null, codice:'', scadenza:'2026-07-07', link:'', note:'Rinnovo automatico per 1 anno il 07/07 se non disdici. Preavviso 15 giorni → disdetta entro il 22/06/2026. Penale recesso anticipato: gestione PM o 50% commissioni prenotazioni confermate.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── ALLOGGIATI WEB — check-in recenti ──
+    { id:'a1',  tipo:'alloggiati',  casa:'La Ciucarina',         ospite:'Angel Lamar Oliveras',       canale:'Airbnb',  importo:null,    cohost:null, codice:'',            scadenza:'2026-06-12', link:'',          note:'Check-in 11/06.',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'a2',  tipo:'alloggiati',  casa:'Tenuta del Mulino',    ospite:'Melissa Sonneveld',          canale:'Airbnb',  importo:null,    cohost:null, codice:'',            scadenza:'2026-06-12', link:'',          note:'Check-in 11/06.',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'a3',  tipo:'alloggiati',  casa:'Appartamento del Palio',ospite:'Eichstädt Gunther',         canale:'Booking', importo:null,    cohost:null, codice:'',            scadenza:'2026-06-12', link:'',          note:'Check-in 11/06.',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'a4',  tipo:'alloggiati',  casa:'La Tana del Tasso',    ospite:'Claudia Aegerter',           canale:'Airbnb',  importo:null,    cohost:null, codice:'',            scadenza:'2026-06-13', link:'',          note:'Check-in 12/06.',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'a5',  tipo:'alloggiati',  casa:'Villa Omedè',          ospite:'Iselin Stundal',             canale:'Airbnb',  importo:null,    cohost:null, codice:'HMQ8F5A5S3',  scadenza:'2026-06-15', link:'',          note:'Check-in 14/06.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── ROSS1000 MAGGIO — scaduto il 10 giugno ──
+    { id:'r10', tipo:'ross',        casa:'—',                    ospite:'',                           canale:'—',       importo:null,    cohost:null, codice:'',            scadenza:'2026-06-10', link:'ross',      note:'Flussi turistici maggio 2026 — tutte le case', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── FATTURE FEE PM — check-in recenti ──
+    { id:'f1',  tipo:'fattura-pm',  casa:'Tenuta del Mulino',    ospite:'Melissa Sonneveld',          canale:'Airbnb',  importo:null,    cohost:126.56, codice:'HM45KWMH3B', scadenza:'2026-06-23', link:'',          note:'Check-in 11/06–15/06. Compenso cohost da Airbnb.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'f2',  tipo:'fattura-pm',  casa:'La Tana del Tasso',    ospite:'Claudia Aegerter',           canale:'Airbnb',  importo:null,    cohost:187.29, codice:'HM3KYWS3WA', scadenza:'2026-06-24', link:'',          note:'', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'f3',  tipo:'fattura-pm',  casa:'Appartamento del Palio',ospite:'Eichstädt Gunther',         canale:'Booking', importo:null,    cohost:null, codice:'6447407135',  scadenza:'2026-07-03', link:'',          note:'Booking. Check-in 11/06. Scarica rendiconto Booking luglio, trova payout Palio, inserisci importo per calcolo fee 20%.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'f4',  tipo:'fattura-pm',  casa:'La Tana del Tasso',    ospite:'Pia Voigt',                  canale:'Airbnb',  importo:null,    cohost:null, codice:'HMKDK5T4NZ',  scadenza:'2026-08-08', link:'',          note:'Check-in 27/07, check-out 01/08 (5 notti, 3A+1B). Airbnb paga il 28/07: CSV movimenti → riga "Compenso co-host" HMKDK5T4NZ → inserisci importo. Fattura entro 12 gg dal check-in = entro l\'8 ago.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── FEE PM CHIUSURA CASTELLERO (Casa delle Nocciole) — contratto Aurelio Balestra scaduto 31/05/2026 ──
+    { id:'cast1', tipo:'fattura-pm', casa:'Castellero (Nocciole)', ospite:'Harald', canale:'Booking', importo:null, cohost:null, codice:'', scadenza:'2026-06-30', link:'', note:'Compenso 25% sul soggiorno di Harald (gestito da te fino al check-out). Da fatturare ad Aurelio Balestra quando Booking gli versa il totale. Lordo: dal tuo account proprietario Booking o dallo zip "Castellero fine mandato".', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'cast2', tipo:'fattura-pm', casa:'Castellero (Nocciole)', ospite:'Soggiorno prima metà agosto', canale:'Booking', importo:null, cohost:null, codice:'', scadenza:'2026-08-31', link:'', note:'Compenso ridotto 12,5% (metà del 25%): prenotazione arrivata prima del recesso ma soggiorno gestito da Aurelio. Da fatturare quando Booking versa ad Aurelio.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── PROMEMORIA PAGAMENTO BOOKING — Appartamento del Palio ──
+    // Flow: Booking paga il prop (~3 del mese) → prop paga Silvia → Silvia fa fattura PM entro 12gg dal pagamento
+    { id:'bk1', tipo:'manuale',     casa:'Appartamento del Palio',ospite:'Sollecita pagamento da Ana Krapovickas', canale:'Booking', importo:null, cohost:null, codice:'1654882612', scadenza:'2026-06-15', link:'', note:'Booking ha pagato Ana (~3 giu, rif. 1654882612). Quando ricevi il pagamento, crea task Fattura fee PM con importo × 20% e scadenza +12gg.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── TDS — DICHIARAZIONE ANNUALE ──
+    { id:'tds1',tipo:'manuale',     casa:'—',                    ospite:'Dichiarazione annuale tassa di soggiorno', canale:'—', importo:null, cohost:null, codice:'', scadenza:'2026-06-30', link:'', note:'Presentazione al Comune di Asti — verifica modalità e moduli sul sito comunale.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── IN ATTESA COMMERCIALISTA — non toccare ancora ──
+    { id:'r8',  tipo:'manuale',     casa:"Ca' Balenga",          ospite:'⏸ Autofattura in attesa — Barbara Finkenbrink', canale:'Airbnb', importo:null, cohost:null, codice:'', scadenza:'2026-06-30', link:'', note:'Attendere ok commercialista prima di emettere. Check-in 11/04/2026, prenotata dic 2025 (cedolare).', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'r9',  tipo:'manuale',     casa:"Ca' Balenga",          ospite:'⏸ Autofattura in attesa — Chiara Baraldo',    canale:'Airbnb', importo:null, cohost:null, codice:'', scadenza:'2026-06-30', link:'', note:'Attendere ok commercialista. IVA già esposta da Airbnb — possibile che non serva TD17. Check-in 07/04/2026.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+  ];
+
+  return reali;
+}
+
+// ─── PUSH NOTIFICATIONS ───────────────────────────────────────────────────────
+
+function urlBase64ToUint8Array(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+
+async function checkNotificheStatus() {
+  const btn = document.getElementById('btn-notifiche');
+  if (!btn) return;
+  if (!('PushManager' in window)) { btn.style.display = 'none'; return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      btn.textContent = '🔔 Notifiche attive';
+      btn.style.color = 'var(--verde)';
+      btn.style.borderColor = '#B8E4B8';
+    }
+  } catch {}
+}
+
+async function attivaNotifiche() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    showToast('Push non supportate su questo browser');
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') { showToast('Notifiche non autorizzate'); return; }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
+      });
+    }
+    if (CURRENT_USER) {
+      const subJson = sub.toJSON();
+      await sb.from('push_subscriptions').upsert(
+        { user_id: CURRENT_USER.id, endpoint: subJson.endpoint, subscription: subJson },
+        { onConflict: 'user_id,endpoint' }
+      );
+    }
+    const btn = document.getElementById('btn-notifiche');
+    if (btn) { btn.textContent = '🔔 Notifiche attive'; btn.style.color = 'var(--verde)'; btn.style.borderColor = '#B8E4B8'; }
+    showToast('🔔 Notifiche attivate — riceverai un alert ogni mattina alle 8');
+  } catch (e) {
+    console.error(e);
+    showToast('⚠ Errore attivazione notifiche');
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW non registrato', e));
+}
+
+checkAuth().then(() => checkNotificheStatus());
+</script>
+</body>
+</html>

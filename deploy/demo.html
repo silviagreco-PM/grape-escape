@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Grape Escape — Demo gestione fiscale</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  :root{
+    --accent:#FF385C;--accent-light:#FFF0F2;--verde:#008A05;--verde-light:#E6F4E6;
+    --nero:#222;--grigio:#717171;--bg:#F7F7F7;--border:#DDD;--oro:#C08B00;
+    --shadow:0 4px 20px rgba(0,0,0,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--nero);line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  .hero{background:linear-gradient(160deg,#fff,#FFF0F2);padding:54px 20px 40px;text-align:center;border-bottom:1px solid var(--border)}
+  .logo{font-size:15px;font-weight:800;letter-spacing:.02em}.logo span{color:var(--accent)}
+  .hero h1{font-size:34px;font-weight:800;letter-spacing:-.02em;margin:18px 0 10px;max-width:760px;margin-left:auto;margin-right:auto}
+  .hero p{font-size:16px;color:var(--grigio);max-width:600px;margin:0 auto}
+  .badge{display:inline-block;background:var(--nero);color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 12px;border-radius:20px;margin-bottom:6px}
+  .section{padding:44px 0}
+  .section h2{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+  .section .sub{color:var(--grigio);font-size:15px;margin-bottom:26px;max-width:640px}
+  .phones{display:flex;gap:26px;flex-wrap:wrap;justify-content:center}
+  .phone{width:300px;background:#fff;border:1px solid var(--border);border-radius:30px;box-shadow:var(--shadow);overflow:hidden;flex-shrink:0}
+  .phone-top{height:26px;background:#fff;display:flex;align-items:center;justify-content:center}
+  .phone-top::after{content:'';width:80px;height:5px;border-radius:3px;background:#e5e5e5}
+  .scr{padding:0 0 14px}
+  .scr-head{background:#fff;padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+  .scr-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);font-weight:600}
+  .scr-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin-top:2px}
+  .scr-sub{font-size:11px;color:var(--grigio);margin-top:3px}
+  .pills{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .pill{font-size:10px;font-weight:700;padding:4px 9px;border-radius:20px}
+  .pill-u{background:var(--accent);color:#fff}.pill-t{background:var(--bg);color:var(--grigio);border:1px solid var(--border)}
+  .pill-d{background:var(--verde-light);color:var(--verde)}
+  .body{padding:12px 14px}
+  .seclab{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--grigio);font-weight:700;padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+  .card.t-sc{border-top:3px solid #FF385C}.card.t-af{border-top:3px solid #FF6B35}
+  .card.t-pm{border-top:3px solid #008A05}.card.t-al{border-top:3px solid #C08B00}
+  .c-tipo{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  .t-sc .c-tipo{color:#FF385C}.t-af .c-tipo{color:#FF6B35}.t-pm .c-tipo{color:#008A05}.t-al .c-tipo{color:#C08B00}
+  .c-tit{font-size:13px;font-weight:700;margin:2px 0 5px}
+  .c-scad{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px}
+  .s-oggi{background:#FFF0F2;color:#FF385C}.s-ok{background:var(--verde-light);color:var(--verde)}.s-warn{background:#FFF8E6;color:#996A00}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+  .fbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+  .fbox .l{font-size:9px;color:var(--grigio)}.fbox .v{font-size:12px;font-weight:700}
+  .copy{display:inline-block;margin-top:4px;font-size:9px;background:#fff;border:1px solid var(--border);border-radius:5px;padding:2px 7px;color:var(--grigio)}
+  .lnk{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-light);border:1px solid #FFD0D8;border-radius:7px;padding:5px 10px;margin-top:9px;text-decoration:none}
+  .big{font-size:30px;font-weight:800;letter-spacing:-.02em}
+  .bar{height:9px;background:var(--bg);border-radius:20px;overflow:hidden;margin:7px 0 4px}
+  .bar>div{height:100%;background:var(--verde);border-radius:20px}
+  .row{display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-bottom:1px solid #f0f0f0}
+  .row b{font-weight:700}
+  .feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:8px}
+  .feat .f{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px}
+  .feat .f .ic{font-size:22px}.feat .f h3{font-size:15px;font-weight:700;margin:8px 0 4px}.feat .f p{font-size:13px;color:var(--grigio)}
+  .note{background:#fff;border:1px dashed var(--border);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--grigio);text-align:center;margin-top:30px}
+  .foot{text-align:center;padding:30px 20px;color:var(--grigio);font-size:12px}
+  @media(max-width:680px){.hero h1{font-size:26px}.section h2{font-size:20px}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="logo">The Grape <span>Escape</span></div>
+  <div style="margin-top:22px"><span class="badge">Demo · dati di esempio</span></div>
+  <h1>La mia gestione fiscale host &amp; property manager, ora sotto controllo.</h1>
+  <p>Ogni adempimento tracciato con scadenza, importi e causali già pronti da copiare. Più una stima di imposte, INPS e della soglia degli 85.000 €.</p>
+</div>
+
+<div class="section">
+  <div class="wrap">
+    <h2>Tre schermate, in pratica</h2>
+    <div class="sub">Quello che vedo ogni giorno dal telefono: cosa scade, cosa emettere e a che punto sono con i conti.</div>
+    <div class="phones">
+
+      <!-- OGGI -->
+      <div class="phone"><div class="phone-top"></div>
+        <div class="scr">
+          <div class="scr-head">
+            <div class="scr-label">Dashboard operativa</div>
+            <div class="scr-h1">2 cose urgenti<br>oggi.</div>
+            <div class="scr-sub">4 completate · 3 questa settimana</div>
+            <div class="pills"><span class="pill pill-u">2 urgenti</span><span class="pill pill-t">3 in scadenza</span><span class="pill pill-d">4 fatte</span></div>
+          </div>
+          <div class="body">
+            <div class="seclab">Da fare oggi</div>
+            <div class="card t-sc">
+              <div class="c-tipo">🧾 Scontrino · Host</div>
+              <div class="c-tit">La Ciucarina · ospite Airbnb</div>
+              <span class="c-scad s-oggi">scade oggi</span>
+              <div class="grid2">
+                <div class="fbox"><div class="l">Importo</div><div class="v">634,32 €</div><span class="copy">⎘ Copia</span></div>
+                <div class="fbox"><div class="l">Descrizione ADE</div><div class="v" style="font-size:10px">PRENOTAZIONE AIRBNB HM9X2K4T1B</div><span class="copy">⎘ Copia</span></div>
+              </div>
+              <a class="lnk">→ Apri Agenzia Entrate</a>
+            </div>
+            <div class="card t-af">
+              <div class="c-tipo">📄 Autofattura · Host</div>
+              <div class="c-tit">Rendiconto Booking maggio</div>
+              <span class="c-scad s-oggi">scade oggi</span>
+              <div class="grid2">
+                <div class="fbox"><div class="l">Data documento</div><div class="v">03/06/2026</div><span class="copy">⎘ Copia</span></div>
+                <div class="fbox"><div class="l">Commissione €</div><div class="v">60,54 €</div><span class="copy">⎘ Copia</span></div>
+              </div>
+              <a class="lnk">→ Apri Passgo (fatturazione)</a>
+            </div>
+            <div class="seclab" style="margin-top:10px">In scadenza</div>
+            <div class="card t-pm">
+              <div class="c-tipo">💶 Fee PM</div>
+              <div class="c-tit">Villa Omedè · compenso cohost</div>
+              <span class="c-scad s-warn">entro 26 giu</span>
+              <div style="background:var(--verde-light);border:1px solid #B8E4B8;border-radius:8px;padding:7px 9px;margin-top:8px">
+                <div style="font-size:9px;font-weight:700;color:var(--verde);text-transform:uppercase;letter-spacing:.04em">Compenso cohost da fatturare</div>
+                <div style="font-size:16px;font-weight:800">895,11 €</div>
+                <span class="copy" style="margin-top:3px">⎘ Copia importo</span>
+              </div>
+              <a class="lnk">→ Apri Passgo (fatturazione)</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUTOFATTURA -->
+      <div class="phone"><div class="phone-top"></div>
+        <div class="scr">
+          <div class="scr-head">
+            <div class="scr-label">Documento pronto</div>
+            <div class="scr-h1">Autofattura<br>TD17</div>
+            <div class="scr-sub">Reverse charge su commissione Airbnb</div>
+          </div>
+          <div class="body">
+            <div class="card t-af">
+              <div class="c-tipo">📄 Autofattura · Host</div>
+              <div class="c-tit">La Ciucarina · commissione Airbnb</div>
+              <span class="c-scad s-ok">entro 15 lug</span>
+              <div class="grid2">
+                <div class="fbox"><div class="l">Data documento</div><div class="v">07/06/2026</div><span class="copy">⎘ Copia</span></div>
+                <div class="fbox"><div class="l">Commissione €</div><div class="v">60,45 €</div><span class="copy">⎘ Copia</span></div>
+              </div>
+              <div style="font-size:10px;color:var(--grigio);margin-top:8px;line-height:1.4">Imponibile da fattura del canale · IVA 22% in reverse charge · pronto per Passepartout</div>
+            </div>
+            <div class="card t-al"><div class="c-tipo">🏛 Alloggiati</div><div class="c-tit">Schedine Questura · entro 24h</div><span class="c-scad s-ok">fatto</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTI -->
+      <div class="phone"><div class="phone-top"></div>
+        <div class="scr">
+          <div class="scr-head">
+            <div class="scr-label">Conti 2026 · stima</div>
+            <div class="scr-sub" style="margin-top:4px">Netto stimato in tasca</div>
+            <div class="big">12.480 €</div>
+            <div class="scr-sub">dopo imposte, INPS e IVA autofatture</div>
+          </div>
+          <div class="body">
+            <div class="card" style="border-top:3px solid var(--verde)">
+              <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700"><span>Soglia forfettario 85.000 €</span><span style="color:var(--verde)">41.200 €</span></div>
+              <div class="bar"><div style="width:48%"></div></div>
+              <div style="font-size:10px;color:var(--grigio)">48% · PM + scontrini host</div>
+            </div>
+            <div class="card" style="border-top:3px solid var(--oro);background:#FFFBF0">
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span style="font-weight:700">💰 Da accantonare (tasse+INPS)</span><b style="color:var(--oro)">4.150 €</b></div>
+            </div>
+            <div class="seclab" style="margin-top:8px">Ripartizione</div>
+            <div class="card">
+              <div class="row"><span>Host — imposta 5%×40%</span><b>≈ 2% del lordo</b></div>
+              <div class="row"><span>PM — imposta 5%×86%</span><b>≈ 4,3% del lordo</b></div>
+              <div class="row" style="border:none"><span>IVA autofatture (costo)</span><b>22% commissioni</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="background:linear-gradient(160deg,#fff,#FFF0F2)">
+  <div class="wrap">
+    <span class="badge" style="background:var(--accent)">Oltre le aspettative</span>
+    <h2 style="margin-top:10px">Non solo <em>quali</em> scadenze: anche <em>quando</em> farle</h2>
+    <div class="sub">Qui sta la differenza. L'app guarda i miei <strong>check-in in presenza</strong> dei prossimi 7 giorni, individua il <strong>giorno più libero</strong> e mi raggruppa lì tutta la burocrazia "accorpabile" — autofatture, fatture PM. E mi suggerisce di <strong>anticipare</strong> le pratiche che scadono più avanti, già che sono lì a farle. Risultato: <strong>una seduta sola</strong> al mese davanti al gestionale, invece di dieci rincorse last-minute.</div>
+
+    <div style="max-width:440px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:15px;font-weight:800">🗓 Quando fare burocrazia</div>
+        <div style="background:var(--accent-light);color:var(--accent);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #FFD0D8">lunedì 15</div>
+      </div>
+      <div style="font-size:12px;color:var(--grigio);margin-bottom:10px">Nessun check-in in presenza quel giorno.</div>
+
+      <div style="display:flex;gap:5px;justify-content:space-between">
+        <div style="flex:1;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:6px 2px"><div style="font-size:9px;font-weight:700;color:var(--grigio)">SAB</div><div style="font-size:13px;font-weight:800">13</div><div style="font-size:12px">🟢</div></div>
+        <div style="flex:1;text-align:center;background:#FFFBF0;border:1px solid #FFE9A0;border-radius:9px;padding:6px 2px"><div style="font-size:9px;font-weight:700;color:#996A00">DOM</div><div style="font-size:13px;font-weight:800">14</div><div style="font-size:12px">🟡</div></div>
+        <div style="flex:1;text-align:center;background:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:6px 2px;color:#fff"><div style="font-size:9px;font-weight:700">LUN</div><div style="font-size:13px;font-weight:800">15</div><div style="font-size:12px">✨</div></div>
+        <div style="flex:1;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:6px 2px"><div style="font-size:9px;font-weight:700;color:var(--grigio)">MAR</div><div style="font-size:13px;font-weight:800">16</div><div style="font-size:12px">🟢</div></div>
+        <div style="flex:1;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:6px 2px"><div style="font-size:9px;font-weight:700;color:var(--grigio)">MER</div><div style="font-size:13px;font-weight:800">17</div><div style="font-size:12px">🟢</div></div>
+        <div style="flex:1;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:6px 2px"><div style="font-size:9px;font-weight:700;color:var(--grigio)">GIO</div><div style="font-size:13px;font-weight:800">18</div><div style="font-size:12px">🟢</div></div>
+        <div style="flex:1;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:6px 2px"><div style="font-size:9px;font-weight:700;color:var(--grigio)">VEN</div><div style="font-size:13px;font-weight:800">19</div><div style="font-size:12px">🟢</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--grigio);margin-top:6px">🔴 2+ check-in · 🟡 1 check-in · 🟢 libera</div>
+
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:12px;font-weight:800;margin-bottom:4px">✅ Da fare lunedì</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0">
+          <div><div style="font-size:12px;font-weight:600">Autofattura <span style="color:var(--grigio);font-weight:400">· La Ciucarina</span></div><div style="font-size:11px;color:var(--grigio)">Rendiconto Booking · scade 15</div></div>
+          <span style="font-size:11px;font-weight:600;color:var(--accent);border:1px solid #FFD0D8;background:var(--accent-light);border-radius:6px;padding:3px 8px">Apri ↓</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0">
+          <div><div style="font-size:12px;font-weight:600">Alloggiati <span style="color:var(--grigio);font-weight:400">· Villa Omedè</span></div><div style="font-size:11px;color:var(--grigio)">Schedine · scade 15</div></div>
+          <span style="font-size:11px;font-weight:600;color:var(--accent);border:1px solid #FFD0D8;background:var(--accent-light);border-radius:6px;padding:3px 8px">Apri ↓</span>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:12px;font-weight:800;color:var(--oro);margin-bottom:4px">⏩ Già che ci sei, puoi anticipare</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0">
+          <div><div style="font-size:12px;font-weight:600">Autofattura <span style="color:var(--grigio);font-weight:400">· La Ciucarina</span> <span style="font-size:9px;background:#FFF8E6;color:#996A00;border:1px solid #FFE9A0;border-radius:4px;padding:1px 5px">anticipo</span></div><div style="font-size:11px;color:var(--grigio)">scade 15 lug</div></div>
+          <span style="font-size:11px;font-weight:600;color:var(--accent);border:1px solid #FFD0D8;background:var(--accent-light);border-radius:6px;padding:3px 8px">Apri ↓</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <h2>Cosa tiene sotto controllo</h2>
+    <div class="sub">Tutti gli adempimenti, con la regola di "cosa / quando / dove / causale" sempre a portata.</div>
+    <div class="feat">
+      <div class="f"><div class="ic">🧾</div><h3>Scontrini (HOST)</h3><p>Documento commerciale il giorno del check-in, con descrizione e importo pronti per l'Agenzia Entrate.</p></div>
+      <div class="f"><div class="ic">📄</div><h3>Autofatture TD17</h3><p>Reverse charge sulle commissioni Airbnb/Booking, entro il 15 del mese successivo. Numero, data e imponibile già pronti.</p></div>
+      <div class="f"><div class="ic">💶</div><h3>Fee PM</h3><p>Compenso al proprietario: Airbnb entro 12 gg dal check-in, Booking entro 12 gg dal pagamento (cumulabili).</p></div>
+      <div class="f"><div class="ic">🏛</div><h3>Alloggiati &amp; ROSS</h3><p>Schedine Questura entro 24h e flussi turistici entro il 10 del mese.</p></div>
+      <div class="f"><div class="ic">📊</div><h3>Conti &amp; soglia 85k</h3><p>Stima del netto, di quanto accantonare per imposte e INPS, e quanto manca alla soglia forfettaria.</p></div>
+      <div class="f"><div class="ic">🏠</div><h3>Case in gestione</h3><p>Per ogni immobile: proprietario, percentuali, extra, scadenze e penali di contratto.</p></div>
+    </div>
+    <div class="note">Sincronizzata in tempo reale tra telefono e PC, con promemoria nel calendario. I dati di questa demo sono di esempio.</div>
+  </div>
+</div>
+
+<div class="foot">
+  The Grape Escape — gestione adempimenti fiscali · Silvia Greco, host &amp; property manager · Asti &amp; Monferrato<br>
+  <strong>© 2026 Silvia Greco. Tutti i diritti riservati.</strong> Concept, design e contenuti di proprietà dell'autrice — riproduzione vietata.
+</div>
+
+</body>
+</html>

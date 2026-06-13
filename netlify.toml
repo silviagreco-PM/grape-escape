@@ -1,0 +1,9 @@
+[build]
+  publish = "deploy"
+  command = ""
+
+[functions]
+  directory = "netlify/functions"
+
+[functions."daily-push"]
+  schedule = "0 6 * * *"

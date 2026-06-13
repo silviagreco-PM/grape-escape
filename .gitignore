@@ -1,0 +1,15 @@
+# Dati fiscali personali — NON caricare su GitHub
+dati-fiscali/
+*.csv
+*.zip
+
+# Dipendenze npm
+node_modules/
+
+# Claude Code
+.claude/
+
+# File temporanei / OS
+.DS_Store
+Thumbs.db
+*.tmp

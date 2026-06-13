@@ -1,0 +1,16 @@
+{
+  "name": "The Grape Escape",
+  "short_name": "Grape Escape",
+  "description": "Gestione adempimenti fiscali host & property manager",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F7F7",
+  "theme_color": "#FF385C",
+  "lang": "it",
+  "icons": [
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}
