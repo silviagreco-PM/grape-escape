@@ -250,6 +250,10 @@
   .importo-overlay.open { display: block; }
   .importo-modal { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 20px 20px 0 0; padding: 22px 20px 40px; z-index: 295; transform: translateY(100%); transition: transform 0.25s ease; }
   .importo-modal.open { transform: translateY(0); }
+  .importo-inline-wrap { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .importo-inline-inp { border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 600; width: 110px; background: white; }
+  .importo-inline-inp:focus { outline: none; border-color: var(--nero); }
+  .importo-inline-btn { background: var(--nero); color: white; border: none; border-radius: 8px; padding: 7px 14px; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 600; cursor: pointer; }
 
   .mini-cal { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 12px 10px 10px; margin-bottom: 14px; }
   .mini-cal-header { text-align: center; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
@@ -1217,7 +1221,11 @@ function taskCardHTML(task, urgent, done, isBatch) {
       } else {
         // Lordo non ancora inserito
         extra += `<div class="calcolo-box" style="border-color:#B8973A;background:#FDFAF0">
-          <div style="font-size:12px;color:var(--grigio)">Scarica il rendiconto Booking${task.codice ? ` (nr. <strong>${task.codice}</strong>)` : ''}, trova il payout per questa casa e inserisci il lordo nel task per calcolare la fee${aliq ? ` (${aliq}%)` : ''}.</div>
+          <div style="font-size:12px;color:var(--grigio);margin-bottom:10px">Scarica il rendiconto Booking${task.codice ? ` (nr. <strong>${task.codice}</strong>)` : ''}, trova il payout per questa casa e inserisci il lordo${aliq ? ` (fee ${aliq}%)` : ''}</div>
+          <div class="importo-inline-wrap">
+            <input type="number" id="importo-card-${task.id}" class="importo-inline-inp" inputmode="decimal" step="0.01" placeholder="es. 850.00">
+            <button class="importo-inline-btn" onclick="salvaImportoCard('${task.id}')">✓ Salva</button>
+          </div>
         </div>`;
       }
     }
@@ -1293,6 +1301,13 @@ function taskCardHTML(task, urgent, done, isBatch) {
       if (task.tipo === 'manuale' || isWarn) {
         extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${task.note}</div>`;
       }
+    }
+    if (task.tipo === 'manuale') {
+      const preVal = task.importo ? task.importo.toFixed(2) : '';
+      extra += `<div class="importo-inline-wrap">
+        <input type="number" id="importo-card-${task.id}" class="importo-inline-inp" inputmode="decimal" step="0.01" placeholder="€ importo" value="${preVal}">
+        <button class="importo-inline-btn" onclick="salvaImportoCard('${task.id}')">✓ Salva</button>
+      </div>`;
     }
     if (isBatch)
       extra += `<button class="riporta-btn" onclick="riportaInLista('${task.id}')">↑ Riporta in lista urgente</button>`;
@@ -1684,6 +1699,20 @@ function saltaImporto() {
 function chiudiImportoModal() {
   document.getElementById('importo-overlay').classList.remove('open');
   document.getElementById('importo-modal').classList.remove('open');
+}
+
+function salvaImportoCard(id) {
+  const inp = document.getElementById('importo-card-' + id);
+  if (!inp) return;
+  const val = parseFloat(String(inp.value).replace(',', '.'));
+  if (isNaN(val) || val <= 0) { showToast('Inserisci un importo valido'); return; }
+  const tasks = loadTasks();
+  const idx = tasks.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  tasks[idx].importo = val;
+  saveTasks(tasks);
+  renderOggi();
+  showToast('✓ Importo salvato');
 }
 
 function riportaInLista(id) {
