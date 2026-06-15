@@ -242,6 +242,26 @@
   .empty-icon { font-size: 40px; margin-bottom: 12px; }
   .empty-text { font-size: 15px; }
 
+  .btn-torna-su { position: fixed; bottom: 76px; right: 16px; width: 40px; height: 40px; border-radius: 50%; background: var(--nero); color: white; border: none; font-size: 20px; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 2px 12px rgba(0,0,0,0.25); z-index: 90; line-height: 1; }
+  .btn-torna-su.visible { display: flex; }
+
+  .importo-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 290; display: none; }
+  .importo-overlay.open { display: block; }
+  .importo-modal { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 20px 20px 0 0; padding: 22px 20px 40px; z-index: 295; transform: translateY(100%); transition: transform 0.25s ease; }
+  .importo-modal.open { transform: translateY(0); }
+
+  .mini-cal { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 12px 10px 10px; margin-bottom: 14px; }
+  .mini-cal-header { text-align: center; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .mini-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+  .mini-cal-dh { font-size: 9px; font-weight: 700; color: var(--grigio); text-align: center; padding-bottom: 4px; }
+  .mini-cal-day { display: flex; flex-direction: column; align-items: center; padding: 3px 1px; border-radius: 6px; font-size: 11px; cursor: default; }
+  .mini-cal-day.oggi > span { background: var(--nero); color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .mini-cal-dots { display: flex; gap: 2px; margin-top: 1px; height: 5px; align-items: center; }
+  .cal-dot { width: 4px; height: 4px; border-radius: 50%; }
+  .cal-dot-verde { background: var(--verde); }
+  .cal-dot-rosso { background: var(--accent); }
+  .cal-dot-oro { background: var(--oro); }
+
   .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--nero); color: white; padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.2s; z-index: 400; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -341,6 +361,20 @@
 </div>
 
 <button class="fab" onclick="openModal()" title="Aggiungi task">+</button>
+<button class="btn-torna-su" id="btn-torna-su" onclick="scrollToTop()" title="Torna su">↑</button>
+
+<div class="importo-overlay" id="importo-overlay" onclick="chiudiImportoModal()"></div>
+<div class="importo-modal" id="importo-modal">
+  <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px"></div>
+  <div style="font-size:16px;font-weight:700;margin-bottom:4px">Inserisci il lordo ricevuto</div>
+  <div style="font-size:12px;color:var(--grigio);margin-bottom:14px" id="importo-modal-sub"></div>
+  <input type="number" inputmode="decimal" step="0.01" placeholder="es. 850.00" id="importo-modal-input"
+    style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:18px;font-family:'Inter',sans-serif;outline:none;margin-bottom:14px;color:var(--nero)">
+  <div style="display:flex;gap:8px">
+    <button onclick="saltaImporto()" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--grigio-light);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;color:var(--grigio)">Salta</button>
+    <button onclick="salvaImporto()" style="flex:2;padding:12px;border:none;border-radius:10px;background:var(--nero);color:white;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer">✓ Salva e completa</button>
+  </div>
+</div>
 
 <div class="nav-bottom">
   <div class="nav-item active" onclick="switchView('oggi',this)">
@@ -1482,12 +1516,55 @@ function renderArchivio() {
 
   if (!html) html = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nessun task con questo filtro.</div></div>`;
 
-  main.innerHTML = filtriHTML + strip + bannerOggi + html;
+  main.innerHTML = renderCalendario(tasks) + filtriHTML + strip + bannerOggi + html;
 }
 
 function setArchivioFiltro(key) {
   archivioFiltro = key;
   renderArchivio();
+}
+
+function renderCalendario(allTasks) {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const oggi = now.getDate();
+  const primoGiorno = new Date(y, m, 1).getDay(); // 0=dom
+  const giorniMese  = new Date(y, m + 1, 0).getDate();
+  const MESI_CAL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const GG = ['L','M','M','G','V','S','D'];
+
+  const fatti = {}, urgenti = {}, scadenza = {};
+  allTasks.forEach(t => {
+    if (t.completato && t.completatoIl) {
+      const [ty,tm,td] = t.completatoIl.split('-').map(Number);
+      if (ty===y && tm-1===m) fatti[td] = (fatti[td]||0)+1;
+    }
+    if (!t.completato && t.scadenza) {
+      const [ty,tm,td] = t.scadenza.split('-').map(Number);
+      if (ty===y && tm-1===m) {
+        const diff = new Date(t.scadenza) - new Date(now.toISOString().slice(0,10));
+        if (diff <= 0) urgenti[td] = (urgenti[td]||0)+1;
+        else scadenza[td] = (scadenza[td]||0)+1;
+      }
+    }
+  });
+
+  const startOffset = (primoGiorno + 6) % 7; // lun=0
+  let html = `<div class="mini-cal"><div class="mini-cal-header">${MESI_CAL[m]} ${y}</div><div class="mini-cal-grid">`;
+  GG.forEach(g => html += `<div class="mini-cal-dh">${g}</div>`);
+  for (let i = 0; i < startOffset; i++) html += `<div></div>`;
+  for (let d = 1; d <= giorniMese; d++) {
+    const isOggi = d === oggi;
+    const dots = (urgenti[d] ? `<span class="cal-dot cal-dot-rosso"></span>` : '')
+               + (scadenza[d] ? `<span class="cal-dot cal-dot-oro"></span>` : '')
+               + (fatti[d]    ? `<span class="cal-dot cal-dot-verde"></span>` : '');
+    html += `<div class="mini-cal-day${isOggi?' oggi':''}"><span>${d}</span><div class="mini-cal-dots">${dots}</div></div>`;
+  }
+  return html + `</div></div>`;
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function exportMeseCSV(mese) {
@@ -1534,7 +1611,29 @@ function fmtTimestamp(iso) {
 
 // ─── AZIONI ───────────────────────────────────────────────────────────────────
 
+let _pendingImportoId = null;
+
 function toggleTask(id) {
+  const tasks = loadTasks();
+  const idx = tasks.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const task = tasks[idx];
+  // Se fattura-pm senza importo e non ancora completata → chiedi lordo
+  if (!task.completato && task.tipo === 'fattura-pm' && task.importo == null) {
+    _pendingImportoId = id;
+    const sub = document.getElementById('importo-modal-sub');
+    if (sub) sub.textContent = [task.canale, task.casa, task.ospite].filter(Boolean).join(' · ');
+    const inp = document.getElementById('importo-modal-input');
+    if (inp) inp.value = '';
+    document.getElementById('importo-overlay').classList.add('open');
+    document.getElementById('importo-modal').classList.add('open');
+    setTimeout(() => inp && inp.focus(), 300);
+    return;
+  }
+  _completaTask(id, null);
+}
+
+function _completaTask(id, importo) {
   const tasks = loadTasks();
   const idx = tasks.findIndex(x => x.id === id);
   if (idx < 0) return;
@@ -1543,11 +1642,29 @@ function toggleTask(id) {
   task.completato = !task.completato;
   task.completatoIl   = task.completato ? today() : null;
   task.completatoAlle = task.completato ? `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` : null;
+  if (importo != null) task.importo = importo;
   tasks[idx] = task;
   saveTasks(tasks);
   renderOggi();
   rerenderSearch();
   showToast(task.completato ? '✓ Task completato' : 'Task rimesso in lista');
+}
+
+function salvaImporto() {
+  const raw = (document.getElementById('importo-modal-input').value || '').replace(',', '.');
+  const val = parseFloat(raw);
+  chiudiImportoModal();
+  if (_pendingImportoId) { _completaTask(_pendingImportoId, isNaN(val) ? null : val); _pendingImportoId = null; }
+}
+
+function saltaImporto() {
+  chiudiImportoModal();
+  if (_pendingImportoId) { _completaTask(_pendingImportoId, null); _pendingImportoId = null; }
+}
+
+function chiudiImportoModal() {
+  document.getElementById('importo-overlay').classList.remove('open');
+  document.getElementById('importo-modal').classList.remove('open');
 }
 
 function riportaInLista(id) {
@@ -2314,6 +2431,11 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 })();
 
 checkAuth().then(() => checkNotificheStatus());
+
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('btn-torna-su');
+  if (btn) btn.classList.toggle('visible', window.scrollY > 300);
+}, { passive: true });
 </script>
 </body>
 </html>
