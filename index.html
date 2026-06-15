@@ -116,6 +116,17 @@
 
   .archivio-month-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
   .archivio-month-totale { font-size: 12px; color: var(--grigio); font-weight: 500; }
+  .archivio-mesi-strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .archivio-mesi-strip::-webkit-scrollbar { display: none; }
+  .archivio-mese-chip { flex-shrink: 0; background: var(--grigio-light); border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 14px; cursor: pointer; text-align: center; min-width: 68px; }
+  .archivio-mese-chip:active { background: var(--border); }
+  .archivio-mese-chip-label { font-size: 11px; font-weight: 600; color: var(--nero); white-space: nowrap; }
+  .archivio-mese-chip-count { font-size: 10px; color: var(--grigio); margin-top: 1px; }
+  .archivio-mese-chip.chip-oggi { background: var(--verde-light); border-color: #B8E4B8; }
+  .archivio-mese-chip.chip-oggi .archivio-mese-chip-label { color: var(--verde); }
+  .archivio-oggi-banner { background: var(--verde-light); border: 1.5px solid #B8E4B8; border-radius: 12px; padding: 10px 13px; margin-bottom: 10px; }
+  .archivio-oggi-title { font-size: 12px; font-weight: 700; color: var(--verde); margin-bottom: 6px; }
+  .archivio-tipo-summary { font-size: 11px; color: var(--grigio); margin: 3px 0 8px; }
   .archivio-group-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grigio); }
   .archivio-group-total { font-size: 11px; font-weight: 600; color: var(--grigio); text-transform: none; letter-spacing: 0; }
   .archivio-card { display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px; background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 5px; border-left: 3px solid var(--border); }
@@ -422,7 +433,6 @@
         <option value="">Nessuno</option>
         <option value="ade">→ ADE (Scontrino / Autofattura)</option>
         <option value="passgo">→ Passgo (Fattura PM)</option>
-        <option value="alloggiati">→ Alloggiati Web</option>
         <option value="ross">→ ROSS1000</option>
       </select>
     </div>
@@ -443,10 +453,9 @@
 // ─── COSTANTI ─────────────────────────────────────────────────────────────────
 
 const LINK_MAP = {
-  ade:        { url: 'https://ivaservizi.agenziaentrate.gov.it/portale/', label: '→ Apri ADE' },
-  passgo:     { url: 'https://webdesk.passgo.cloud/webdesk/wd',           label: '→ Apri Passgo' },
-  alloggiati: { url: 'https://alloggiati.poliziadistato.it',             label: '→ Alloggiati Web' },
-  ross:       { url: 'https://www.ross1000.it',                          label: '→ ROSS1000 (solo se non usi Kross)' },
+  ade:    { url: 'https://ivaservizi.agenziaentrate.gov.it/portale/', label: '→ Apri ADE' },
+  passgo: { url: 'https://webdesk.passgo.cloud/webdesk/wd',           label: '→ Apri Passgo' },
+  ross:   { url: 'https://www.ross1000.it',                           label: '→ ROSS1000 (solo se non usi Kross)' },
 };
 
 const VAPID_PUBLIC = 'BDa9X0eLGwV5dMM2jcaa26TRTmm_oizrKrfq4b6KvWZmqjdK-WIOnuSBk1FuR_DZDnnkzVcDcPE6MWIkQSJ9cjY';
@@ -966,9 +975,9 @@ function renderOggi() {
 
   const pillsEl = document.getElementById('oggi-pills');
   pillsEl.innerHTML = '';
-  if (nUrgenti>0)        pillsEl.innerHTML += `<div class="pill pill-urgent"><div class="pill-dot"></div>${nUrgenti} urgent${nUrgenti===1?'e':'i'}</div>`;
-  if (settimana.length>0)pillsEl.innerHTML += `<div class="pill pill-todo"><div class="pill-dot"></div>${settimana.length} in scadenza</div>`;
-  if (fatti.length>0)    pillsEl.innerHTML += `<div class="pill pill-done"><div class="pill-dot"></div>${fatti.length} fatt${fatti.length===1?'a':'e'}</div>`;
+  if (nUrgenti>0)        pillsEl.innerHTML += `<div class="pill pill-urgent" style="cursor:pointer" onclick="scrollToSection('sec-urgenti')"><div class="pill-dot"></div>${nUrgenti} urgent${nUrgenti===1?'e':'i'}</div>`;
+  if (settimana.length>0)pillsEl.innerHTML += `<div class="pill pill-todo" style="cursor:pointer" onclick="scrollToSection('sec-scadenza')"><div class="pill-dot"></div>${settimana.length} in scadenza</div>`;
+  if (fatti.length>0)    pillsEl.innerHTML += `<div class="pill pill-done" style="cursor:pointer" onclick="scrollToSection('sec-fatte')"><div class="pill-dot"></div>${fatti.length} fatt${fatti.length===1?'a':'e'}</div>`;
 
   let html = '';
 
@@ -991,14 +1000,14 @@ function renderOggi() {
 
   const daFare = [...urgenti];
   if (daFare.length > 0) {
-    html += sectionLabelHTML('Da fare oggi', daFare.length);
+    html += sectionLabelHTML('Da fare oggi', daFare.length, 'sec-urgenti');
     daFare.forEach(task => { html += taskCardHTML(task, true); });
   }
 
   html += batchSuggestHTML(tasks);
 
   if (settimana.length > 0) {
-    html += sectionLabelHTML('In scadenza questa settimana', settimana.length);
+    html += sectionLabelHTML('In scadenza questa settimana', settimana.length, 'sec-scadenza');
     const perData = {};
     settimana.forEach(task => { if (!perData[task.scadenza]) perData[task.scadenza]=[]; perData[task.scadenza].push(task); });
     Object.keys(perData).sort().forEach(data => {
@@ -1022,7 +1031,7 @@ function renderOggi() {
   }
 
   if (fatti.length > 0) {
-    html += sectionLabelHTML('Completate oggi', fatti.length);
+    html += sectionLabelHTML('Completate oggi', fatti.length, 'sec-fatte');
     fatti.forEach(task => { html += taskCardHTML(task, false, true); });
   }
 
@@ -1049,8 +1058,13 @@ function renderOggi() {
   document.getElementById('main-oggi').innerHTML = html;
 }
 
-function sectionLabelHTML(label, count) {
-  return `<div class="section-label">${label}<span class="section-label-count">${count}</span></div>`;
+function sectionLabelHTML(label, count, id='') {
+  return `<div class="section-label"${id ? ` id="${id}"` : ''}>${label}<span class="section-label-count">${count}</span></div>`;
+}
+
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Estrae check-in/out dalla nota e restituisce HTML da mostrare sotto il titolo
@@ -1314,6 +1328,9 @@ function renderArchivio() {
   }
 
   const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const MESI_S = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const TIPO_EMOJI = { scontrino:'🧾', autofattura:'📄', 'fattura-pm':'💶', alloggiati:'🏛', ross:'📊', manuale:'✏️' };
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   const perMese = {};
   fatti.forEach(x => {
@@ -1322,15 +1339,13 @@ function renderArchivio() {
     perMese[mese].push(x);
   });
 
-  const renderItem = task => {
+  const renderItem = (task, hideDate) => {
     const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
     const val = task.cohost || task.importo;
-    const tipoMeta = [
-      cfg.label,
-      task.canale && task.canale !== '—' ? task.canale : '',
-    ].filter(Boolean).join(' · ');
+    const canale = task.canale && task.canale !== '—' ? task.canale : '';
+    const tipoMeta = [cfg.label, canale].filter(Boolean).join(' · ');
     const title = [task.casa, task.ospite].filter(Boolean).join(' · ');
-    const dateMeta = task.completatoIl ? formatShort(task.completatoIl) : '';
+    const dateMeta = (!hideDate && task.completatoIl) ? formatShort(task.completatoIl) : '';
     return `<div class="archivio-card ${cfg.cls}">
       <div class="archivio-card-body">
         <div class="archivio-card-tipo">${tipoMeta}</div>
@@ -1344,17 +1359,56 @@ function renderArchivio() {
     </div>`;
   };
 
-  const renderGruppo = (label, emoji, items) => {
+  const tipoBreakdown = items => {
+    const counts = {};
+    items.forEach(x => { counts[x.tipo] = (counts[x.tipo] || 0) + 1; });
+    return Object.entries(counts)
+      .map(([t, n]) => `${TIPO_EMOJI[t] || '✏️'} ${n}`)
+      .join('  ');
+  };
+
+  const renderGruppo = (label, emoji, items, hideDate) => {
     if (!items.length) return '';
     const tot = items.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
     const countLabel = `${items.length} task${tot > 0 ? ' · ' + fmtEuro(tot) + ' €' : ''}`;
     return `<div class="archivio-group-header"><span>${emoji} ${label}</span><span class="archivio-group-total">${countLabel}</span></div>` +
-      items.map(renderItem).join('');
+      items.map(t => renderItem(t, hideDate)).join('');
   };
 
+  const mesiKeys = Object.keys(perMese).sort().reverse();
+
+  // ── Strip navigazione mesi ──
+  let strip = `<div class="archivio-mesi-strip">`;
+  mesiKeys.forEach(mese => {
+    const [y, m] = mese.split('-').map(Number);
+    const label = mese === '0000-00' ? '?' : `${MESI_S[m-1]} ${y}`;
+    const isOggi = mese === todayISO.slice(0,7);
+    strip += `<div class="archivio-mese-chip${isOggi?' chip-oggi':''}" onclick="document.getElementById('archivio-mese-${mese}')?.scrollIntoView({behavior:'smooth',block:'start'})">
+      <div class="archivio-mese-chip-label">${label}</div>
+      <div class="archivio-mese-chip-count">${perMese[mese].length} task</div>
+    </div>`;
+  });
+  strip += `</div>`;
+
+  // ── Banner completati oggi ──
+  const oggiItems = fatti.filter(x => x.completatoIl === todayISO)
+    .sort((a,b) => (b.completatoAlle||'').localeCompare(a.completatoAlle||''));
+  let bannerOggi = '';
+  if (oggiItems.length > 0) {
+    bannerOggi = `<div class="archivio-oggi-banner">
+      <div class="archivio-oggi-title">✓ Completati oggi (${oggiItems.length})</div>
+      ${oggiItems.map(t => renderItem(t, true)).join('')}
+    </div>`;
+  }
+
+  // ── Mesi ──
   let html = '';
-  Object.keys(perMese).sort().reverse().forEach(mese => {
-    const lista = perMese[mese].sort((a,b) => (b.completatoIl||'').localeCompare(a.completatoIl||''));
+  mesiKeys.forEach(mese => {
+    const lista = perMese[mese].sort((a,b) => {
+      if (a.completatoIl === todayISO && b.completatoIl !== todayISO) return -1;
+      if (b.completatoIl === todayISO && a.completatoIl !== todayISO) return 1;
+      return (b.completatoIl||'').localeCompare(a.completatoIl||'');
+    });
     const totale = lista.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
     const [y, m] = mese.split('-').map(Number);
     const meseLabel = mese === '0000-00' ? 'Data sconosciuta' : `${MESI_L[m-1]} ${y}`;
@@ -1363,16 +1417,17 @@ function renderArchivio() {
     const pmItems    = lista.filter(x => CASE_PM.includes(x.casa));
     const altroItems = lista.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
 
-    html += `<div class="archivio-month-header">
+    html += `<div class="archivio-month-header" id="archivio-mese-${mese}">
       <span class="archivio-month-title">${meseLabel}</span>
-      <span class="archivio-month-totale">${lista.length} fatt${lista.length===1?'o':'i'}${totale > 0 ? ' · ' + fmtEuro(totale) + ' €' : ''}</span>
-    </div>`;
+      <span class="archivio-month-totale">${lista.length} task${totale > 0 ? ' · ' + fmtEuro(totale) + ' €' : ''}</span>
+    </div>
+    <div class="archivio-tipo-summary">${tipoBreakdown(lista)}</div>`;
     html += renderGruppo('HOST', '🏠', hostItems);
     html += renderGruppo('PM', '👔', pmItems);
     html += renderGruppo('Altro', '✏️', altroItems);
   });
 
-  main.innerHTML = html;
+  main.innerHTML = strip + bannerOggi + html;
 }
 
 function fmtEuro(n) {
