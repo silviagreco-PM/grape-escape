@@ -447,7 +447,7 @@ const VAPID_PUBLIC = 'BDa9X0eLGwV5dMM2jcaa26TRTmm_oizrKrfq4b6KvWZmqjdK-WIOnuSBk1
 const TIPO_CONFIG = {
   scontrino:    { label: '🧾 Scontrino',     cls: 'tipo-scontrino',   defaultLink: 'ade',       accorpabile: false, perché: 'giorno del check-in' },
   autofattura:  { label: '📄 Autofattura',   cls: 'tipo-autofattura', defaultLink: 'passgo',    accorpabile: true,  perché: 'entro il 15 del mese successivo alla prenotazione' },
-  'fattura-pm': { label: '💶 Fattura prop.',  cls: 'tipo-fattura-pm',  defaultLink: 'passgo',    accorpabile: true,  perché: 'entro 12 giorni dal check-in' },
+  'fattura-pm': { label: '💶 Fattura',         cls: 'tipo-fattura-pm',  defaultLink: 'passgo',    accorpabile: true,  perché: 'entro 12 giorni dalla data di pagamento' },
   alloggiati:   { label: '🏛 Alloggiati',    cls: 'tipo-alloggiati',  defaultLink: 'alloggiati',accorpabile: false, perché: 'entro 24h dall\'arrivo' },
   ross:         { label: '📊 ROSS / ISTAT',  cls: 'tipo-ross',        defaultLink: 'ross',      accorpabile: false, perché: 'entro il 10 del mese' },
   manuale:      { label: '✏️ Promemoria',    cls: 'tipo-manuale',     defaultLink: '',          accorpabile: true,  perché: 'scadenza flessibile' },
@@ -528,20 +528,27 @@ async function applyMigrations() {
   // ── Migration 2: nuovi task da prenotazioni email giugno 2026 ──
   const _now = new Date().toISOString();
   const _nuovi = [
+    // David Müller — La Ciucarina, check-in 20/06
     { id:'dm1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:784.00, cohost:null, codice:'HMXYWKSPZS', dataDoc:null, scadenza:'2026-06-20', link:'ade',    note:'Check-in 20/06, check-out 25/06 (5 notti, 2A). Totale ospite 784,00 €.',                                                                                                                                                                           completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
     { id:'dm2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-06-21', link:'',       note:'Check-in 20/06, check-out 25/06.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
     { id:'dm3', tipo:'autofattura', casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:121.52, cohost:null, codice:'HMXYWKSPZS', dataDoc:null, scadenza:'2026-07-15', link:'passgo', note:'Commissione 121,52 € (servizio host 15,5%, conf. 12/06). N. fattura e data dalla fattura IVA Airbnb di giugno.',                                                                                                                    completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
+    // Rodica Mitu — Ca' Balenga, check-in 04/07
     { id:'rm1', tipo:'scontrino',   casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:355.30, cohost:null, codice:'HMSPPHSXEQ', dataDoc:null, scadenza:'2026-07-04', link:'ade',    note:'Check-in 04/07, check-out 07/07 (3 notti, 3A + 1 animale). Totale ospite 355,30 €.',                                                                                                                                                               completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
     { id:'rm2', tipo:'alloggiati',  casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 07/07.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'rm3', tipo:'autofattura', casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:55.07,  cohost:null, codice:'HMSPPHSXEQ', dataDoc:null, scadenza:'2026-07-15', link:'passgo', note:'Commissione 55,07 € (servizio host 15,5%, conf. 01/06). N. fattura e data dalla fattura IVA Airbnb di giugno.',                                                                                   completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
+    { id:'rm3', tipo:'autofattura', casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:55.07,  cohost:null, codice:'HMSPPHSXEQ', dataDoc:null, scadenza:'2026-07-15', link:'passgo', note:'Commissione 55,07 € (servizio host 15,5%, conf. 01/06). N. fattura e data dalla fattura IVA Airbnb di giugno. Pagante: Airbnb Payments Luxembourg.',                                                                                   completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
+    // Benn McGrady — Villa Omedè (PM), check-in 05/07
     { id:'bm1', tipo:'fattura-pm',  casa:'Villa Omedè',           ospite:'Benn McGrady',               canale:'Airbnb', importo:null,   cohost:null, codice:'HMPC3QTMCY', dataDoc:null, scadenza:'2026-07-17', link:'',       note:'Check-in 05/07, check-out 09/07 (4 notti, 4A+4B). Airbnb paga il 06/07: CSV movimenti → riga "Compenso co-host" HMPC3QTMCY oppure calcola 30% × payout 2.123,76 €. Fattura entro 12 gg dal check-in = entro il 17/07.',                   completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
     { id:'bm2', tipo:'alloggiati',  casa:'Villa Omedè',           ospite:'Benn McGrady',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-06', link:'',       note:'Check-in 05/07, check-out 09/07.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
+    // Bianca Da Hora — App. del Palio (PM), check-in 05/07
     { id:'bd1', tipo:'fattura-pm',  casa:'Appartamento del Palio',ospite:'Bianca Da Hora',             canale:'Airbnb', importo:null,   cohost:null, codice:'HMSBM944WW', dataDoc:null, scadenza:'2026-07-17', link:'',       note:'Check-in 05/07, check-out 13/07 (8 notti, 2A). Airbnb paga il 06/07: CSV movimenti → riga "Compenso co-host" HMSBM944WW oppure calcola 20% × payout 661,53 € ≈ 132 €. Fattura entro 12 gg dal check-in = entro il 17/07.',               completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
     { id:'bd2', tipo:'alloggiati',  casa:'Appartamento del Palio',ospite:'Bianca Da Hora',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-06', link:'',       note:'Check-in 05/07, check-out 13/07.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
+    // Lucie Guettier — Tenuta del Mulino (PM), check-in 04/07
     { id:'lg1', tipo:'fattura-pm',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',             canale:'Airbnb', importo:null,   cohost:null, codice:'HMFBDHYT8Y', dataDoc:null, scadenza:'2026-07-16', link:'',       note:'Check-in 04/07, check-out 11/07 (7 notti, 4A+4B+2 neonati). Airbnb paga il 05/07: CSV movimenti → riga "Compenso co-host" HMFBDHYT8Y oppure calcola 20% × payout 1.123,94 € ≈ 225 €. Fattura entro 12 gg dal check-in = entro il 16/07.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'lg2', tipo:'alloggiati',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 11/07.',                                                                                                                                                               completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
+    { id:'lg2', tipo:'alloggiati',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 11/07.',                                                                                                                                                                               completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
+    // Francesca Loss — La Ciucarina (HOST), check-in 16/10 (autofattura af1 già in app)
     { id:'fl1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Francesca Loss',             canale:'Airbnb', importo:497.00, cohost:null, codice:'HMXNBRYTX2', dataDoc:null, scadenza:'2026-10-16', link:'ade',    note:'Check-in 16/10, check-out 18/10 (2 notti, 4A+2B+1 neonato). Totale ospite 497,00 €.',                                                                                                                                                           completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
     { id:'fl2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Francesca Loss',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-10-17', link:'',       note:'Check-in 16/10, check-out 18/10.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
+    // Yuen Seng So — La Ciucarina (HOST), check-in 26/10 (autofattura af2 già in app)
     { id:'ys1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:390.00, cohost:null, codice:'HM2ANAEW4H', dataDoc:null, scadenza:'2026-10-26', link:'ade',    note:'Check-in 26/10, check-out 28/10 (2 notti, 4A). Totale ospite 390,00 €.',                                                                                                                                                                    completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
     { id:'ys2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-10-27', link:'',       note:'Check-in 26/10, check-out 28/10.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
   ];
@@ -553,6 +560,22 @@ async function applyMigrations() {
       if (error) console.error('Migration insert error', error);
       else showToast(`✓ ${_daInserire.length} nuovi task aggiunti`);
     }
+  }
+
+  // ── Migration 3: fix scadenze Booking fattura-pm (scadenza = data pagamento + 12 = deadline fiscale) ──
+  const _bFix = [
+    { id:'cast1', scadenza:'2026-07-15' },
+    { id:'cast2', scadenza:'2026-09-15' },
+    { id:'f3',   scadenza:'2026-07-15' },
+  ];
+  const _bPatches = [];
+  _bFix.forEach(fix => {
+    const t = TASKS.find(x => x.id === fix.id && x.scadenza !== fix.scadenza);
+    if (t) { t.scadenza = fix.scadenza; _bPatches.push(taskToRow(t)); }
+  });
+  if (_bPatches.length && CURRENT_USER) {
+    const { error } = await sb.from('tasks').upsert(_bPatches);
+    if (error) console.error('Booking scadenza fix error', error);
   }
 }
 
@@ -756,17 +779,10 @@ function finestraBannerHTML(tasks) {
     ? (nSbest > 0 ? `nessun check-in in presenza (${nSbest} self, non serve esserci)` : 'nessun check-in previsto')
     : `solo ${nPbest} check-in in presenza`;
 
-  // Fattura prop: dal check-in (Airbnb: scadenza-12gg); Booking: dal 3 del mese successivo
+  // Fattura: disponibile dalla data di pagamento = scadenza - 12 gg (Airbnb = giorno check-in; Booking = data pagamento Booking)
   const isDisponibile = x => {
     if (x.tipo !== 'fattura-pm') return true;
-    const s = isoToDate(x.scadenza);
-    if (x.canale === 'Booking') {
-      const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
-      return new Date() >= disp;
-    }
-    // Airbnb/altri: disponibile dal giorno del check-in (= scadenza - 12 giorni)
-    const checkin = new Date(s.getFullYear(), s.getMonth(), s.getDate() - 12);
-    return new Date() >= checkin;
+    return new Date() >= isoToDate(addDays(x.scadenza, -12));
   };
 
   // Task inamovibili che cadono nel giorno migliore (scadenza esatta)
@@ -843,15 +859,9 @@ function finestraBannerHTML(tasks) {
     todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
     todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">⏳ In attesa pagamento Booking</div>`;
     inAttesaBooking.forEach(x => {
-      const s = isoToDate(x.scadenza);
-      const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
-      const dispLabel = `${disp.getDate()} ${MESI_S[disp.getMonth()]}`;
-      const scadD = isoToDate(x.scadenza);
-      const scadLabel = `${scadD.getDate()} ${MESI_S[scadD.getMonth()]}`;
-      const giorniWindow = Math.round((scadD - disp) / 86400000);
-      const giorniText = giorniWindow >= 0
-        ? `puoi iniziare dal <strong>${dispLabel}</strong> · hai <strong>${giorniWindow}</strong> giorni · scade <strong>${scadLabel}</strong>`
-        : `⚠ scade <strong>${scadLabel}</strong> — pagamento Booking atteso il <strong>${dispLabel}</strong>`;
+      const dispLabel = formatShort(addDays(x.scadenza, -12));
+      const scadLabel = formatShort(x.scadenza);
+      const giorniText = `puoi iniziare dal <strong>${dispLabel}</strong> · scade <strong>${scadLabel}</strong>`;
       todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:600;color:var(--grigio)">${TIPO_CONFIG['fattura-pm'].label} ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
@@ -867,10 +877,8 @@ function finestraBannerHTML(tasks) {
     todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
     todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">📅 Dopo il check-in</div>`;
     inAttesaCheckin.forEach(x => {
-      const s = isoToDate(x.scadenza);
-      const checkin = new Date(s.getFullYear(), s.getMonth(), s.getDate() - 12);
-      const checkinLabel = `${checkin.getDate()} ${MESI_S[checkin.getMonth()]}`;
-      const scadLabel = `${s.getDate()} ${MESI_S[s.getMonth()]}`;
+      const checkinLabel = formatShort(addDays(x.scadenza, -12));
+      const scadLabel = formatShort(x.scadenza);
       todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:600;color:var(--grigio)">${TIPO_CONFIG['fattura-pm'].label} ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
@@ -922,7 +930,7 @@ function batchSuggestHTML(tasks) {
 let currentRoleFilter = 'tutti';
 let currentTipoFilter = 'tutte';
 
-const TIPO_FILTRI_PM   = [['fattura-pm','💶 Fattura prop.'],['manuale','✏️ Promemoria']];
+const TIPO_FILTRI_PM   = [['fattura-pm','💶 Fattura'],['manuale','✏️ Promemoria']];
 const TIPO_FILTRI_HOST = [['scontrino','🧾 Scontrini'],['autofattura','📄 Autofatture']];
 
 function updateTipoBar() {
@@ -1075,18 +1083,23 @@ function sectionLabelHTML(label, count) {
   return `<div class="section-label">${label}<span class="section-label-count">${count}</span></div>`;
 }
 
+// Estrae check-in/out dalla nota e restituisce HTML da mostrare sotto il titolo
 function checkinOutHTML(note) {
   if (!note) return '';
   const fmt = (d, mo) => `${parseInt(d)} ${MESI_S[parseInt(mo)-1]}`;
+  // Pattern standard: "Check-in 20/06, check-out 25/06"
   let m = note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})[^c\d]*[Cc]heck-?out\s+(\d{1,2})\/(\d{2})/i);
   if (m) return `<div style="font-size:11px;font-weight:600;color:var(--grigio);margin:3px 0 4px">↘ ${fmt(m[1],m[2])} <span style="opacity:0.3;margin:0 3px">·</span> ↗ ${fmt(m[3],m[4])}</div>`;
+  // Pattern range: "Check-in 11/06–15/06"
   m = note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})[–-](\d{1,2})\/(\d{2})/i);
   if (m) return `<div style="font-size:11px;font-weight:600;color:var(--grigio);margin:3px 0 4px">↘ ${fmt(m[1],m[2])} <span style="opacity:0.3;margin:0 3px">·</span> ↗ ${fmt(m[3],m[4])}</div>`;
+  // Solo check-in
   m = note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})/i);
   if (m) return `<div style="font-size:11px;font-weight:600;color:var(--grigio);margin:3px 0 4px">↘ ${fmt(m[1],m[2])}</div>`;
   return '';
 }
 
+// Rimuove la riga "Check-in ... check-out ... (N notti, ...). " dalla nota (già mostrata nell'intestazione)
 function stripCheckinIntro(note) {
   if (!note) return note;
   return note.replace(/[Cc]heck-?in\s+[\d\/]+(?:[–\-,\s]+[Cc]heck-?out\s+[\d\/]+)?\s*(?:\([^)]*\))?\.\s*/gi, '').trim();
@@ -1232,13 +1245,10 @@ function taskCardHTML(task, urgent, done, isBatch) {
     const linkKey = task.link || cfg.defaultLink;
     const li = linkKey ? LINK_MAP[linkKey] : null;
     if (li) extra += `<br><a class="task-link" href="${li.url}" target="_blank">${li.label}</a>`;
-    const displayNote = stripCheckinIntro(task.note);
-    if (displayNote) {
-      const isWarn = displayNote.startsWith('⚠') || displayNote.startsWith('⏸');
+    if (task.note) {
+      const isWarn = task.note.startsWith('⚠') || task.note.startsWith('⏸');
       if (task.tipo === 'manuale' || isWarn) {
-        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${displayNote}</div>`;
-      } else {
-        extra += `<div style="font-size:11px;color:var(--grigio);margin-top:4px;line-height:1.4">${displayNote}</div>`;
+        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${task.note}</div>`;
       }
     }
     if (isBatch)
@@ -1335,13 +1345,37 @@ function renderArchivio() {
 
   const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
-  // Raggruppa per mese (YYYY-MM), più recente prima
   const perMese = {};
   fatti.forEach(x => {
     const mese = (x.completatoIl || '0000-00').slice(0, 7);
     if (!perMese[mese]) perMese[mese] = [];
     perMese[mese].push(x);
   });
+
+  const renderItem = task => {
+    const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
+    const val = task.cohost || task.importo;
+    const meta = [
+      task.completatoIl ? formatShort(task.completatoIl) : '',
+      task.canale && task.canale !== '—' ? task.canale : '',
+    ].filter(Boolean).join(' · ');
+    return `<div class="archivio-item">
+      <span class="task-tipo ${cfg.cls}" style="font-size:10px;padding:2px 7px;white-space:nowrap;flex-shrink:0">${cfg.label}</span>
+      <div class="archivio-item-body">
+        <div class="archivio-item-title">${task.ospite || task.casa}</div>
+        ${meta ? `<div class="archivio-item-meta">${meta}</div>` : ''}
+      </div>
+      ${val ? `<span class="archivio-item-importo">${fmtEuro(val)} €</span>` : ''}
+      <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
+    </div>`;
+  };
+
+  const renderGruppo = (label, emoji, items) => {
+    if (!items.length) return '';
+    const tot = items.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
+    return `<div class="archivio-casa">${emoji} ${label}<span class="archivio-casa-totale">${items.length} fatt${items.length===1?'o':'i'}${tot > 0 ? ' · ' + fmtEuro(tot) + ' €' : ''}</span></div>` +
+      items.map(renderItem).join('');
+  };
 
   let html = '';
   Object.keys(perMese).sort().reverse().forEach(mese => {
@@ -1350,29 +1384,17 @@ function renderArchivio() {
     const [y, m] = mese.split('-').map(Number);
     const meseLabel = mese === '0000-00' ? 'Data sconosciuta' : `${MESI_L[m-1]} ${y}`;
 
+    const hostItems  = lista.filter(x => CASE_HOST.includes(x.casa));
+    const pmItems    = lista.filter(x => CASE_PM.includes(x.casa));
+    const altroItems = lista.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
+
     html += `<div class="archivio-month-header">
       <span class="archivio-month-title">${meseLabel}</span>
       <span class="archivio-month-totale">${lista.length} fatt${lista.length===1?'o':'i'}${totale > 0 ? ' · ' + fmtEuro(totale) + ' €' : ''}</span>
     </div>`;
-
-    lista.forEach(task => {
-      const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
-      const val = task.cohost || task.importo;
-      const meta = [
-        task.completatoIl ? formatShort(task.completatoIl) : '',
-        task.casa && task.ospite ? task.casa : '',
-        task.canale && task.canale !== '—' ? task.canale : '',
-      ].filter(Boolean).join(' · ');
-      html += `<div class="archivio-item">
-        <span class="task-tipo ${cfg.cls}" style="font-size:10px;padding:2px 7px;white-space:nowrap;flex-shrink:0">${cfg.label}</span>
-        <div class="archivio-item-body">
-          <div class="archivio-item-title">${task.ospite || task.casa}</div>
-          ${meta ? `<div class="archivio-item-meta">${meta}</div>` : ''}
-        </div>
-        ${val ? `<span class="archivio-item-importo">${fmtEuro(val)} €</span>` : ''}
-        <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
-      </div>`;
-    });
+    html += renderGruppo('HOST', '🏠', hostItems);
+    html += renderGruppo('PM', '👔', pmItems);
+    html += renderGruppo('Altro', '✏️', altroItems);
   });
 
   main.innerHTML = html;
@@ -1546,6 +1568,7 @@ function doSearch(q) {
   if (clearBtn) clearBtn.style.display = trimmed ? 'flex' : 'none';
 
   if (!trimmed) {
+    // Torna alla vista precedente
     const sv = document.getElementById('view-search');
     if (sv && sv.classList.contains('active')) {
       sv.classList.remove('active');
@@ -1555,12 +1578,15 @@ function doSearch(q) {
     return;
   }
 
+  // Salva la vista attiva prima di passare a search
   const active = document.querySelector('.view.active:not(#view-search)');
   if (active) _searchPrevView = active.id.replace('view-', '');
 
+  // Attiva la vista search
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-search').classList.add('active');
 
+  // Filtra
   const lower = trimmed.toLowerCase();
   const all = loadTasks();
   const results = all.filter(t =>
@@ -1589,10 +1615,10 @@ function doSearch(q) {
     return;
   }
 
-  const pending = results.filter(t => !t.completato);
-  const done    = results.filter(t =>  t.completato);
+  const pending  = results.filter(t => !t.completato);
+  const done     = results.filter(t =>  t.completato);
   let html = `<div class="search-count">${results.length} risultat${results.length===1?'o':'i'} per «${trimmed}»</div>`;
-  if (pending.length) html += pending.map(t => taskCardHTML(t, false, false)).join('');
+  if (pending.length)  html += pending.map(t => taskCardHTML(t, false, false)).join('');
   if (done.length) {
     if (pending.length) html += `<div class="search-count" style="margin-top:12px">Completati (${done.length})</div>`;
     html += done.map(t => taskCardHTML(t, false, true)).join('');
@@ -1617,6 +1643,7 @@ function rerenderSearch() {
 // ─── NAVIGAZIONE ──────────────────────────────────────────────────────────────
 
 function switchView(name, navEl) {
+  // Pulisci la ricerca se attiva
   const inp = document.getElementById('search-input');
   if (inp && inp.value) {
     inp.value = '';
@@ -1637,6 +1664,7 @@ function switchView(name, navEl) {
 
 // Salta alla card del task dentro l'app (dalla finestra burocrazia) e la evidenzia
 function goToTask(id) {
+  // Se la ricerca è aperta, chiudila prima di navigare
   const inp = document.getElementById('search-input');
   if (inp && inp.value) { inp.value = ''; doSearch(''); }
   const oggiView = document.getElementById('view-oggi');
@@ -2017,30 +2045,35 @@ function SEED_TASKS() {
     { id:'r8',  tipo:'manuale',     casa:"Ca' Balenga",          ospite:'⏸ Autofattura in attesa — Barbara Finkenbrink', canale:'Airbnb', importo:null, cohost:null, codice:'', scadenza:'2026-06-30', link:'', note:'Attendere ok commercialista prima di emettere. Check-in 11/04/2026, prenotata dic 2025 (cedolare).', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
     { id:'r9',  tipo:'manuale',     casa:"Ca' Balenga",          ospite:'⏸ Autofattura in attesa — Chiara Baraldo',    canale:'Airbnb', importo:null, cohost:null, codice:'', scadenza:'2026-06-30', link:'', note:'Attendere ok commercialista. IVA già esposta da Airbnb — possibile che non serva TD17. Check-in 07/04/2026.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
 
-    // ── PRENOTAZIONI GIUGNO 2026 — da email ──
-    // David Müller — La Ciucarina, check-in 20/06
-    { id:'dm1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:784.00, cohost:null, codice:'HMXYWKSPZS', scadenza:'2026-06-20', link:'ade',    note:'Check-in 20/06, check-out 25/06 (5 notti, 2A). Totale ospite 784,00 €.',                                                                                                                                                                           completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'dm2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-06-21', link:'',       note:'Check-in 20/06, check-out 25/06.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'dm3', tipo:'autofattura', casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:121.52, cohost:null, codice:'HMXYWKSPZS', scadenza:'2026-07-15', link:'passgo', note:'Commissione 121,52 € (servizio host 15,5%, conf. 12/06). N. fattura e data dalla fattura IVA Airbnb di giugno.',                                                                                                                    completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    // Rodica Mitu — Ca' Balenga, check-in 04/07
-    { id:'rm1', tipo:'scontrino',   casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:355.30, cohost:null, codice:'HMSPPHSXEQ', scadenza:'2026-07-04', link:'ade',    note:'Check-in 04/07, check-out 07/07 (3 notti, 3A + 1 animale). Totale ospite 355,30 €.',                                                                                                                                                               completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'rm2', tipo:'alloggiati',  casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 07/07.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'rm3', tipo:'autofattura', casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:55.07,  cohost:null, codice:'HMSPPHSXEQ', scadenza:'2026-07-15', link:'passgo', note:'Commissione 55,07 € (servizio host 15,5%, conf. 01/06). N. fattura e data dalla fattura IVA Airbnb di giugno.',                                                                                                                  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    // Benn McGrady — Villa Omedè (PM), check-in 05/07
-    { id:'bm1', tipo:'fattura-pm',  casa:'Villa Omedè',           ospite:'Benn McGrady',               canale:'Airbnb', importo:null,   cohost:null, codice:'HMPC3QTMCY', scadenza:'2026-07-17', link:'',       note:'Check-in 05/07, check-out 09/07 (4 notti, 4A+4B). Airbnb paga il 06/07: CSV movimenti → riga "Compenso co-host" HMPC3QTMCY oppure calcola 30% × payout 2.123,76 €. Fattura entro 12 gg dal check-in = entro il 17/07.',                   completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'bm2', tipo:'alloggiati',  casa:'Villa Omedè',           ospite:'Benn McGrady',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-07-06', link:'',       note:'Check-in 05/07, check-out 09/07.',                                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    // Bianca Da Hora — App. del Palio (PM), check-in 05/07
-    { id:'bd1', tipo:'fattura-pm',  casa:'Appartamento del Palio',ospite:'Bianca Da Hora',             canale:'Airbnb', importo:null,   cohost:null, codice:'HMSBM944WW', scadenza:'2026-07-17', link:'',       note:'Check-in 05/07, check-out 13/07 (8 notti, 2A). Airbnb paga il 06/07: CSV movimenti → riga "Compenso co-host" HMSBM944WW oppure calcola 20% × payout 661,53 € ≈ 132 €. Fattura entro 12 gg dal check-in = entro il 17/07.',               completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'bd2', tipo:'alloggiati',  casa:'Appartamento del Palio',ospite:'Bianca Da Hora',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-07-06', link:'',       note:'Check-in 05/07, check-out 13/07.',                                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    // Lucie Guettier — Tenuta del Mulino (PM), check-in 04/07
-    { id:'lg1', tipo:'fattura-pm',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',             canale:'Airbnb', importo:null,   cohost:null, codice:'HMFBDHYT8Y', scadenza:'2026-07-16', link:'',       note:'Check-in 04/07, check-out 11/07 (7 notti, 4A+4B+2 neonati). Airbnb paga il 05/07: CSV movimenti → riga "Compenso co-host" HMFBDHYT8Y oppure calcola 20% × payout 1.123,94 € ≈ 225 €. Fattura entro 12 gg dal check-in = entro il 16/07.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'lg2', tipo:'alloggiati',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 11/07.',                                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    // Francesca Loss — La Ciucarina (HOST), check-in 16/10
-    { id:'fl1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Francesca Loss',             canale:'Airbnb', importo:497.00, cohost:null, codice:'HMXNBRYTX2', scadenza:'2026-10-16', link:'ade',    note:'Check-in 16/10, check-out 18/10 (2 notti, 4A+2B+1 neonato). Totale ospite 497,00 €.',                                                                                                                                                           completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'fl2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Francesca Loss',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-10-17', link:'',       note:'Check-in 16/10, check-out 18/10.',                                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    // Yuen Seng So — La Ciucarina (HOST), check-in 26/10
-    { id:'ys1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:390.00, cohost:null, codice:'HM2ANAEW4H', scadenza:'2026-10-26', link:'ade',    note:'Check-in 26/10, check-out 28/10 (2 notti, 4A). Totale ospite 390,00 €.',                                                                                                                                                                    completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-    { id:'ys2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-10-27', link:'',       note:'Check-in 26/10, check-out 28/10.',                                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    // ── DAVID MÜLLER — La Ciucarina, check-in 20/06 ──
+    { id:'dm1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:784.00, cohost:null, codice:'HMXYWKSPZS', scadenza:'2026-06-20', link:'ade',    note:'Check-in 20/06, check-out 25/06 (5 notti, 2A). Totale ospite 784,00 €.',                                                                                                                                             completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'dm2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-06-21', link:'',       note:'Check-in 20/06, check-out 25/06.',                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'dm3', tipo:'autofattura', casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:121.52, cohost:null, codice:'HMXYWKSPZS', scadenza:'2026-07-15', link:'passgo', note:'Commissione 121,52 € (servizio host 15,5%, conf. 12/06). N. fattura e data dalla fattura IVA Airbnb di giugno.',                                                                                                completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── RODICA MITU — Ca' Balenga, check-in 04/07 ──
+    { id:'rm1', tipo:'scontrino',   casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:355.30, cohost:null, codice:'HMSPPHSXEQ', scadenza:'2026-07-04', link:'ade',    note:'Check-in 04/07, check-out 07/07 (3 notti, 3A + 1 animale). Totale ospite 355,30 €.',                                                                                                                                  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'rm2', tipo:'alloggiati',  casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 07/07.',                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'rm3', tipo:'autofattura', casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:55.07,  cohost:null, codice:'HMSPPHSXEQ', scadenza:'2026-07-15', link:'passgo', note:'Commissione 55,07 € (servizio host 15,5%, conf. 01/06). N. fattura e data dalla fattura IVA Airbnb di giugno.',                                                                                                  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── BENN McGRADY — Villa Omedè (PM), check-in 05/07 ──
+    { id:'bm1', tipo:'fattura-pm',  casa:'Villa Omedè',           ospite:'Benn McGrady',               canale:'Airbnb', importo:null,   cohost:null, codice:'HMPC3QTMCY', scadenza:'2026-07-17', link:'',       note:'Check-in 05/07, check-out 09/07 (4 notti, 4A+4B). Airbnb paga il 06/07: CSV movimenti → riga "Compenso co-host" HMPC3QTMCY oppure calcola 30% × payout 2.123,76 €. Fattura entro 12 gg dal check-in = entro il 17/07.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'bm2', tipo:'alloggiati',  casa:'Villa Omedè',           ospite:'Benn McGrady',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-07-06', link:'',       note:'Check-in 05/07, check-out 09/07.',                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── BIANCA DA HORA — App. del Palio (PM), check-in 05/07 ──
+    { id:'bd1', tipo:'fattura-pm',  casa:'Appartamento del Palio',ospite:'Bianca Da Hora',             canale:'Airbnb', importo:null,   cohost:null, codice:'HMSBM944WW', scadenza:'2026-07-17', link:'',       note:'Check-in 05/07, check-out 13/07 (8 notti, 2A). Airbnb paga il 06/07: CSV movimenti → riga "Compenso co-host" HMSBM944WW oppure calcola 20% × payout 661,53 € ≈ 132 €. Fattura entro 12 gg dal check-in = entro il 17/07.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'bd2', tipo:'alloggiati',  casa:'Appartamento del Palio',ospite:'Bianca Da Hora',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-07-06', link:'',       note:'Check-in 05/07, check-out 13/07.',                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── LUCIE GUETTIER — casa da identificare, check-in 04/07 ──
+    { id:'lg1', tipo:'fattura-pm',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',                             canale:'Airbnb', importo:null,   cohost:null, codice:'HMFBDHYT8Y', scadenza:'2026-07-16', link:'',       note:'Check-in 04/07, check-out 11/07 (7 notti, 4A+4B+2 neonati). Airbnb paga il 05/07: CSV movimenti → riga "Compenso co-host" HMFBDHYT8Y oppure calcola 20% × payout 1.123,94 € ≈ 225 €. Fattura entro 12 gg dal check-in = entro il 16/07.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'lg2', tipo:'alloggiati',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',                             canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 11/07.',                                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── FRANCESCA LOSS — La Ciucarina (HOST), check-in 16/10 — autofattura af1 già in app ──
+    { id:'fl1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Francesca Loss',             canale:'Airbnb', importo:497.00, cohost:null, codice:'HMXNBRYTX2', scadenza:'2026-10-16', link:'ade',    note:'Check-in 16/10, check-out 18/10 (2 notti, 4A+2B+1 neonato). Totale ospite 497,00 €.',                                                                                                                              completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'fl2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Francesca Loss',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-10-17', link:'',       note:'Check-in 16/10, check-out 18/10.',                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+
+    // ── YUEN SENG SO — La Ciucarina (HOST), check-in 26/10 — autofattura af2 già in app ──
+    { id:'ys1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:390.00, cohost:null, codice:'HM2ANAEW4H', scadenza:'2026-10-26', link:'ade',    note:'Check-in 26/10, check-out 28/10 (2 notti, 4A). Totale ospite 390,00 €.',                                                                                                                                           completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'ys2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            scadenza:'2026-10-27', link:'',       note:'Check-in 26/10, check-out 28/10.',                                                                                                                                                                                 completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
   ];
 
   return reali;
@@ -2118,6 +2151,14 @@ async function attivaNotifiche() {
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW non registrato', e));
 }
+
+// Aggiorna il bottone notifiche subito da localStorage, senza aspettare l'auth
+(function() {
+  var nb = document.getElementById('btn-notifiche');
+  if (!nb) return;
+  if (!('PushManager' in window)) { nb.style.display = 'none'; return; }
+  if (localStorage.getItem('notifiche_attive') === '1') setNotificheAttive(nb);
+})();
 
 checkAuth().then(() => checkNotificheStatus());
 </script>

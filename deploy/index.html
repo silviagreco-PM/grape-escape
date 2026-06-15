@@ -447,7 +447,7 @@ const VAPID_PUBLIC = 'BDa9X0eLGwV5dMM2jcaa26TRTmm_oizrKrfq4b6KvWZmqjdK-WIOnuSBk1
 const TIPO_CONFIG = {
   scontrino:    { label: '🧾 Scontrino',     cls: 'tipo-scontrino',   defaultLink: 'ade',       accorpabile: false, perché: 'giorno del check-in' },
   autofattura:  { label: '📄 Autofattura',   cls: 'tipo-autofattura', defaultLink: 'passgo',    accorpabile: true,  perché: 'entro il 15 del mese successivo alla prenotazione' },
-  'fattura-pm': { label: '💶 Fattura prop.',  cls: 'tipo-fattura-pm',  defaultLink: 'passgo',    accorpabile: true,  perché: 'entro 12 giorni dal check-in' },
+  'fattura-pm': { label: '💶 Fattura',         cls: 'tipo-fattura-pm',  defaultLink: 'passgo',    accorpabile: true,  perché: 'entro 12 giorni dalla data di pagamento' },
   alloggiati:   { label: '🏛 Alloggiati',    cls: 'tipo-alloggiati',  defaultLink: 'alloggiati',accorpabile: false, perché: 'entro 24h dall\'arrivo' },
   ross:         { label: '📊 ROSS / ISTAT',  cls: 'tipo-ross',        defaultLink: 'ross',      accorpabile: false, perché: 'entro il 10 del mese' },
   manuale:      { label: '✏️ Promemoria',    cls: 'tipo-manuale',     defaultLink: '',          accorpabile: true,  perché: 'scadenza flessibile' },
@@ -560,6 +560,22 @@ async function applyMigrations() {
       if (error) console.error('Migration insert error', error);
       else showToast(`✓ ${_daInserire.length} nuovi task aggiunti`);
     }
+  }
+
+  // ── Migration 3: fix scadenze Booking fattura-pm (scadenza = data pagamento + 12 = deadline fiscale) ──
+  const _bFix = [
+    { id:'cast1', scadenza:'2026-07-15' },
+    { id:'cast2', scadenza:'2026-09-15' },
+    { id:'f3',   scadenza:'2026-07-15' },
+  ];
+  const _bPatches = [];
+  _bFix.forEach(fix => {
+    const t = TASKS.find(x => x.id === fix.id && x.scadenza !== fix.scadenza);
+    if (t) { t.scadenza = fix.scadenza; _bPatches.push(taskToRow(t)); }
+  });
+  if (_bPatches.length && CURRENT_USER) {
+    const { error } = await sb.from('tasks').upsert(_bPatches);
+    if (error) console.error('Booking scadenza fix error', error);
   }
 }
 
@@ -763,17 +779,10 @@ function finestraBannerHTML(tasks) {
     ? (nSbest > 0 ? `nessun check-in in presenza (${nSbest} self, non serve esserci)` : 'nessun check-in previsto')
     : `solo ${nPbest} check-in in presenza`;
 
-  // Fattura prop: dal check-in (Airbnb: scadenza-12gg); Booking: dal 3 del mese successivo
+  // Fattura: disponibile dalla data di pagamento = scadenza - 12 gg (Airbnb = giorno check-in; Booking = data pagamento Booking)
   const isDisponibile = x => {
     if (x.tipo !== 'fattura-pm') return true;
-    const s = isoToDate(x.scadenza);
-    if (x.canale === 'Booking') {
-      const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
-      return new Date() >= disp;
-    }
-    // Airbnb/altri: disponibile dal giorno del check-in (= scadenza - 12 giorni)
-    const checkin = new Date(s.getFullYear(), s.getMonth(), s.getDate() - 12);
-    return new Date() >= checkin;
+    return new Date() >= isoToDate(addDays(x.scadenza, -12));
   };
 
   // Task inamovibili che cadono nel giorno migliore (scadenza esatta)
@@ -850,15 +859,9 @@ function finestraBannerHTML(tasks) {
     todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
     todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">⏳ In attesa pagamento Booking</div>`;
     inAttesaBooking.forEach(x => {
-      const s = isoToDate(x.scadenza);
-      const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
-      const dispLabel = `${disp.getDate()} ${MESI_S[disp.getMonth()]}`;
-      const scadD = isoToDate(x.scadenza);
-      const scadLabel = `${scadD.getDate()} ${MESI_S[scadD.getMonth()]}`;
-      const giorniWindow = Math.round((scadD - disp) / 86400000);
-      const giorniText = giorniWindow >= 0
-        ? `puoi iniziare dal <strong>${dispLabel}</strong> · hai <strong>${giorniWindow}</strong> giorni · scade <strong>${scadLabel}</strong>`
-        : `⚠ scade <strong>${scadLabel}</strong> — pagamento Booking atteso il <strong>${dispLabel}</strong>`;
+      const dispLabel = formatShort(addDays(x.scadenza, -12));
+      const scadLabel = formatShort(x.scadenza);
+      const giorniText = `puoi iniziare dal <strong>${dispLabel}</strong> · scade <strong>${scadLabel}</strong>`;
       todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:600;color:var(--grigio)">${TIPO_CONFIG['fattura-pm'].label} ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
@@ -874,10 +877,8 @@ function finestraBannerHTML(tasks) {
     todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
     todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">📅 Dopo il check-in</div>`;
     inAttesaCheckin.forEach(x => {
-      const s = isoToDate(x.scadenza);
-      const checkin = new Date(s.getFullYear(), s.getMonth(), s.getDate() - 12);
-      const checkinLabel = `${checkin.getDate()} ${MESI_S[checkin.getMonth()]}`;
-      const scadLabel = `${s.getDate()} ${MESI_S[s.getMonth()]}`;
+      const checkinLabel = formatShort(addDays(x.scadenza, -12));
+      const scadLabel = formatShort(x.scadenza);
       todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:600;color:var(--grigio)">${TIPO_CONFIG['fattura-pm'].label} ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
@@ -929,7 +930,7 @@ function batchSuggestHTML(tasks) {
 let currentRoleFilter = 'tutti';
 let currentTipoFilter = 'tutte';
 
-const TIPO_FILTRI_PM   = [['fattura-pm','💶 Fattura prop.'],['manuale','✏️ Promemoria']];
+const TIPO_FILTRI_PM   = [['fattura-pm','💶 Fattura'],['manuale','✏️ Promemoria']];
 const TIPO_FILTRI_HOST = [['scontrino','🧾 Scontrini'],['autofattura','📄 Autofatture']];
 
 function updateTipoBar() {
@@ -1244,13 +1245,10 @@ function taskCardHTML(task, urgent, done, isBatch) {
     const linkKey = task.link || cfg.defaultLink;
     const li = linkKey ? LINK_MAP[linkKey] : null;
     if (li) extra += `<br><a class="task-link" href="${li.url}" target="_blank">${li.label}</a>`;
-    const displayNote = stripCheckinIntro(task.note);
-    if (displayNote) {
-      const isWarn = displayNote.startsWith('⚠') || displayNote.startsWith('⏸');
+    if (task.note) {
+      const isWarn = task.note.startsWith('⚠') || task.note.startsWith('⏸');
       if (task.tipo === 'manuale' || isWarn) {
-        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${displayNote}</div>`;
-      } else {
-        extra += `<div style="font-size:11px;color:var(--grigio);margin-top:4px;line-height:1.4">${displayNote}</div>`;
+        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${task.note}</div>`;
       }
     }
     if (isBatch)
@@ -1347,13 +1345,37 @@ function renderArchivio() {
 
   const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
-  // Raggruppa per mese (YYYY-MM), più recente prima
   const perMese = {};
   fatti.forEach(x => {
     const mese = (x.completatoIl || '0000-00').slice(0, 7);
     if (!perMese[mese]) perMese[mese] = [];
     perMese[mese].push(x);
   });
+
+  const renderItem = task => {
+    const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
+    const val = task.cohost || task.importo;
+    const meta = [
+      task.completatoIl ? formatShort(task.completatoIl) : '',
+      task.canale && task.canale !== '—' ? task.canale : '',
+    ].filter(Boolean).join(' · ');
+    return `<div class="archivio-item">
+      <span class="task-tipo ${cfg.cls}" style="font-size:10px;padding:2px 7px;white-space:nowrap;flex-shrink:0">${cfg.label}</span>
+      <div class="archivio-item-body">
+        <div class="archivio-item-title">${task.ospite || task.casa}</div>
+        ${meta ? `<div class="archivio-item-meta">${meta}</div>` : ''}
+      </div>
+      ${val ? `<span class="archivio-item-importo">${fmtEuro(val)} €</span>` : ''}
+      <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
+    </div>`;
+  };
+
+  const renderGruppo = (label, emoji, items) => {
+    if (!items.length) return '';
+    const tot = items.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
+    return `<div class="archivio-casa">${emoji} ${label}<span class="archivio-casa-totale">${items.length} fatt${items.length===1?'o':'i'}${tot > 0 ? ' · ' + fmtEuro(tot) + ' €' : ''}</span></div>` +
+      items.map(renderItem).join('');
+  };
 
   let html = '';
   Object.keys(perMese).sort().reverse().forEach(mese => {
@@ -1362,29 +1384,17 @@ function renderArchivio() {
     const [y, m] = mese.split('-').map(Number);
     const meseLabel = mese === '0000-00' ? 'Data sconosciuta' : `${MESI_L[m-1]} ${y}`;
 
+    const hostItems  = lista.filter(x => CASE_HOST.includes(x.casa));
+    const pmItems    = lista.filter(x => CASE_PM.includes(x.casa));
+    const altroItems = lista.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
+
     html += `<div class="archivio-month-header">
       <span class="archivio-month-title">${meseLabel}</span>
       <span class="archivio-month-totale">${lista.length} fatt${lista.length===1?'o':'i'}${totale > 0 ? ' · ' + fmtEuro(totale) + ' €' : ''}</span>
     </div>`;
-
-    lista.forEach(task => {
-      const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
-      const val = task.cohost || task.importo;
-      const meta = [
-        task.completatoIl ? formatShort(task.completatoIl) : '',
-        task.casa && task.ospite ? task.casa : '',
-        task.canale && task.canale !== '—' ? task.canale : '',
-      ].filter(Boolean).join(' · ');
-      html += `<div class="archivio-item">
-        <span class="task-tipo ${cfg.cls}" style="font-size:10px;padding:2px 7px;white-space:nowrap;flex-shrink:0">${cfg.label}</span>
-        <div class="archivio-item-body">
-          <div class="archivio-item-title">${task.ospite || task.casa}</div>
-          ${meta ? `<div class="archivio-item-meta">${meta}</div>` : ''}
-        </div>
-        ${val ? `<span class="archivio-item-importo">${fmtEuro(val)} €</span>` : ''}
-        <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
-      </div>`;
-    });
+    html += renderGruppo('HOST', '🏠', hostItems);
+    html += renderGruppo('PM', '👔', pmItems);
+    html += renderGruppo('Altro', '✏️', altroItems);
   });
 
   main.innerHTML = html;
@@ -2141,6 +2151,14 @@ async function attivaNotifiche() {
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW non registrato', e));
 }
+
+// Aggiorna il bottone notifiche subito da localStorage, senza aspettare l'auth
+(function() {
+  var nb = document.getElementById('btn-notifiche');
+  if (!nb) return;
+  if (!('PushManager' in window)) { nb.style.display = 'none'; return; }
+  if (localStorage.getItem('notifiche_attive') === '1') setNotificheAttive(nb);
+})();
 
 checkAuth().then(() => checkNotificheStatus());
 </script>

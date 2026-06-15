@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 const TIPO_LABEL = {
   scontrino:    '🧾 Scontrino',
   autofattura:  '📄 Autofattura',
-  'fattura-pm': '💶 Fattura prop.',
+  'fattura-pm': '💶 Fattura',
   alloggiati:   '🏛 Alloggiati',
   ross:         '📊 ROSS/ISTAT',
   manuale:      '✏️ Promemoria',
