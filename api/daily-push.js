@@ -1,5 +1,5 @@
-// The Grape Escape — notifiche push mattutine
-// Netlify scheduled function: ogni giorno alle 8:00 ora italiana
+// api/daily-push.js — notifiche push mattutine (Vercel Cron)
+// Eseguita ogni giorno alle 06:00 UTC (= 8:00 ora italiana d'estate) via vercel.json.
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
@@ -12,7 +12,14 @@ const TIPO_LABEL = {
   manuale:      '✏️ Promemoria',
 };
 
-export const handler = async () => {
+export default async function handler(req, res) {
+  // Vercel Cron invia "Authorization: Bearer <CRON_SECRET>" se la variabile è impostata.
+  // Se l'hai impostata, blocchiamo le chiamate non autorizzate; altrimenti lasciamo passare.
+  if (process.env.CRON_SECRET) {
+    const auth = (req.headers.authorization || '').replace('Bearer ', '');
+    if (auth !== process.env.CRON_SECRET) return res.status(401).send('Unauthorized');
+  }
+
   const SUPA_URL      = process.env.SUPABASE_URL;
   const SUPA_SRV_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
@@ -20,7 +27,7 @@ export const handler = async () => {
 
   if (!SUPA_URL || !SUPA_SRV_KEY || !VAPID_PUBLIC || !VAPID_PRIVATE) {
     console.error('Missing env vars');
-    return;
+    return res.status(500).send('Missing env vars');
   }
 
   webpush.setVapidDetails('mailto:silvia.greco@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
@@ -40,7 +47,7 @@ export const handler = async () => {
     .in('scadenza', [todayISO, tomorrowISO])
     .order('scadenza');
 
-  if (!tasks?.length) { console.log('No tasks today/tomorrow'); return; }
+  if (!tasks?.length) { console.log('No tasks today/tomorrow'); return res.status(200).json({ sent: 0 }); }
 
   const oggi   = tasks.filter(t => t.scadenza === todayISO);
   const domani = tasks.filter(t => t.scadenza === tomorrowISO);
@@ -60,14 +67,14 @@ export const handler = async () => {
 
   const payload = JSON.stringify({
     title, body,
-    url: 'https://thegrapeescape.netlify.app',
+    url: '/',
     icon: '/icon.svg',
     badge: '/icon.svg',
   });
 
   // Tutte le subscription attive
   const { data: subs } = await sb.from('push_subscriptions').select('id, subscription');
-  if (!subs?.length) { console.log('No subscriptions'); return; }
+  if (!subs?.length) { console.log('No subscriptions'); return res.status(200).json({ sent: 0 }); }
 
   let sent = 0, removed = 0;
   await Promise.allSettled(subs.map(async row => {
@@ -84,4 +91,5 @@ export const handler = async () => {
   }));
 
   console.log(`Push: ${sent} sent, ${removed} removed`);
-};
+  return res.status(200).json({ sent, removed });
+}
