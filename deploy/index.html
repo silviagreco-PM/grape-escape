@@ -112,6 +112,7 @@
   .scaduti-toggle-label { font-size: 13px; font-weight: 700; color: var(--rosso-alert); }
   .scaduti-toggle-arrow { font-size: 11px; color: var(--rosso-alert); font-weight: 600; }
   .scaduti-list { padding: 0 10px 10px; }
+  .notifiche-attive { color: var(--verde) !important; border-color: #B8E4B8 !important; }
 
   .archivio-month-header { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 0 8px; border-bottom: 2px solid var(--nero); margin-bottom: 6px; }
   .archivio-month-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
@@ -772,13 +773,21 @@ function finestraBannerHTML(tasks) {
 
   const taskRow = (x, scadLabel, isAnticipo) => {
     const cfg = TIPO_CONFIG[x.tipo] || TIPO_CONFIG.manuale;
+    const diff = daysDiff(x.scadenza);
+    const giorniTag = diff > 1
+      ? `<span style="font-size:10px;font-weight:700;color:#1A8A3A"> · hai ${diff} giorni</span>`
+      : diff === 1
+      ? `<span style="font-size:10px;font-weight:700;color:var(--oro)"> · scade domani</span>`
+      : diff === 0
+      ? `<span style="font-size:10px;font-weight:700;color:var(--rosso-alert)"> · scade oggi</span>`
+      : '';
     const anticipoBadge = isAnticipo
-      ? `<span style="font-size:9px;background:#FFF8E6;color:#996A00;border:1px solid #FFE9A0;border-radius:4px;padding:1px 5px;margin-left:6px">anticipo</span>`
+      ? `<span style="font-size:9px;background:#FFF8E6;color:#996A00;border:1px solid #FFE9A0;border-radius:4px;padding:1px 5px;margin-left:4px">anticipo</span>`
       : '';
     return `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;color:var(--nero)">${cfg.label} <span style="color:var(--grigio);font-weight:400">· ${x.casa}</span></div>
-        <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'} · scade ${scadLabel}${anticipoBadge}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--nero)">${cfg.label} ${canaleBadge(x.canale)} <span style="color:var(--grigio);font-weight:400">· ${x.casa}</span></div>
+        <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'} · scade ${scadLabel}${giorniTag}${anticipoBadge}</div>
       </div>
       <span style="font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;border:1px solid #FFD0D8;background:var(--accent-light);border-radius:6px;padding:3px 8px">Apri ↓</span>
     </div>`;
@@ -813,11 +822,16 @@ function finestraBannerHTML(tasks) {
       const s = isoToDate(x.scadenza);
       const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
       const dispLabel = `${disp.getDate()} ${MESI_S[disp.getMonth()]}`;
-      todoHTML += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light)">
+      const scadD = isoToDate(x.scadenza);
+      const scadLabel = `${scadD.getDate()} ${MESI_S[scadD.getMonth()]}`;
+      const giorniWindow = Math.round((scadD - disp) / 86400000);
+      todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600;color:var(--grigio)">💶 Fee PM <span style="font-weight:400">· ${x.casa}</span></div>
-          <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'} · disponibile dal ${dispLabel}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--grigio)">💶 Fee PM ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
+          <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'}</div>
+          <div style="font-size:10px;color:var(--grigio);margin-top:3px">puoi iniziare dal <strong>${dispLabel}</strong> · hai <strong>${giorniWindow}</strong> giorni · scade <strong>${scadLabel}</strong></div>
         </div>
+        <span style="font-size:11px;font-weight:600;color:var(--grigio);white-space:nowrap;border:1px solid var(--border);border-radius:6px;padding:3px 8px">Apri ↓</span>
       </div>`;
     });
     todoHTML += `</div>`;
@@ -1015,6 +1029,19 @@ function sectionLabelHTML(label, count) {
   return `<div class="section-label">${label}<span class="section-label-count">${count}</span></div>`;
 }
 
+function canaleBadge(canale) {
+  if (!canale || canale === '—') return '';
+  const brands = {
+    'Airbnb':  ['#FF5A5F','#fff','Airbnb'],
+    'Booking': ['#003580','#fff','Booking'],
+    'VRBO':    ['#1D5EA8','#fff','VRBO'],
+    'B&B':     ['#0D6E3B','#fff','B&B'],
+    'Dirette': ['#27AE60','#fff','Diretta'],
+  };
+  const [bg, fg, label] = brands[canale] || ['#888','#fff', canale];
+  return `<span style="display:inline-flex;align-items:center;background:${bg};color:${fg};font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:0.02em;white-space:nowrap;vertical-align:middle">${label}</span>`;
+}
+
 function taskCardHTML(task, urgent, done, isBatch) {
   const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
   const checkCls  = done ? 'done' : (urgent ? 'urgent' : '');
@@ -1026,7 +1053,7 @@ function taskCardHTML(task, urgent, done, isBatch) {
 
   // meta: canale + codice
   let metaParts = [];
-  if (task.canale && task.canale !== '—') metaParts.push(task.canale);
+  if (task.canale && task.canale !== '—') metaParts.push(canaleBadge(task.canale));
   if (task.codice) metaParts.push(`cod. ${task.codice}`);
   const meta = metaParts.join(' <span class="task-meta-sep">·</span> ');
 
@@ -1881,17 +1908,28 @@ function urlBase64ToUint8Array(b64) {
   return Uint8Array.from(raw, c => c.charCodeAt(0));
 }
 
+function setNotificheAttive(btn) {
+  if (!btn) return;
+  btn.textContent = '🔔 Notifiche attive';
+  btn.classList.add('notifiche-attive');
+}
+
 async function checkNotificheStatus() {
   const btn = document.getElementById('btn-notifiche');
   if (!btn) return;
   if (!('PushManager' in window)) { btn.style.display = 'none'; return; }
+  // Mostra subito lo stato salvato (evita flash "Attiva notifiche" ad ogni ricarica)
+  if (localStorage.getItem('notifiche_attive') === '1') setNotificheAttive(btn);
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
     if (sub) {
-      btn.textContent = '🔔 Notifiche attive';
-      btn.style.color = 'var(--verde)';
-      btn.style.borderColor = '#B8E4B8';
+      localStorage.setItem('notifiche_attive', '1');
+      setNotificheAttive(btn);
+    } else {
+      localStorage.removeItem('notifiche_attive');
+      btn.textContent = '🔔 Attiva notifiche';
+      btn.classList.remove('notifiche-attive');
     }
   } catch {}
 }
@@ -1920,8 +1958,8 @@ async function attivaNotifiche() {
         { onConflict: 'user_id,endpoint' }
       );
     }
-    const btn = document.getElementById('btn-notifiche');
-    if (btn) { btn.textContent = '🔔 Notifiche attive'; btn.style.color = 'var(--verde)'; btn.style.borderColor = '#B8E4B8'; }
+    localStorage.setItem('notifiche_attive', '1');
+    setNotificheAttive(document.getElementById('btn-notifiche'));
     showToast('🔔 Notifiche attivate — riceverai un alert ogni mattina alle 8');
   } catch (e) {
     console.error(e);
