@@ -1646,6 +1646,7 @@ function fmtTimestamp(iso) {
 // ─── AZIONI ───────────────────────────────────────────────────────────────────
 
 let _pendingImportoId = null;
+let _contiMeseFilter = null; // null = tutto 2026, 1-12 = mese specifico
 
 function toggleTask(id) {
   const tasks = loadTasks();
@@ -2100,6 +2101,9 @@ function renderConti() {
     ['IVA 22% versata (costo reale)', fmtEuro(ivaAutof)+' €'],
   ], autof.map(x => ({ casa: x.casa, ospite: x.ospite, val: x.importo ? x.importo*0.22 : null })));
 
+  html += `<div class="section-label" style="margin-top:8px">Per casa</div>`;
+  html += `<div id="casa-breakdown">${renderCasaBreakdownHTML(tasks)}</div>`;
+
   html += `<div style="font-size:11px;color:var(--grigio);text-align:center;padding:16px 8px;line-height:1.5">Stima per accantonare, non sostituisce il commercialista. Solo 2026 (forfettario). Il 2025 con cedolare su Ca' Balenga si recupera a parte.</div>`;
 
   document.getElementById('main-conti').innerHTML = html;
@@ -2126,6 +2130,110 @@ function contoSezioneHTML(titolo, color, totale, righe, dettaglio) {
   }
   h += `</div>`;
   return h;
+}
+
+function setContiMeseFilter(mese) {
+  _contiMeseFilter = mese;
+  const el = document.getElementById('casa-breakdown');
+  if (el) el.innerHTML = renderCasaBreakdownHTML(loadTasks());
+}
+
+function renderCasaBreakdownHTML(tasks) {
+  const MESI_L = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const btnBase = 'border:1.5px solid var(--border);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;background:white;color:var(--grigio);';
+  const btnOn  = 'background:var(--nero);color:white;border-color:var(--nero);';
+
+  let html = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">';
+  html += `<button style="${btnBase}${_contiMeseFilter===null?btnOn:''}" onclick="setContiMeseFilter(null)">Tutto 2026</button>`;
+  MESI_L.forEach((m, i) => {
+    html += `<button style="${btnBase}${_contiMeseFilter===i+1?btnOn:''}" onclick="setContiMeseFilter(${i+1})">${m}</button>`;
+  });
+  html += '</div>';
+
+  function filtraMese(list) {
+    if (_contiMeseFilter === null) return list.filter(x => x.scadenza && x.scadenza.startsWith('2026'));
+    const mm = String(_contiMeseFilter).padStart(2, '0');
+    return list.filter(x => x.scadenza && x.scadenza.startsWith(`2026-${mm}`));
+  }
+
+  const scontrini = filtraMese(tasks.filter(x => x.tipo === 'scontrino' && x.importo));
+  const pmTasks   = filtraMese(tasks.filter(x => x.tipo === 'fattura-pm'));
+  const autof     = filtraMese(tasks.filter(x => x.tipo === 'autofattura' && x.importo));
+
+  const casaData = {};
+  [...CASE_HOST, ...CASE_PM].forEach(c => { casaData[c] = { inc: 0, costi: 0, isHost: CASE_HOST.includes(c) }; });
+
+  scontrini.forEach(x => {
+    if (!casaData[x.casa]) casaData[x.casa] = { inc: 0, costi: 0, isHost: true };
+    casaData[x.casa].inc += x.importo;
+  });
+  pmTasks.forEach(x => {
+    const c = pmCompenso(x) || 0;
+    if (!casaData[x.casa]) casaData[x.casa] = { inc: 0, costi: 0, isHost: false };
+    casaData[x.casa].inc += c;
+  });
+  autof.forEach(x => {
+    const iva = x.importo * 0.22;
+    if (!casaData[x.casa]) casaData[x.casa] = { inc: 0, costi: 0, isHost: true };
+    casaData[x.casa].costi += iva;
+  });
+
+  const sorted = Object.entries(casaData)
+    .filter(([, d]) => d.inc > 0 || d.costi > 0)
+    .sort(([, a], [, b]) => (b.inc - b.costi) - (a.inc - a.costi));
+
+  if (!sorted.length) {
+    return html + '<div style="text-align:center;color:var(--grigio);font-size:13px;padding:20px 0">Nessun dato per il periodo selezionato</div>';
+  }
+
+  let totInc = 0, totCosti = 0;
+  sorted.forEach(([casa, d]) => {
+    totInc += d.inc; totCosti += d.costi;
+    const netto = d.inc - d.costi;
+    const bc = d.isHost ? 'var(--accent)' : 'var(--verde)';
+    const bbg = d.isHost ? '#FFE9EC' : 'var(--verde-light)';
+    const blbl = d.isHost ? 'HOST' : 'PM';
+    html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:0;border-top:3px solid ${bc};margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:700;flex:1">${casa}</span>
+        <span style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border-radius:4px;padding:2px 7px;background:${bbg};color:${bc}">${blbl}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--grigio-light)">
+        <span style="font-size:12px;color:var(--grigio)">${d.isHost ? 'Incassi scontrini' : 'Compensi PM'}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--verde)">+${fmtEuro(d.inc)} €</span>
+      </div>`;
+    if (d.isHost) {
+      html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--grigio-light)">
+        <span style="font-size:12px;color:var(--grigio)">Commissioni IVA (costo)</span>
+        <span style="font-size:13px;font-weight:600;color:var(--accent)">${d.costi>0?'−'+fmtEuro(d.costi)+' €':'—'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0">
+        <span style="font-size:12px;font-weight:700">Netto</span>
+        <span style="font-size:14px;font-weight:700">${fmtEuro(netto)} €</span>
+      </div>`;
+    }
+    html += `</div>`;
+  });
+
+  // totale generale
+  const totNetto = totInc - totCosti;
+  html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:0;border-top:3px solid var(--nero);background:var(--grigio-light)">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--grigio);margin-bottom:8px">Totale ${_contiMeseFilter ? MESI_L[_contiMeseFilter-1] : '2026'}</div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--grigio)">Incassi totali</span>
+      <span style="font-size:13px;font-weight:600;color:var(--verde)">+${fmtEuro(totInc)} €</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--grigio)">Commissioni IVA</span>
+      <span style="font-size:13px;font-weight:600;color:var(--accent)">${totCosti>0?'−'+fmtEuro(totCosti)+' €':'—'}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0">
+      <span style="font-size:13px;font-weight:700">Netto complessivo</span>
+      <span style="font-size:15px;font-weight:700">${fmtEuro(totNetto)} €</span>
+    </div>
+  </div>`;
+
+  return html;
 }
 
 // ─── REGOLE (la bibbia fiscale) ────────────────────────────────────────────────
