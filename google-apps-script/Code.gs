@@ -1,419 +1,468 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// The Grape Escape — Gmail Processor v1.0
-// Monitora Gmail per email Airbnb / Booking / Kross
-// Crea task automaticamente in Supabase e invia notifiche push
+// The Grape Escape — Gmail Processor
+// Legge le email di Airbnb, Booking e Kross e crea i task nell'app
+// Completamente gratuito — gira dentro Google
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ── CONFIGURAZIONE (Progetto → Proprietà script) ───────────────────────────────
-// SUPABASE_URL          → https://vjurwiqeiummanltsdtt.supabase.co
-// SUPABASE_SERVICE_KEY  → chiave service_role (Settings > API)
-// SUPABASE_USER_ID      → UUID di Silvia (Authentication > Users)
-// CLAUDE_API_KEY        → chiave Anthropic (console.anthropic.com)
-// PUSH_ENDPOINT         → https://thegrapeescape.netlify.app/.netlify/functions/send-push
-// PUSH_SECRET           → stringa casuale (stessa in Netlify env)
+// ── IMPOSTAZIONI (vedi istruzioni SETUP) ──────────────────────────────────────
+var CFG = PropertiesService.getScriptProperties().getProperties();
+// CFG.SUPABASE_URL       → indirizzo del database
+// CFG.SUPABASE_KEY       → chiave segreta del database (service_role)
+// CFG.SUPABASE_USER_ID   → il tuo codice utente nel database
+// CFG.PUSH_URL           → indirizzo per le notifiche push
+// CFG.PUSH_SECRET        → parola segreta per le notifiche
 
-const P = PropertiesService.getScriptProperties().getProperties();
+var LABEL_OK  = 'grape-escape/elaborata';
+var LABEL_ERR = 'grape-escape/errore';
 
-const LABEL_OK  = 'grape-escape/ok';
-const LABEL_ERR = 'grape-escape/errore';
-
-// Mapping nome annuncio (lowercase, match parziale) → nome casa nell'app
-const LISTING_MAP = [
-  ['ciucarina',            "La Ciucarina"],
-  ['boutique house',       "La Ciucarina"],
+// Nome annuncio su Airbnb/Booking → nome casa nell'app
+var CASE_MAP = [
+  ['ciucarina',            'La Ciucarina'],
+  ['boutique house',       'La Ciucarina'],
   ["ca' balenga",          "Ca' Balenga"],
   ['balenga',              "Ca' Balenga"],
-  ['tana del tasso',       "La Tana del Tasso"],
-  ['authentic monferrato', "La Tana del Tasso"],
-  ['palio',                "Appartamento del Palio"],
-  ['casa amalia',          "Casa Amalia"],
-  ['amalia monferrato',    "Casa Amalia"],
-  ['omede',                "Villa Omedè"],     // senza accento
-  ['omedè',                "Villa Omedè"],
-  ['dimora storica',       "Villa Omedè"],
-  ['con piscina',          "Villa Omedè"],
-  ['tenuta del mulino',    "Tenuta del Mulino"],
-  ['villa indipendente',   "Tenuta del Mulino"],
-  ['mulino',               "Tenuta del Mulino"],
-  ['castellero',           "Castellero (Nocciole)"],
+  ['tana del tasso',       'La Tana del Tasso'],
+  ['authentic monferrato', 'La Tana del Tasso'],
+  ['palio',                'Appartamento del Palio'],
+  ['casa amalia',          'Casa Amalia'],
+  ['amalia monferrato',    'Casa Amalia'],
+  ['omede',                'Villa Omedè'],
+  ['omedè',                'Villa Omedè'],
+  ['dimora storica',       'Villa Omedè'],
+  ['con piscina',          'Villa Omedè'],
+  ['tenuta del mulino',    'Tenuta del Mulino'],
+  ['villa indipendente',   'Tenuta del Mulino'],
+  ['mulino',               'Tenuta del Mulino'],
+  ['castellero',           'Castellero (Nocciole)'],
 ];
 
-const CASE_HOST = ["Ca' Balenga", "La Ciucarina"];
+var CASE_HOST = ["Ca' Balenga", "La Ciucarina"];
 
-// ═══ ENTRY POINTS ═════════════════════════════════════════════════════════════
+var MESI_IT = [
+  'gennaio','febbraio','marzo','aprile','maggio','giugno',
+  'luglio','agosto','settembre','ottobre','novembre','dicembre'
+];
 
-/** Esegui UNA VOLTA: imposta il trigger automatico ogni 5 minuti */
-function setupTrigger() {
-  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('processNewEmails').timeBased().everyMinutes(5).create();
-  Logger.log('✅ Trigger impostato: processNewEmails ogni 5 minuti');
+// ═══ FUNZIONI PRINCIPALI ══════════════════════════════════════════════════════
+
+/**
+ * Esegui questa funzione UNA SOLA VOLTA per impostare il controllo automatico.
+ * Dopo, il programma controllerà le email ogni 5 minuti da solo.
+ */
+function impostaTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('controllaEmailNuove').timeBased().everyMinutes(5).create();
+  Logger.log('✅ Fatto! Il programma controllerà le email ogni 5 minuti.');
 }
 
-/** Esegui UNA VOLTA: recupera tutte le email storiche non ancora elaborate */
-function backfillEmails() {
-  Logger.log('🔄 Backfill in corso...');
-  _run('from:(airbnb.com OR booking.com OR kross) -label:' + LABEL_OK, true);
-  Logger.log('✅ Backfill completato');
+/**
+ * Esegui questa funzione UNA SOLA VOLTA per recuperare tutte le email passate.
+ * Può richiedere qualche minuto.
+ */
+function recuperaEmailPassate() {
+  Logger.log('🔄 Sto leggendo le email vecchie...');
+  _elabora('from:(airbnb.com OR booking.com OR kross) -label:' + LABEL_OK, true);
+  Logger.log('✅ Fatto! Tutte le email vecchie sono state elaborate.');
 }
 
-/** Chiamato automaticamente ogni 5 minuti */
-function processNewEmails() {
-  _run('from:(airbnb.com OR booking.com OR kross) -label:' + LABEL_OK + ' newer_than:3d', false);
+/**
+ * Questa funzione gira automaticamente ogni 5 minuti. Non serve avviarla a mano.
+ */
+function controllaEmailNuove() {
+  _elabora(
+    'from:(airbnb.com OR booking.com OR kross) -label:' + LABEL_OK + ' newer_than:3d',
+    false
+  );
 }
 
-// ═══ CORE ═════════════════════════════════════════════════════════════════════
+// ═══ ELABORAZIONE EMAIL ═══════════════════════════════════════════════════════
 
-function _run(query, isBackfill) {
-  const threads = GmailApp.search(query, 0, 100);
-  let newTasks = 0;
+function _elabora(ricerca, storico) {
+  var discussioni = GmailApp.search(ricerca, 0, 100);
+  var taskNuovi = 0;
 
-  for (const thread of threads) {
-    for (const msg of thread.getMessages()) {
-      if (_hasLabel(msg, LABEL_OK)) continue;
+  for (var i = 0; i < discussioni.length; i++) {
+    var messaggi = discussioni[i].getMessages();
+    for (var j = 0; j < messaggi.length; j++) {
+      var msg = messaggi[j];
+      if (_haLabel(msg, LABEL_OK)) continue;
       try {
-        newTasks += _processMsg(msg, isBackfill);
-        _addLabel(msg, LABEL_OK);
-      } catch (e) {
-        Logger.log('❌ "' + msg.getSubject() + '": ' + e);
-        _addLabel(msg, LABEL_ERR);
+        taskNuovi += _leggiEmail(msg, storico);
+        _mettiLabel(msg, LABEL_OK);
+      } catch(e) {
+        Logger.log('❌ Errore: ' + msg.getSubject() + ' — ' + e);
+        _mettiLabel(msg, LABEL_ERR);
       }
     }
   }
 
-  if (newTasks > 0) {
-    _notify(
-      '📋 ' + newTasks + (newTasks === 1 ? ' nuovo task aggiunto' : ' nuovi task aggiunti'),
-      'Aggiornamento da Airbnb / Booking / Kross — apri l\'app per vedere.'
+  if (taskNuovi > 0) {
+    _notifica(
+      '📋 ' + taskNuovi + (taskNuovi === 1 ? ' nuovo task aggiunto' : ' nuovi task aggiunti'),
+      'Aggiornamento da Airbnb/Booking/Kross — apri l\'app per vedere.'
     );
-    Logger.log('✅ ' + newTasks + ' task creati');
+    Logger.log('✅ Creati ' + taskNuovi + ' task nuovi');
   }
 }
 
-function _processMsg(msg, isBackfill) {
-  const from     = msg.getFrom().toLowerCase();
-  const platform = from.includes('airbnb') ? 'airbnb'
-                 : from.includes('booking') ? 'booking'
-                 : from.includes('kross')   ? 'kross'
-                 : null;
-  if (!platform) return 0;
+function _leggiEmail(msg, storico) {
+  var mittente = msg.getFrom().toLowerCase();
+  var piattaforma = mittente.indexOf('airbnb') >= 0  ? 'airbnb'
+                  : mittente.indexOf('booking') >= 0 ? 'booking'
+                  : mittente.indexOf('kross') >= 0   ? 'kross'
+                  : null;
+  if (!piattaforma) return 0;
 
-  const parsed = _parse(
-    msg.getSubject(),
-    msg.getPlainBody().slice(0, 4000),
-    platform,
-    msg.getDate()
-  );
-  if (!parsed || parsed.event_type === 'altro') return 0;
+  var dati = _analizzaEmail(msg.getSubject(), msg.getPlainBody(), piattaforma, msg.getDate());
+  if (!dati || dati.tipo === 'altro') return 0;
 
-  Logger.log('📨 ' + platform + ' · ' + parsed.event_type
-    + ' · ' + (parsed.listing_name || '—')
-    + ' · ' + (parsed.guest_name   || '—'));
+  Logger.log('📨 ' + piattaforma + ' · ' + dati.tipo
+    + ' · ' + (dati.casa || '—') + ' · ' + (dati.ospite || '—'));
 
-  return _createTasks(parsed, isBackfill);
+  return _creaTask(dati, storico);
 }
 
-// ═══ PARSING CON CLAUDE HAIKU ════════════════════════════════════════════════
+// ═══ LETTURA DEL CONTENUTO DELL'EMAIL ════════════════════════════════════════
 
-function _parse(subject, body, platform, date) {
-  if (!P.CLAUDE_API_KEY) return _parseFallback(subject, body, platform);
+function _analizzaEmail(oggetto, corpo, piattaforma, data) {
+  var ogg = oggetto.toLowerCase();
+  var cor = corpo.toLowerCase();
+  var testo = oggetto + '\n' + corpo;
 
-  const prompt =
-    'Sei un assistente che estrae dati strutturati da email per una property manager italiana.\n'
-    + 'Analizza questa email di ' + platform.toUpperCase() + ' e rispondi SOLO con JSON valido.\n\n'
-    + '{\n'
-    + '  "event_type": "prenotazione"|"cancellazione"|"modifica"|"pagamento_cohost"|"autofattura_iva"|"altro",\n'
-    + '  "listing_name": string|null,\n'
-    + '  "guest_name": string|null,\n'
-    + '  "checkin": "YYYY-MM-DD"|null,\n'
-    + '  "checkout": "YYYY-MM-DD"|null,\n'
-    + '  "nights": number|null,\n'
-    + '  "reservation_code": string|null,\n'
-    + '  "amount_gross": number|null,\n'
-    + '  "amount_payout": number|null,\n'
-    + '  "invoice_month": "YYYY-MM"|null\n'
-    + '}\n\n'
-    + 'Anno di riferimento: ' + date.getFullYear() + '. Solo JSON, nessun altro testo.\n\n'
-    + 'OGGETTO: ' + subject + '\n---\n' + body;
+  var dati = {
+    piattaforma: piattaforma,
+    tipo: 'altro',
+    casa: null,
+    ospite: null,
+    checkin: null,
+    checkout: null,
+    notti: null,
+    codice: null,
+    importo: null,
+    compenso: null,
+    mese_fattura: null
+  };
 
-  const res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
-    method: 'post',
-    contentType: 'application/json',
-    headers: {
-      'x-api-key': P.CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    payload: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-    muteHttpExceptions: true,
-  });
-
-  if (res.getResponseCode() !== 200) {
-    Logger.log('Claude ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 300));
-    return _parseFallback(subject, body, platform);
+  // Capisce di che tipo di email si tratta
+  if (ogg.match(/cancell/)) {
+    dati.tipo = 'cancellazione';
+  } else if (ogg.match(/prenotaz|conferm|nuova prenot|new reserv|booking confirm|new booking/)) {
+    dati.tipo = 'prenotazione';
+  } else if (ogg.match(/modific|modif/)) {
+    dati.tipo = 'modifica';
+  } else if (ogg.match(/pagamento|payout|compenso|guadagno|trasferimento|co.host/)) {
+    dati.tipo = 'pagamento';
+  } else if (ogg.match(/fattura|invoice|iva|td17|riepilogo commissioni/)) {
+    dati.tipo = 'autofattura';
   }
 
-  try {
-    const text = JSON.parse(res.getContentText()).content[0].text;
-    const m    = text.match(/\{[\s\S]*\}/);
-    if (!m) return null;
-    const parsed = JSON.parse(m[0]);
-    parsed.platform = platform;
-    return parsed;
-  } catch (e) {
-    Logger.log('JSON parse error: ' + e);
-    return _parseFallback(subject, body, platform);
-  }
-}
-
-// Fallback regex per i casi più comuni senza Claude API
-function _parseFallback(subject, body, platform) {
-  const s = subject.toLowerCase();
-  const b = body.toLowerCase();
-  const result = { platform, event_type: 'altro', listing_name: null, guest_name: null,
-                   checkin: null, checkout: null, nights: null, reservation_code: null,
-                   amount_gross: null, amount_payout: null, invoice_month: null };
-
-  if (s.includes('cancell')) { result.event_type = 'cancellazione'; }
-  else if (s.includes('prenotaz') || s.includes('booking confirm') || s.includes('new reserv')) {
-    result.event_type = 'prenotazione';
-  } else if (s.includes('pagamento') || s.includes('payout') || s.includes('guadagno')) {
-    result.event_type = 'pagamento_cohost';
-  } else if (s.includes('fattura') || s.includes('invoice')) {
-    result.event_type = 'autofattura_iva';
+  // Trova la casa (cerca le parole chiave del nome annuncio nel testo)
+  for (var k = 0; k < CASE_MAP.length; k++) {
+    var parola = CASE_MAP[k][0].toLowerCase()
+      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
+      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
+    var testoPulito = cor
+      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
+      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
+    if (testoPulito.indexOf(parola) >= 0) {
+      dati.casa = CASE_MAP[k][1];
+      break;
+    }
   }
 
   // Codice prenotazione Airbnb (es. HMKANPNZFF)
-  const codeAirbnb = body.match(/\b(HM[A-Z0-9]{6,10})\b/);
-  if (codeAirbnb) result.reservation_code = codeAirbnb[1];
+  var codAir = testo.match(/\b(HM[A-Z0-9]{6,10})\b/i);
+  if (codAir) dati.codice = codAir[1].toUpperCase();
 
-  // Codice prenotazione Booking (es. 3501655314)
-  const codeBook = body.match(/\b(\d{10})\b/);
-  if (codeBook && platform === 'booking') result.reservation_code = codeBook[1];
+  // Codice prenotazione Booking (numero lungo)
+  if (!dati.codice && piattaforma === 'booking') {
+    var codBook = testo.match(/\b([0-9]{9,12})\b/);
+    if (codBook) dati.codice = codBook[1];
+  }
 
   // Date nel formato GG/MM/AAAA
-  const dates = [...body.matchAll(/(\d{1,2})\/(\d{2})\/(\d{4})/g)].map(m =>
-    m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0'));
-  if (dates.length >= 2) { result.checkin = dates[0]; result.checkout = dates[1]; }
+  var dateSlash = [];
+  var regData = /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g;
+  var match;
+  while ((match = regData.exec(testo)) !== null) {
+    var d = match[3] + '-' + match[2].padStart(2,'0') + '-' + match[1].padStart(2,'0');
+    if (d > '2024-01-01') dateSlash.push(d);
+  }
 
-  return result;
+  // Date nel formato "15 giugno 2026"
+  var dateParole = [];
+  var regMese = new RegExp('\\b(\\d{1,2})\\s+(' + MESI_IT.join('|') + ')\\s+(\\d{4})\\b', 'gi');
+  while ((match = regMese.exec(corpo)) !== null) {
+    var mIdx = MESI_IT.indexOf(match[2].toLowerCase()) + 1;
+    if (mIdx > 0) {
+      var d2 = match[3] + '-' + String(mIdx).padStart(2,'0') + '-' + match[1].padStart(2,'0');
+      if (d2 > '2024-01-01') dateParole.push(d2);
+    }
+  }
+
+  // Prende le prime due date trovate come check-in e check-out
+  var tutteDate = dateSlash.concat(dateParole).sort();
+  if (tutteDate.length >= 2) {
+    dati.checkin  = tutteDate[0];
+    dati.checkout = tutteDate[1];
+    if (dati.checkin === dati.checkout && tutteDate.length > 2) dati.checkout = tutteDate[2];
+  } else if (tutteDate.length === 1) {
+    dati.checkin = tutteDate[0];
+  }
+
+  // Nome ospite (cerca pattern comuni)
+  var patOspite = [
+    /ospite:\s*([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+)/i,
+    /guest:\s*([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+)/i,
+    /nome:\s*([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+)/i,
+    /prenotazione di ([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+)/i,
+    /([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+) ha prenotato/i,
+    /([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+) has requested/i,
+  ];
+  for (var p = 0; p < patOspite.length; p++) {
+    var m2 = testo.match(patOspite[p]);
+    if (m2 && m2[1]) { dati.ospite = m2[1]; break; }
+  }
+
+  // Importo (cerca simbolo € o EUR)
+  var importi = [];
+  var regImporto = /(?:EUR|€)\s*([0-9.,]+)/gi;
+  while ((match = regImporto.exec(testo)) !== null) {
+    var n = parseFloat(match[1].replace(/\./g,'').replace(',','.'));
+    if (!isNaN(n) && n > 0) importi.push(n);
+  }
+  if (importi.length > 0) dati.compenso = Math.max.apply(null, importi);
+
+  // Mese per autofattura (es. "commissioni maggio 2026")
+  if (dati.tipo === 'autofattura') {
+    var regMeseAf = new RegExp('(?:di|del|per il mese di)\\s+(' + MESI_IT.join('|') + ')\\s+(\\d{4})', 'i');
+    var mAf = testo.match(regMeseAf);
+    if (mAf) {
+      var mIdx2 = MESI_IT.indexOf(mAf[1].toLowerCase()) + 1;
+      if (mIdx2 > 0) dati.mese_fattura = mAf[2] + '-' + String(mIdx2).padStart(2,'0');
+    }
+  }
+
+  return dati;
 }
 
-// ═══ CREAZIONE TASK ═══════════════════════════════════════════════════════════
+// ═══ CREAZIONE TASK NEL DATABASE ══════════════════════════════════════════════
 
-function _resolveCasa(name) {
-  if (!name) return null;
-  const lower = name.toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, ''); // rimuove accenti
-  for (const [kw, casa] of LISTING_MAP) {
-    const kwNorm = kw.normalize('NFD').replace(/[̀-ͯ]/g, '');
-    if (lower.includes(kwNorm)) return casa;
+function _trovaCasa(nome) {
+  if (!nome) return null;
+  var n = nome.toLowerCase()
+    .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
+    .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
+  for (var i = 0; i < CASE_MAP.length; i++) {
+    var kw = CASE_MAP[i][0]
+      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
+      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
+    if (n.indexOf(kw) >= 0) return CASE_MAP[i][1];
   }
   return null;
 }
 
-function _addDays(iso, n) {
-  const d = new Date(iso + 'T12:00:00Z');
-  d.setUTCDate(d.getUTCDate() + n);
+function _aggiungiGiorni(data, giorni) {
+  var d = new Date(data + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + giorni);
   return d.toISOString().slice(0, 10);
 }
 
-function _bookingScadenza(checkout) {
-  // Booking paga ~3 del mese dopo il checkout; scadenza fiscale = payout + 12 gg
+function _scadenzaBooking(checkout) {
   if (!checkout) return null;
-  const d = new Date(checkout + 'T12:00:00Z');
-  const payout = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 3));
-  return _addDays(payout.toISOString().slice(0, 10), 12);
+  var d = new Date(checkout + 'T12:00:00Z');
+  // Booking paga circa il 3 del mese dopo il checkout
+  var pagamento = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 3));
+  return _aggiungiGiorni(pagamento.toISOString().slice(0, 10), 12);
 }
 
-// ID deterministico basato sul codice prenotazione → previene duplicati
-function _taskId(code, suffix) {
-  return ('gas_' + (code || 'noc') + '_' + suffix)
+function _idTask(codice, suffisso) {
+  return ('gas_' + (codice || 'x') + '_' + suffisso)
     .replace(/[^a-z0-9_]/gi, '_').toLowerCase().slice(0, 50);
 }
 
-function _createTasks(p, isBackfill) {
-  const now  = new Date().toISOString();
-  const casa = _resolveCasa(p.listing_name);
-  let created = 0;
+function _creaTask(d, storico) {
+  var ora  = new Date().toISOString();
+  var casa = d.casa || _trovaCasa(d.casa);
+  var creati = 0;
 
-  // ── CANCELLAZIONE ──
-  if (p.event_type === 'cancellazione') {
-    if (p.reservation_code) _cancelTasks(p.reservation_code);
+  // CANCELLAZIONE: segna i task come annullati
+  if (d.tipo === 'cancellazione') {
+    if (d.codice) _annullaTask(d.codice);
     return 0;
   }
 
-  // ── PAGAMENTO CO-HOST — aggiorna importo su fattura-pm esistente ──
-  if (p.event_type === 'pagamento_cohost') {
-    if (p.reservation_code && p.amount_payout)
-      _patchTask(_taskId(p.reservation_code, 'fp'), { cohost: p.amount_payout });
-    return 0;
-  }
-
-  // ── AUTOFATTURA IVA (TD17) ──
-  if (p.event_type === 'autofattura_iva' && p.invoice_month) {
-    const [y, m] = p.invoice_month.split('-').map(Number);
-    const scadenza = new Date(Date.UTC(y, m, 15)).toISOString().slice(0, 10);
-    const id = _taskId('af_' + p.invoice_month, 'af');
-    if (!isBackfill || !_exists(id)) {
-      _insert({
-        id, tipo: 'autofattura', casa: casa || '—',
-        ospite: 'Autofattura ' + p.invoice_month, canale: 'Airbnb',
-        scadenza, codice: 'af_' + p.invoice_month,
-        importo: p.amount_payout || null, cohost: null,
-        note: 'IVA commissioni Airbnb ' + p.invoice_month + ' — emetti TD17 entro il 15.',
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: now,
-      });
-      created++;
+  // PAGAMENTO: aggiorna l'importo sulla fattura esistente
+  if (d.tipo === 'pagamento') {
+    if (d.codice && d.compenso) {
+      _aggiornaCampo(_idTask(d.codice, 'fp'), { cohost: d.compenso });
     }
-    return created;
+    return 0;
   }
 
-  // ── PRENOTAZIONE / MODIFICA ──
-  if (!['prenotazione', 'modifica'].includes(p.event_type)) return 0;
-  if (!p.checkin) { Logger.log('⚠ No checkin date, skip'); return 0; }
-  if (!casa)      { Logger.log('⚠ Unknown listing: ' + p.listing_name + ' — skip'); return 0; }
+  // AUTOFATTURA IVA (TD17 per commissioni Airbnb)
+  if (d.tipo === 'autofattura' && d.mese_fattura) {
+    var parti = d.mese_fattura.split('-').map(Number);
+    var scad = new Date(Date.UTC(parti[0], parti[1], 15)).toISOString().slice(0, 10);
+    var id_af = _idTask('af_' + d.mese_fattura, 'af');
+    if (!storico || !_esiste(id_af)) {
+      _salvaTask({
+        id: id_af, tipo: 'autofattura',
+        casa: casa || '—', ospite: 'Autofattura ' + d.mese_fattura,
+        canale: 'Airbnb', scadenza: scad, codice: 'af_' + d.mese_fattura,
+        importo: d.compenso || null, cohost: null,
+        note: 'IVA commissioni Airbnb ' + d.mese_fattura + ' — emetti TD17 entro il 15.',
+        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+      });
+      creati++;
+    }
+    return creati;
+  }
 
-  const isHost    = CASE_HOST.includes(casa);
-  const isBooking = ['booking', 'kross'].includes(p.platform);
-  const canale    = isBooking ? 'Booking' : 'Airbnb';
-  const code      = p.reservation_code || '';
-  const noteBase  = p.checkin && p.checkout
-    ? 'Check-in ' + p.checkin + ', check-out ' + p.checkout
-      + (p.nights ? ' (' + p.nights + ' notti).' : '.')
+  // PRENOTAZIONE o MODIFICA
+  if (d.tipo !== 'prenotazione' && d.tipo !== 'modifica') return 0;
+  if (!d.checkin) { Logger.log('⚠ Nessuna data check-in trovata'); return 0; }
+  if (!casa) {
+    Logger.log('⚠ Nome annuncio non riconosciuto: ' + (d.casa || '—'));
+    return 0;
+  }
+
+  var isHost    = CASE_HOST.indexOf(casa) >= 0;
+  var isBooking = d.piattaforma === 'booking' || d.piattaforma === 'kross';
+  var canale    = isBooking ? 'Booking' : 'Airbnb';
+  var cod       = d.codice || '';
+  var nota      = d.checkin && d.checkout
+    ? 'Check-in ' + d.checkin + ', check-out ' + d.checkout
+      + (d.notti ? ' (' + d.notti + ' notti).' : '.')
     : '';
 
   if (isHost) {
-    // SCONTRINO — giorno del check-in
-    const sc = _taskId(code, 'sc');
-    if (!isBackfill || !_existsByCode(code + '_sc', sc)) {
-      _insert({
-        id: sc, tipo: 'scontrino', casa, ospite: p.guest_name || '—',
-        canale, scadenza: p.checkin, codice: code + '_sc',
-        importo: p.amount_gross || null, cohost: null, note: noteBase,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: now,
+    // SCONTRINO — il giorno del check-in
+    var id_sc = _idTask(cod, 'sc');
+    if (!storico || !_esistePerCodice(cod + '_sc', id_sc)) {
+      _salvaTask({
+        id: id_sc, tipo: 'scontrino', casa: casa, ospite: d.ospite || '—',
+        canale: canale, scadenza: d.checkin, codice: cod + '_sc',
+        importo: d.importo || null, cohost: null, note: nota,
+        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
       });
-      created++;
+      creati++;
     }
-    // ALLOGGIATI — entro 24h dall'arrivo
-    const al = _taskId(code, 'al');
-    if (!isBackfill || !_existsByCode(code + '_al', al)) {
-      _insert({
-        id: al, tipo: 'alloggiati', casa, ospite: p.guest_name || '—',
-        canale, scadenza: p.checkin, codice: code + '_al',
-        importo: null, cohost: null, note: noteBase,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: now,
+    // ALLOGGIATI — entro 24 ore dall'arrivo
+    var id_al = _idTask(cod, 'al');
+    if (!storico || !_esistePerCodice(cod + '_al', id_al)) {
+      _salvaTask({
+        id: id_al, tipo: 'alloggiati', casa: casa, ospite: d.ospite || '—',
+        canale: canale, scadenza: d.checkin, codice: cod + '_al',
+        importo: null, cohost: null, note: nota,
+        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
       });
-      created++;
+      creati++;
     }
   } else {
-    // FATTURA PM
-    const scadenza = isBooking ? _bookingScadenza(p.checkout) : _addDays(p.checkin, 12);
-    const fp = _taskId(code, 'fp');
-    if (!isBackfill || !_existsByCode(code, fp)) {
-      _insert({
-        id: fp, tipo: 'fattura-pm', casa, ospite: p.guest_name || '—',
-        canale, scadenza, codice: code,
-        importo: p.amount_gross || null, cohost: p.amount_payout || null,
-        note: noteBase,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: now,
+    // FATTURA AL PROPRIETARIO
+    var scadenza = isBooking ? _scadenzaBooking(d.checkout) : _aggiungiGiorni(d.checkin, 12);
+    var id_fp = _idTask(cod, 'fp');
+    if (!storico || !_esistePerCodice(cod, id_fp)) {
+      _salvaTask({
+        id: id_fp, tipo: 'fattura-pm', casa: casa, ospite: d.ospite || '—',
+        canale: canale, scadenza: scadenza, codice: cod,
+        importo: d.importo || null, cohost: d.compenso || null, note: nota,
+        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
       });
-      created++;
+      creati++;
     }
   }
 
-  return created;
+  return creati;
 }
 
-// ═══ SUPABASE ════════════════════════════════════════════════════════════════
+// ═══ SALVATAGGIO NEL DATABASE ═════════════════════════════════════════════════
 
-function _sb(path, opts) {
-  return UrlFetchApp.fetch(P.SUPABASE_URL + '/rest/v1/' + path, {
+function _db(percorso, opzioni) {
+  return UrlFetchApp.fetch(CFG.SUPABASE_URL + '/rest/v1/' + percorso, {
     muteHttpExceptions: true,
-    ...opts,
+    method: (opzioni && opzioni.metodo) || 'get',
+    contentType: 'application/json',
     headers: {
-      apikey: P.SUPABASE_SERVICE_KEY,
-      Authorization: 'Bearer ' + P.SUPABASE_SERVICE_KEY,
+      apikey: CFG.SUPABASE_KEY,
+      Authorization: 'Bearer ' + CFG.SUPABASE_KEY,
       'Content-Type': 'application/json',
-      ...(opts && opts.headers || {}),
+      Prefer: (opzioni && opzioni.prefer) || 'return=minimal',
     },
+    payload: opzioni && opzioni.dati ? JSON.stringify(opzioni.dati) : undefined,
   });
 }
 
-function _insert(task) {
-  task.user_id = P.SUPABASE_USER_ID;
-  const r = _sb('tasks', {
-    method: 'post',
-    payload: JSON.stringify(task),
-    headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+function _salvaTask(task) {
+  task.user_id = CFG.SUPABASE_USER_ID;
+  var r = _db('tasks', {
+    metodo: 'post',
+    dati: task,
+    prefer: 'resolution=ignore-duplicates,return=minimal',
   });
-  if (r.getResponseCode() >= 400) Logger.log('Supabase insert error: ' + r.getContentText());
+  if (r.getResponseCode() >= 400) Logger.log('Errore database: ' + r.getContentText());
 }
 
-function _patchTask(id, fields) {
-  _sb('tasks?id=eq.' + encodeURIComponent(id), {
-    method: 'patch',
-    payload: JSON.stringify(fields),
-    headers: { Prefer: 'return=minimal' },
+function _aggiornaCampo(id, campi) {
+  _db('tasks?id=eq.' + encodeURIComponent(id), {
+    metodo: 'patch',
+    dati: campi,
   });
 }
 
-// Controlla esistenza per id (task creati da questo script)
-function _exists(id) {
+function _esiste(id) {
   try {
     return JSON.parse(
-      _sb('tasks?id=eq.' + encodeURIComponent(id) + '&select=id&limit=1').getContentText()
+      _db('tasks?id=eq.' + encodeURIComponent(id) + '&select=id&limit=1').getContentText()
     ).length > 0;
-  } catch { return false; }
+  } catch(e) { return false; }
 }
 
-// Controlla esistenza per codice (task creati manualmente) O per id
-function _existsByCode(codice, id) {
-  if (_exists(id)) return true;
+function _esistePerCodice(codice, id) {
+  if (_esiste(id)) return true;
   try {
     return JSON.parse(
-      _sb('tasks?codice=eq.' + encodeURIComponent(codice)
-          + '&user_id=eq.' + P.SUPABASE_USER_ID + '&select=id&limit=1').getContentText()
+      _db('tasks?codice=eq.' + encodeURIComponent(codice)
+          + '&user_id=eq.' + CFG.SUPABASE_USER_ID + '&select=id&limit=1').getContentText()
     ).length > 0;
-  } catch { return false; }
+  } catch(e) { return false; }
 }
 
-function _cancelTasks(code) {
-  const today = new Date().toISOString().slice(0, 10);
-  const nota  = { note: '❌ Prenotazione cancellata.', completato: true, completatoIl: today };
-  // Task creati dallo script
-  ['sc', 'al', 'fp'].forEach(s => _patchTask(_taskId(code, s), nota));
-  // Task creati manualmente con lo stesso codice
-  _sb('tasks?codice=eq.' + encodeURIComponent(code) + '&user_id=eq.' + P.SUPABASE_USER_ID, {
-    method: 'patch',
-    payload: JSON.stringify(nota),
-    headers: { Prefer: 'return=minimal' },
+function _annullaTask(codice) {
+  var oggi = new Date().toISOString().slice(0, 10);
+  var dati = { note: '❌ Prenotazione cancellata.', completato: true, completatoIl: oggi };
+  ['sc','al','fp'].forEach(function(s) { _aggiornaCampo(_idTask(codice, s), dati); });
+  _db('tasks?codice=eq.' + encodeURIComponent(codice) + '&user_id=eq.' + CFG.SUPABASE_USER_ID, {
+    metodo: 'patch', dati: dati,
   });
 }
 
-// ═══ PUSH NOTIFICATION ═══════════════════════════════════════════════════════
+// ═══ NOTIFICA PUSH ════════════════════════════════════════════════════════════
 
-function _notify(title, body) {
-  if (!P.PUSH_ENDPOINT || !P.PUSH_SECRET) return;
-  UrlFetchApp.fetch(P.PUSH_ENDPOINT, {
+function _notifica(titolo, testo) {
+  if (!CFG.PUSH_URL || !CFG.PUSH_SECRET) return;
+  UrlFetchApp.fetch(CFG.PUSH_URL, {
     method: 'post',
     contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + P.PUSH_SECRET },
-    payload: JSON.stringify({ title, body }),
+    headers: { Authorization: 'Bearer ' + CFG.PUSH_SECRET },
+    payload: JSON.stringify({ title: titolo, body: testo }),
     muteHttpExceptions: true,
   });
 }
 
-// ═══ GMAIL LABELS ════════════════════════════════════════════════════════════
+// ═══ ETICHETTE GMAIL ══════════════════════════════════════════════════════════
 
-function _getLabel(name) {
-  return GmailApp.getUserLabelByName(name) || GmailApp.createLabel(name);
+function _getLabel(nome) {
+  return GmailApp.getUserLabelByName(nome) || GmailApp.createLabel(nome);
 }
-function _hasLabel(msg, name) {
-  return msg.getThread().getLabels().some(l => l.getName() === name);
+function _haLabel(msg, nome) {
+  var labels = msg.getThread().getLabels();
+  for (var i = 0; i < labels.length; i++) {
+    if (labels[i].getName() === nome) return true;
+  }
+  return false;
 }
-function _addLabel(msg, name) {
-  msg.getThread().addLabel(_getLabel(name));
+function _mettiLabel(msg, nome) {
+  msg.getThread().addLabel(_getLabel(nome));
 }

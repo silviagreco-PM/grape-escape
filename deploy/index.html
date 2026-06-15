@@ -143,9 +143,11 @@
   .archivio-card-body { flex: 1; min-width: 0; }
   .archivio-card-tipo { font-size: 9px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--grigio); margin-bottom: 2px; }
   .archivio-card-title { font-size: 13px; font-weight: 600; color: var(--nero); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .archivio-card-meta { font-size: 11px; color: var(--grigio); margin-top: 1px; }
+  .archivio-card-meta { font-size: 11px; color: var(--grigio); margin-top: 2px; }
+  .archivio-card-fatto { font-size: 10px; color: var(--verde); font-weight: 600; margin-top: 2px; }
   .archivio-card-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .archivio-card-importo { font-size: 12px; font-weight: 700; color: var(--verde); white-space: nowrap; }
+  .task-aggiunto { font-size: 10px; color: var(--grigio); margin-bottom: 3px; opacity: 0.7; }
 
   .copy-btn { display: inline-flex; align-items: center; gap: 5px; background: var(--grigio-light); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-family: 'Inter', monospace; color: var(--nero); cursor: pointer; transition: background 0.15s; margin-right: 6px; margin-bottom: 4px; font-weight: 500; }
   .copy-btn:active { background: var(--border); }
@@ -1264,10 +1266,12 @@ function taskCardHTML(task, urgent, done, isBatch) {
     ? `<span style="${badgeBase};background:var(--verde-light);color:var(--verde)">PM</span>`
     : `<span style="${badgeBase};background:var(--grigio-light);color:var(--grigio)">TUTTE</span>`;
 
+  const aggiuntoTs = task.creatoIl ? fmtTimestamp(task.creatoIl) : '';
   return `<div class="task-card ${cardCls}" data-id="${task.id}">
     <div class="task-check ${checkCls}" onclick="toggleTask('${task.id}')"></div>
     <div class="task-body">
       <div class="task-tipo ${cfg.cls}">${cfg.label}${ruoloBadge}</div>
+      ${aggiuntoTs ? `<div class="task-aggiunto">Aggiunto il ${aggiuntoTs}</div>` : ''}
       <div class="task-titolo ${titoloCls}">${task.casa}${task.ospite?' · '+task.ospite:''}</div>
       ${!done ? checkinOutHTML(task.note) : ''}
       ${extra}
@@ -1358,12 +1362,18 @@ function renderArchivio() {
     const canale = task.canale && task.canale !== '—' ? task.canale : '';
     const tipoMeta = [cfg.label, canale].filter(Boolean).join(' · ');
     const title = [task.casa, task.ospite].filter(Boolean).join(' · ');
-    const dateMeta = (!hideDate && task.completatoIl) ? formatShort(task.completatoIl) : '';
+    const fattoData  = !hideDate && task.completatoIl ? formatShort(task.completatoIl) : '';
+    const fattoOre   = task.completatoAlle || '';
+    const fattoLabel = fattoData
+      ? `✓ Fatto il ${fattoData}${fattoOre ? ' · ' + fattoOre : ''}`
+      : fattoOre ? `✓ Fatto alle ${fattoOre}` : '';
+    const aggLabel = task.creatoIl ? `Aggiunto il ${fmtTimestamp(task.creatoIl)}` : '';
     return `<div class="archivio-card ${cfg.cls}">
       <div class="archivio-card-body">
         <div class="archivio-card-tipo">${tipoMeta}</div>
         <div class="archivio-card-title">${title}</div>
-        ${dateMeta ? `<div class="archivio-card-meta">${dateMeta}</div>` : ''}
+        ${fattoLabel ? `<div class="archivio-card-fatto">${fattoLabel}</div>` : ''}
+        ${aggLabel ? `<div class="archivio-card-meta">${aggLabel}</div>` : ''}
       </div>
       <div class="archivio-card-right">
         ${val ? `<span class="archivio-card-importo">${fmtEuro(val)} €</span>` : ''}
@@ -1426,8 +1436,8 @@ function renderArchivio() {
   });
   strip += `</div>`;
 
-  // ── Banner completati oggi ──
-  const oggiItems = fatti.filter(x => x.completatoIl === todayISO)
+  // ── Banner completati oggi — usa sempre tuttiFatti (ignora filtro attivo) ──
+  const oggiItems = tuttiFatti.filter(x => x.completatoIl === todayISO)
     .sort((a,b) => (b.completatoAlle||'').localeCompare(a.completatoAlle||''));
   let bannerOggi = '';
   if (oggiItems.length > 0) {
@@ -1453,9 +1463,10 @@ function renderArchivio() {
     const [y, m] = mese.split('-').map(Number);
     const meseLabel = mese === '0000-00' ? 'Data sconosciuta' : `${MESI_L[m-1]} ${y}`;
 
-    const hostItems  = listaFiltrata.filter(x => CASE_HOST.includes(x.casa));
-    const pmItems    = listaFiltrata.filter(x => CASE_PM.includes(x.casa));
-    const altroItems = listaFiltrata.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
+    const TIPI_SOLDI = ['fattura-pm', 'scontrino', 'autofattura'];
+    const soldiItems  = listaFiltrata.filter(x => TIPI_SOLDI.includes(x.tipo))
+      .sort((a,b) => (a.tipo).localeCompare(b.tipo));
+    const adempiItems = listaFiltrata.filter(x => !TIPI_SOLDI.includes(x.tipo));
 
     html += `<div class="archivio-month-header" id="archivio-mese-${mese}">
       <span class="archivio-month-title">${meseLabel}</span>
@@ -1465,9 +1476,8 @@ function renderArchivio() {
       </div>
     </div>
     <div class="archivio-tipo-summary">${tipoBreakdown(listaFiltrata)}</div>`;
-    html += renderGruppo('HOST', '🏠', hostItems);
-    html += renderGruppo('PM', '👔', pmItems);
-    html += renderGruppo('Altro', '✏️', altroItems);
+    html += renderGruppo('Fatture & Scontrini', '💶', soldiItems);
+    html += renderGruppo('Adempimenti', '📋', adempiItems);
   });
 
   if (!html) html = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nessun task con questo filtro.</div></div>`;
@@ -1511,6 +1521,15 @@ function exportMeseCSV(mese) {
 function fmtEuro(n) {
   if (!n && n !== 0) return '0,00';
   return parseFloat(n).toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function fmtTimestamp(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const ore = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    return `${d.getDate()} ${MESI_S[d.getMonth()]} ${d.getFullYear()} · ${ore}`;
+  } catch(e) { return ''; }
 }
 
 // ─── AZIONI ───────────────────────────────────────────────────────────────────
