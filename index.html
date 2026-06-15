@@ -347,7 +347,7 @@
       <select class="form-select" id="f-tipo" onchange="onTipoChange()">
         <option value="scontrino">🧾 Scontrino fiscale</option>
         <option value="autofattura">📄 Autofattura TD17</option>
-        <option value="fattura-pm">💶 Fattura fee PM</option>
+        <option value="fattura-pm">💶 Fattura proprietari</option>
         <option value="alloggiati">🏛 Alloggiati Web</option>
         <option value="ross">📊 ROSS1000 / ISTAT</option>
         <option value="manuale">✏️ Task manuale</option>
@@ -447,7 +447,7 @@ const VAPID_PUBLIC = 'BDa9X0eLGwV5dMM2jcaa26TRTmm_oizrKrfq4b6KvWZmqjdK-WIOnuSBk1
 const TIPO_CONFIG = {
   scontrino:    { label: '🧾 Scontrino',     cls: 'tipo-scontrino',   defaultLink: 'ade',       accorpabile: false, perché: 'giorno del check-in' },
   autofattura:  { label: '📄 Autofattura',   cls: 'tipo-autofattura', defaultLink: 'passgo',    accorpabile: true,  perché: 'entro il 15 del mese successivo alla prenotazione' },
-  'fattura-pm': { label: '💶 Fee PM',        cls: 'tipo-fattura-pm',  defaultLink: 'passgo',    accorpabile: true,  perché: 'entro 12 giorni dal check-in' },
+  'fattura-pm': { label: '💶 Fattura prop.',  cls: 'tipo-fattura-pm',  defaultLink: 'passgo',    accorpabile: true,  perché: 'entro 12 giorni dal check-in' },
   alloggiati:   { label: '🏛 Alloggiati',    cls: 'tipo-alloggiati',  defaultLink: 'alloggiati',accorpabile: false, perché: 'entro 24h dall\'arrivo' },
   ross:         { label: '📊 ROSS / ISTAT',  cls: 'tipo-ross',        defaultLink: 'ross',      accorpabile: false, perché: 'entro il 10 del mese' },
   manuale:      { label: '✏️ Promemoria',    cls: 'tipo-manuale',     defaultLink: '',          accorpabile: true,  perché: 'scadenza flessibile' },
@@ -756,12 +756,17 @@ function finestraBannerHTML(tasks) {
     ? (nSbest > 0 ? `nessun check-in in presenza (${nSbest} self, non serve esserci)` : 'nessun check-in previsto')
     : `solo ${nPbest} check-in in presenza`;
 
-  // Fee PM su Booking: disponibile dal 3 del mese dopo la scadenza (Booking paga ~il 3)
+  // Fattura prop: dal check-in (Airbnb: scadenza-12gg); Booking: dal 3 del mese successivo
   const isDisponibile = x => {
-    if (x.tipo !== 'fattura-pm' || x.canale !== 'Booking') return true;
+    if (x.tipo !== 'fattura-pm') return true;
     const s = isoToDate(x.scadenza);
-    const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
-    return isoToDate(today()) >= disp;
+    if (x.canale === 'Booking') {
+      const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
+      return new Date() >= disp;
+    }
+    // Airbnb/altri: disponibile dal giorno del check-in (= scadenza - 12 giorni)
+    const checkin = new Date(s.getFullYear(), s.getMonth(), s.getDate() - 12);
+    return new Date() >= checkin;
   };
 
   // Task inamovibili che cadono nel giorno migliore (scadenza esatta)
@@ -782,9 +787,12 @@ function finestraBannerHTML(tasks) {
     TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile && isDisponibile(x)
   ).sort((a,b) => a.scadenza.localeCompare(b.scadenza));
 
-  // Fee PM Booking non ancora disponibili (Booking non ha ancora pagato)
-  const inAttesa = tasks.filter(x =>
+  // Fattura prop non ancora disponibili (split per motivo)
+  const inAttesaBooking = tasks.filter(x =>
     !x.completato && x.tipo === 'fattura-pm' && x.canale === 'Booking' && !isDisponibile(x)
+  );
+  const inAttesaCheckin = tasks.filter(x =>
+    !x.completato && x.tipo === 'fattura-pm' && x.canale !== 'Booking' && !isDisponibile(x)
   );
 
   const taskRow = (x, scadLabel, isAnticipo) => {
@@ -831,21 +839,43 @@ function finestraBannerHTML(tasks) {
     });
     todoHTML += `</div>`;
   }
-  if (inAttesa.length > 0) {
+  if (inAttesaBooking.length > 0) {
     todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
     todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">⏳ In attesa pagamento Booking</div>`;
-    inAttesa.forEach(x => {
+    inAttesaBooking.forEach(x => {
       const s = isoToDate(x.scadenza);
       const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
       const dispLabel = `${disp.getDate()} ${MESI_S[disp.getMonth()]}`;
       const scadD = isoToDate(x.scadenza);
       const scadLabel = `${scadD.getDate()} ${MESI_S[scadD.getMonth()]}`;
       const giorniWindow = Math.round((scadD - disp) / 86400000);
+      const giorniText = giorniWindow >= 0
+        ? `puoi iniziare dal <strong>${dispLabel}</strong> · hai <strong>${giorniWindow}</strong> giorni · scade <strong>${scadLabel}</strong>`
+        : `⚠ scade <strong>${scadLabel}</strong> — pagamento Booking atteso il <strong>${dispLabel}</strong>`;
       todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600;color:var(--grigio)">💶 Fee PM ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
+          <div style="font-size:12px;font-weight:600;color:var(--grigio)">${TIPO_CONFIG['fattura-pm'].label} ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
           <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'}</div>
-          <div style="font-size:10px;color:var(--grigio);margin-top:3px">puoi iniziare dal <strong>${dispLabel}</strong> · hai <strong>${giorniWindow}</strong> giorni · scade <strong>${scadLabel}</strong></div>
+          <div style="font-size:10px;color:var(--grigio);margin-top:3px">${giorniText}</div>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:var(--grigio);white-space:nowrap;border:1px solid var(--border);border-radius:6px;padding:3px 8px">Apri ↓</span>
+      </div>`;
+    });
+    todoHTML += `</div>`;
+  }
+  if (inAttesaCheckin.length > 0) {
+    todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
+    todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">📅 Dopo il check-in</div>`;
+    inAttesaCheckin.forEach(x => {
+      const s = isoToDate(x.scadenza);
+      const checkin = new Date(s.getFullYear(), s.getMonth(), s.getDate() - 12);
+      const checkinLabel = `${checkin.getDate()} ${MESI_S[checkin.getMonth()]}`;
+      const scadLabel = `${s.getDate()} ${MESI_S[s.getMonth()]}`;
+      todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--grigio)">${TIPO_CONFIG['fattura-pm'].label} ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
+          <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'}</div>
+          <div style="font-size:10px;color:var(--grigio);margin-top:3px">check-in <strong>${checkinLabel}</strong> · poi hai <strong>12 giorni</strong> · scade <strong>${scadLabel}</strong></div>
         </div>
         <span style="font-size:11px;font-weight:600;color:var(--grigio);white-space:nowrap;border:1px solid var(--border);border-radius:6px;padding:3px 8px">Apri ↓</span>
       </div>`;
@@ -892,8 +922,8 @@ function batchSuggestHTML(tasks) {
 let currentRoleFilter = 'tutti';
 let currentTipoFilter = 'tutte';
 
-const TIPO_FILTRI_PM   = [['fattura-pm','💶 Fee PM'],['alloggiati','🏛 Alloggiati'],['manuale','✏️ Promemoria']];
-const TIPO_FILTRI_HOST = [['scontrino','🧾 Scontrini'],['autofattura','📄 Autofatture'],['alloggiati','🏛 Alloggiati']];
+const TIPO_FILTRI_PM   = [['fattura-pm','💶 Fattura prop.'],['manuale','✏️ Promemoria']];
+const TIPO_FILTRI_HOST = [['scontrino','🧾 Scontrini'],['autofattura','📄 Autofatture']];
 
 function updateTipoBar() {
   const bar = document.getElementById('tipo-bar');
@@ -1045,6 +1075,23 @@ function sectionLabelHTML(label, count) {
   return `<div class="section-label">${label}<span class="section-label-count">${count}</span></div>`;
 }
 
+function checkinOutHTML(note) {
+  if (!note) return '';
+  const fmt = (d, mo) => `${parseInt(d)} ${MESI_S[parseInt(mo)-1]}`;
+  let m = note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})[^c\d]*[Cc]heck-?out\s+(\d{1,2})\/(\d{2})/i);
+  if (m) return `<div style="font-size:11px;font-weight:600;color:var(--grigio);margin:3px 0 4px">↘ ${fmt(m[1],m[2])} <span style="opacity:0.3;margin:0 3px">·</span> ↗ ${fmt(m[3],m[4])}</div>`;
+  m = note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})[–-](\d{1,2})\/(\d{2})/i);
+  if (m) return `<div style="font-size:11px;font-weight:600;color:var(--grigio);margin:3px 0 4px">↘ ${fmt(m[1],m[2])} <span style="opacity:0.3;margin:0 3px">·</span> ↗ ${fmt(m[3],m[4])}</div>`;
+  m = note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})/i);
+  if (m) return `<div style="font-size:11px;font-weight:600;color:var(--grigio);margin:3px 0 4px">↘ ${fmt(m[1],m[2])}</div>`;
+  return '';
+}
+
+function stripCheckinIntro(note) {
+  if (!note) return note;
+  return note.replace(/[Cc]heck-?in\s+[\d\/]+(?:[–\-,\s]+[Cc]heck-?out\s+[\d\/]+)?\s*(?:\([^)]*\))?\.\s*/gi, '').trim();
+}
+
 function canaleBadge(canale) {
   if (!canale || canale === '—') return '';
   const brands = {
@@ -1107,10 +1154,10 @@ function taskCardHTML(task, urgent, done, isBatch) {
         const calcolato = pct ? fmtEuro(task.importo * pct.Booking) : null;
         extra += `<div class="calcolo-box">
           <div style="margin-bottom:4px">Lordo da rendiconto Booking: <strong>${fmtEuro(task.importo)} €</strong></div>
-          ${aliq && calcolato ? `<div>Fee PM <strong>${aliq}%</strong> → <strong style="color:var(--verde)">${calcolato} €</strong> — questo è il tuo compenso da fatturare</div>` : '<div>Inserisci il lordo dal rendiconto Booking per calcolare la fee.</div>'}
+          ${aliq && calcolato ? `<div>Fattura <strong>${aliq}%</strong> → <strong style="color:var(--verde)">${calcolato} €</strong> — importo da fatturare al proprietario</div>` : '<div>Inserisci il lordo dal rendiconto Booking per calcolare il compenso.</div>'}
         </div>`;
         extra += `<button class="copy-btn" onclick="copyVal('${task.importo}',this)"><span class="copy-icon">⎘</span> Copia lordo</button>`;
-        if (pct && task.importo) extra += `<button class="copy-btn" onclick="copyVal('${(task.importo*pct.Booking).toFixed(2)}',this)"><span class="copy-icon">⎘</span> Copia fee PM</button>`;
+        if (pct && task.importo) extra += `<button class="copy-btn" onclick="copyVal('${(task.importo*pct.Booking).toFixed(2)}',this)"><span class="copy-icon">⎘</span> Copia importo fattura</button>`;
       } else {
         // Lordo non ancora inserito
         extra += `<div class="calcolo-box" style="border-color:#B8973A;background:#FDFAF0">
@@ -1185,13 +1232,13 @@ function taskCardHTML(task, urgent, done, isBatch) {
     const linkKey = task.link || cfg.defaultLink;
     const li = linkKey ? LINK_MAP[linkKey] : null;
     if (li) extra += `<br><a class="task-link" href="${li.url}" target="_blank">${li.label}</a>`;
-    if (task.note) {
-      const isWarn = task.note.startsWith('⚠') || task.note.startsWith('⏸');
+    const displayNote = stripCheckinIntro(task.note);
+    if (displayNote) {
+      const isWarn = displayNote.startsWith('⚠') || displayNote.startsWith('⏸');
       if (task.tipo === 'manuale' || isWarn) {
-        // Promemoria / avvisi: nota completa in un box leggibile (è il "problema" da risolvere)
-        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${task.note}</div>`;
+        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${displayNote}</div>`;
       } else {
-        extra += `<div style="font-size:11px;color:var(--grigio);margin-top:4px;line-height:1.4">${task.note}</div>`;
+        extra += `<div style="font-size:11px;color:var(--grigio);margin-top:4px;line-height:1.4">${displayNote}</div>`;
       }
     }
     if (isBatch)
@@ -1223,6 +1270,7 @@ function taskCardHTML(task, urgent, done, isBatch) {
     <div class="task-body">
       <div class="task-tipo ${cfg.cls}">${cfg.label}${ruoloBadge}</div>
       <div class="task-titolo ${titoloCls}">${task.casa}${task.ospite?' · '+task.ospite:''}</div>
+      ${!done ? checkinOutHTML(task.note) : ''}
       ${extra}
     </div>
   </div>`;
@@ -1279,10 +1327,9 @@ function renderArchivio() {
   const tasks = loadTasks();
   const fatti = tasks.filter(x => x.completato);
   const main = document.getElementById('main-archivio');
-  const riepilogo = riepilogoMensileHTML(tasks);
 
   if (fatti.length === 0) {
-    main.innerHTML = riepilogo + `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Nessun task completato ancora.</div></div>`;
+    main.innerHTML = `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Nessun task completato ancora.</div></div>`;
     return;
   }
 
@@ -1296,7 +1343,7 @@ function renderArchivio() {
     perMese[mese].push(x);
   });
 
-  let html = riepilogo;
+  let html = '';
   Object.keys(perMese).sort().reverse().forEach(mese => {
     const lista = perMese[mese].sort((a,b) => (b.completatoIl||'').localeCompare(a.completatoIl||''));
     const totale = lista.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
