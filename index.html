@@ -242,6 +242,7 @@
   .empty-icon { font-size: 40px; margin-bottom: 12px; }
   .empty-text { font-size: 15px; }
 
+  .archivio-restore-btn { background: var(--verde-light); border: 1px solid #B8E4B8; color: var(--verde); border-radius: 8px; padding: 4px 8px; font-size: 14px; cursor: pointer; flex-shrink: 0; }
   .btn-torna-su { position: fixed; bottom: 76px; right: 16px; width: 40px; height: 40px; border-radius: 50%; background: var(--nero); color: white; border: none; font-size: 20px; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 2px 12px rgba(0,0,0,0.25); z-index: 90; line-height: 1; }
   .btn-torna-su.visible { display: flex; }
 
@@ -618,7 +619,7 @@ async function applyMigrations() {
     }
   }
 
-  // ── Migration 3: fix scadenze Booking fattura-pm (scadenza = data pagamento + 12 = deadline fiscale) ──
+  // ── Migration 3: fix scadenze Booking fattura-pm ──
   const _bFix = [
     { id:'cast1', scadenza:'2026-07-15' },
     { id:'cast2', scadenza:'2026-09-15' },
@@ -632,6 +633,20 @@ async function applyMigrations() {
   if (_bPatches.length && CURRENT_USER) {
     const { error } = await sb.from('tasks').upsert(_bPatches);
     if (error) console.error('Booking scadenza fix error', error);
+  }
+
+  // ── Migration 4: ripristino f3 Palio/Eichstädt eliminato per errore ──
+  if (!TASKS.find(x => x.id === 'f3')) {
+    const _f3 = { id:'f3', tipo:'fattura-pm', casa:'Appartamento del Palio', ospite:'Eichstädt Gunther',
+      canale:'Booking', importo:null, cohost:null, codice:'6447407135', scadenza:'2026-07-15', link:'',
+      note:'Booking. Check-in 11/06. Scarica rendiconto Booking luglio, trova payout Palio, inserisci importo per calcolo fee 20%.',
+      completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:new Date().toISOString() };
+    TASKS.push(_f3);
+    if (CURRENT_USER) {
+      const { error } = await sb.from('tasks').upsert([taskToRow(_f3)]);
+      if (error) console.error('Migration 4 error', error);
+      else showToast('✓ Task Palio/Eichstädt ripristinato');
+    }
   }
 }
 
@@ -1411,7 +1426,8 @@ function renderArchivio() {
       </div>
       <div class="archivio-card-right">
         ${val ? `<span class="archivio-card-importo">${fmtEuro(val)} €</span>` : ''}
-        <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
+        <button class="archivio-restore-btn" onclick="ripristinaTask('${task.id}')" title="Rimetti in lista">↩</button>
+        <button class="delete-btn" onclick="confermaEliminaTask('${task.id}')" title="Elimina">✕</button>
       </div>
     </div>`;
   };
@@ -1687,10 +1703,32 @@ function spostaInBatch(id) {
   showToast('Task spostato in Da recuperare');
 }
 
-function deleteTask(id) {
-  saveTasks(loadTasks().filter(x => x.id !== id));
+function ripristinaTask(id) {
+  const tasks = loadTasks();
+  const idx = tasks.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  tasks[idx].completato    = false;
+  tasks[idx].completatoIl  = null;
+  tasks[idx].completatoAlle = null;
+  saveTasks(tasks);
+  renderArchivio();
+  renderOggi();
+  showToast('↩ Task rimesso in lista');
+}
+
+function confermaEliminaTask(id) {
+  const tasks = loadTasks();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  const nome = [t.casa, t.ospite].filter(Boolean).join(' · ').slice(0, 40);
+  if (!confirm(`Eliminare definitivamente:\n"${nome}"?\n\nQuesta azione non si può annullare.`)) return;
+  saveTasks(tasks.filter(x => x.id !== id));
   renderArchivio();
   showToast('Task eliminato');
+}
+
+function deleteTask(id) {
+  confermaEliminaTask(id);
 }
 
 function copyVal(val, btn) {
