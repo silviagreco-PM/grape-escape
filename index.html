@@ -114,14 +114,23 @@
   .scaduti-list { padding: 0 10px 10px; }
   .notifiche-attive { color: var(--verde) !important; border-color: #B8E4B8 !important; }
 
-  .archivio-month-header { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 0 8px; border-bottom: 2px solid var(--nero); margin-bottom: 6px; }
   .archivio-month-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
-  .archivio-month-totale { font-size: 13px; color: var(--grigio); font-weight: 500; }
-  .archivio-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--grigio-light); }
-  .archivio-item-body { flex: 1; min-width: 0; }
-  .archivio-item-title { font-size: 13px; font-weight: 600; color: var(--nero); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .archivio-item-meta { font-size: 11px; color: var(--grigio); margin-top: 1px; }
-  .archivio-item-importo { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .archivio-month-totale { font-size: 12px; color: var(--grigio); font-weight: 500; }
+  .archivio-group-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grigio); }
+  .archivio-group-total { font-size: 11px; font-weight: 600; color: var(--grigio); text-transform: none; letter-spacing: 0; }
+  .archivio-card { display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px; background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 5px; border-left: 3px solid var(--border); }
+  .archivio-card.tipo-scontrino   { border-left-color: var(--br-scontrino);   background: var(--bg-scontrino); }
+  .archivio-card.tipo-autofattura { border-left-color: var(--br-autofattura); background: var(--bg-autofattura); }
+  .archivio-card.tipo-fattura-pm  { border-left-color: var(--br-fattura-pm);  background: var(--bg-fattura-pm); }
+  .archivio-card.tipo-alloggiati  { border-left-color: var(--br-alloggiati);  background: var(--bg-alloggiati); }
+  .archivio-card.tipo-ross        { border-left-color: var(--br-ross);        background: var(--bg-ross); }
+  .archivio-card.tipo-manuale     { border-left-color: var(--br-manuale);     background: var(--bg-manuale); }
+  .archivio-card-body { flex: 1; min-width: 0; }
+  .archivio-card-tipo { font-size: 9px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--grigio); margin-bottom: 2px; }
+  .archivio-card-title { font-size: 13px; font-weight: 600; color: var(--nero); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .archivio-card-meta { font-size: 11px; color: var(--grigio); margin-top: 1px; }
+  .archivio-card-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .archivio-card-importo { font-size: 12px; font-weight: 700; color: var(--verde); white-space: nowrap; }
 
   .copy-btn { display: inline-flex; align-items: center; gap: 5px; background: var(--grigio-light); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-family: 'Inter', monospace; color: var(--nero); cursor: pointer; transition: background 0.15s; margin-right: 6px; margin-bottom: 4px; font-weight: 500; }
   .copy-btn:active { background: var(--border); }
@@ -175,8 +184,7 @@
 
   .archivio-ruolo { font-size: 18px; font-weight: 700; padding: 20px 0 4px; border-bottom: 2px solid var(--nero); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: baseline; letter-spacing: -0.01em; }
   .archivio-ruolo-totale { font-size: 14px; color: var(--grigio); font-weight: 500; }
-  .archivio-casa { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grigio); padding: 14px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-  .archivio-casa-totale { font-size: 13px; color: var(--accent); font-weight: 700; }
+  .archivio-month-header { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 0 4px; padding-bottom: 8px; border-bottom: 2px solid var(--nero); }
 
   .search-bar-wrap { background: white; padding: 7px 14px 9px; border-bottom: 1px solid var(--border); position: sticky; top: 49px; z-index: 98; }
   .search-bar-inner { display: flex; align-items: center; gap: 8px; background: var(--grigio-light); border-radius: 10px; padding: 0 10px; }
@@ -447,7 +455,7 @@ const TIPO_CONFIG = {
   scontrino:    { label: '🧾 Scontrino',     cls: 'tipo-scontrino',   defaultLink: 'ade',       accorpabile: false, perché: 'giorno del check-in' },
   autofattura:  { label: '📄 Autofattura',   cls: 'tipo-autofattura', defaultLink: 'passgo',    accorpabile: true,  perché: 'entro il 15 del mese successivo alla prenotazione' },
   'fattura-pm': { label: '💶 Fattura',         cls: 'tipo-fattura-pm',  defaultLink: 'passgo',    accorpabile: true,  perché: 'entro 12 giorni dalla data di pagamento' },
-  alloggiati:   { label: '🏛 Alloggiati',    cls: 'tipo-alloggiati',  defaultLink: 'alloggiati',accorpabile: false, perché: 'entro 24h dall\'arrivo' },
+  alloggiati:   { label: '🏛 Alloggiati',    cls: 'tipo-alloggiati',  defaultLink: '',          accorpabile: false, perché: 'entro 24h dall\'arrivo' },
   ross:         { label: '📊 ROSS / ISTAT',  cls: 'tipo-ross',        defaultLink: 'ross',      accorpabile: false, perché: 'entro il 10 del mese' },
   manuale:      { label: '✏️ Promemoria',    cls: 'tipo-manuale',     defaultLink: '',          accorpabile: true,  perché: 'scadenza flessibile' },
 };
@@ -1317,25 +1325,30 @@ function renderArchivio() {
   const renderItem = task => {
     const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
     const val = task.cohost || task.importo;
-    const meta = [
-      task.completatoIl ? formatShort(task.completatoIl) : '',
+    const tipoMeta = [
+      cfg.label,
       task.canale && task.canale !== '—' ? task.canale : '',
     ].filter(Boolean).join(' · ');
-    return `<div class="archivio-item">
-      <span class="task-tipo ${cfg.cls}" style="font-size:10px;padding:2px 7px;white-space:nowrap;flex-shrink:0">${cfg.label}</span>
-      <div class="archivio-item-body">
-        <div class="archivio-item-title">${task.ospite || task.casa}</div>
-        ${meta ? `<div class="archivio-item-meta">${meta}</div>` : ''}
+    const title = [task.casa, task.ospite].filter(Boolean).join(' · ');
+    const dateMeta = task.completatoIl ? formatShort(task.completatoIl) : '';
+    return `<div class="archivio-card ${cfg.cls}">
+      <div class="archivio-card-body">
+        <div class="archivio-card-tipo">${tipoMeta}</div>
+        <div class="archivio-card-title">${title}</div>
+        ${dateMeta ? `<div class="archivio-card-meta">${dateMeta}</div>` : ''}
       </div>
-      ${val ? `<span class="archivio-item-importo">${fmtEuro(val)} €</span>` : ''}
-      <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
+      <div class="archivio-card-right">
+        ${val ? `<span class="archivio-card-importo">${fmtEuro(val)} €</span>` : ''}
+        <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
+      </div>
     </div>`;
   };
 
   const renderGruppo = (label, emoji, items) => {
     if (!items.length) return '';
     const tot = items.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
-    return `<div class="archivio-casa">${emoji} ${label}<span class="archivio-casa-totale">${items.length} fatt${items.length===1?'o':'i'}${tot > 0 ? ' · ' + fmtEuro(tot) + ' €' : ''}</span></div>` +
+    const countLabel = `${items.length} task${tot > 0 ? ' · ' + fmtEuro(tot) + ' €' : ''}`;
+    return `<div class="archivio-group-header"><span>${emoji} ${label}</span><span class="archivio-group-total">${countLabel}</span></div>` +
       items.map(renderItem).join('');
   };
 
@@ -1993,7 +2006,7 @@ function SEED_TASKS() {
     { id:'f4',  tipo:'fattura-pm',  casa:'La Tana del Tasso',    ospite:'Pia Voigt',                  canale:'Airbnb',  importo:null,    cohost:null, codice:'HMKDK5T4NZ',  scadenza:'2026-08-08', link:'',          note:'Check-in 27/07, check-out 01/08 (5 notti, 3A+1B). Airbnb paga il 28/07: CSV movimenti → riga "Compenso co-host" HMKDK5T4NZ → inserisci importo. Fattura entro 12 gg dal check-in = entro l\'8 ago.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
 
     // ── FEE PM CHIUSURA CASTELLERO (Casa delle Nocciole) — contratto Aurelio Balestra scaduto 31/05/2026 ──
-    { id:'cast1', tipo:'fattura-pm', casa:'Castellero (Nocciole)', ospite:'Harald', canale:'Booking', importo:null, cohost:null, codice:'', scadenza:'2026-06-30', link:'', note:'Compenso 25% sul soggiorno di Harald (gestito da te fino al check-out). Da fatturare ad Aurelio Balestra quando Booking gli versa il totale. Lordo: dal tuo account proprietario Booking o dallo zip "Castellero fine mandato".', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
+    { id:'cast1', tipo:'fattura-pm', casa:'Castellero (Nocciole)', ospite:'Harald', canale:'Booking', importo:null, cohost:null, codice:'', scadenza:'2026-07-15', link:'', note:'Compenso 25% sul soggiorno di Harald (gestito da te fino al check-out). Da fatturare ad Aurelio Balestra quando Booking gli versa il totale. Lordo: dal tuo account proprietario Booking o dallo zip "Castellero fine mandato".', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
     { id:'cast2', tipo:'fattura-pm', casa:'Castellero (Nocciole)', ospite:'Soggiorno prima metà agosto', canale:'Booking', importo:null, cohost:null, codice:'', scadenza:'2026-08-31', link:'', note:'Compenso ridotto 12,5% (metà del 25%): prenotazione arrivata prima del recesso ma soggiorno gestito da Aurelio. Da fatturare quando Booking versa ad Aurelio.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
 
     // ── PROMEMORIA PAGAMENTO BOOKING — Appartamento del Palio ──
