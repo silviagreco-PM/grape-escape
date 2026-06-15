@@ -779,10 +779,15 @@ function finestraBannerHTML(tasks) {
     ? (nSbest > 0 ? `nessun check-in in presenza (${nSbest} self, non serve esserci)` : 'nessun check-in previsto')
     : `solo ${nPbest} check-in in presenza`;
 
-  // Fattura: disponibile dalla data di pagamento = scadenza - 12 gg (Airbnb = giorno check-in; Booking = data pagamento Booking)
+  // Fattura: disponibile dalla data di pagamento = scadenza - 12 gg
+  // Autofattura: disponibile dal 1° del mese di scadenza (quando arriva la fattura mensile Airbnb/Booking)
   const isDisponibile = x => {
-    if (x.tipo !== 'fattura-pm') return true;
-    return new Date() >= isoToDate(addDays(x.scadenza, -12));
+    if (x.tipo === 'fattura-pm') return new Date() >= isoToDate(addDays(x.scadenza, -12));
+    if (x.tipo === 'autofattura') {
+      const s = isoToDate(x.scadenza);
+      return new Date() >= new Date(s.getFullYear(), s.getMonth(), 1);
+    }
+    return true;
   };
 
   // Task inamovibili che cadono nel giorno migliore (scadenza esatta)
