@@ -536,6 +536,14 @@ const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 let TASKS = [];
 let CURRENT_USER = null;
 let realtimeBound = false;
+let autoRefreshBound = false;
+
+// Tieni il token del realtime sempre aggiornato: senza questo il canale realtime
+// si collega come "anon", la RLS della tabella tasks blocca gli eventi e l'app
+// non riceve le nuove prenotazioni. Il token scade ~ogni ora: lo rinnoviamo qui.
+sb.auth.onAuthStateChange((_event, session) => {
+  if (session?.access_token) { try { sb.realtime.setAuth(session.access_token); } catch {} }
+});
 
 // loadTasks restituisce CLONI (così le mutazioni non toccano TASKS finché non salvi → i delete si rilevano)
 function loadTasks() { return TASKS.map(t => ({ ...t })); }
@@ -571,7 +579,21 @@ async function reloadTasksFromCloud(render) {
   const { data, error } = await sb.from('tasks').select('*');
   if (error) { console.error(error); return; }
   TASKS = (data || []).map(rowToTask);
-  if (render) renderOggi();
+  if (render) rerenderCurrent();
+}
+
+// Ri-disegna la schermata attualmente visibile (non solo "Oggi"), così un
+// ricaricamento dati aggiorna la vista in cui si trova l'utente.
+function rerenderCurrent() {
+  const inp = document.getElementById('search-input');
+  if (inp && inp.value) { rerenderSearch(); return; }
+  const active = document.querySelector('.view.active');
+  const name = active ? active.id.replace('view-', '') : 'oggi';
+  if (name === 'archivio') renderArchivio();
+  else if (name === 'regole') renderRegole();
+  else if (name === 'case') renderCase();
+  else if (name === 'conti') renderConti();
+  else renderOggi();
 }
 
 async function applyMigrations() {
@@ -670,18 +692,45 @@ async function initData() {
     if (e2) console.error('Seed error', e2);
   }
   bindRealtime();
+  setupAutoRefresh();
   renderOggi();
 }
 
-function bindRealtime() {
+async function bindRealtime() {
   if (realtimeBound) return;
   realtimeBound = true;
+  // Imposta il token così la RLS lascia passare gli eventi realtime di questo utente.
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    if (session?.access_token) sb.realtime.setAuth(session.access_token);
+  } catch {}
   sb.channel('tasks-rt')
     .on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, () => {
       clearTimeout(window._rtTimer);
       window._rtTimer = setTimeout(() => reloadTasksFromCloud(true), 400);
     })
     .subscribe();
+}
+
+// Aggiornamento automatico anche senza realtime (riapertura app, ritorno online,
+// polling leggero): è la rete di sicurezza per "l'app non si aggiorna".
+let _lastReload = 0;
+function autoReload() {
+  if (!CURRENT_USER) return;
+  const now = Date.now();
+  if (now - _lastReload < 3000) return;
+  _lastReload = now;
+  reloadTasksFromCloud(true);
+}
+function setupAutoRefresh() {
+  if (autoRefreshBound) return;
+  autoRefreshBound = true;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') autoReload();
+  });
+  window.addEventListener('focus', autoReload);
+  window.addEventListener('online', autoReload);
+  setInterval(() => { if (document.visibilityState === 'visible') autoReload(); }, 60000);
 }
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
