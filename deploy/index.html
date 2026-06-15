@@ -126,7 +126,11 @@
   .archivio-mese-chip.chip-oggi .archivio-mese-chip-label { color: var(--verde); }
   .archivio-oggi-banner { background: var(--verde-light); border: 1.5px solid #B8E4B8; border-radius: 12px; padding: 10px 13px; margin-bottom: 10px; }
   .archivio-oggi-title { font-size: 12px; font-weight: 700; color: var(--verde); margin-bottom: 6px; }
-  .archivio-tipo-summary { font-size: 11px; color: var(--grigio); margin: 3px 0 8px; }
+  .archivio-tipo-summary { font-size: 11px; color: var(--grigio); margin: 3px 0 8px; line-height: 1.8; }
+  .archivio-filtri { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .archivio-filtro { background: var(--grigio-light); border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--grigio); cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; }
+  .archivio-filtro.active { background: var(--nero); color: white; border-color: var(--nero); }
+  .archivio-csv-btn { font-size: 10px; font-weight: 700; color: var(--grigio); background: var(--grigio-light); border: 1px solid var(--border); border-radius: 8px; padding: 3px 9px; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; flex-shrink: 0; }
   .archivio-group-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grigio); }
   .archivio-group-total { font-size: 11px; font-weight: 600; color: var(--grigio); text-transform: none; letter-spacing: 0; }
   .archivio-card { display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px; background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 5px; border-left: 3px solid var(--border); }
@@ -908,6 +912,7 @@ function batchSuggestHTML(tasks) {
 
 let currentRoleFilter = 'tutti';
 let currentTipoFilter = 'tutte';
+let archivioFiltro = 'tutto';
 
 const TIPO_FILTRI_PM   = [['fattura-pm','💶 Fattura'],['manuale','✏️ Promemoria']];
 const TIPO_FILTRI_HOST = [['scontrino','🧾 Scontrini'],['autofattura','📄 Autofatture']];
@@ -1319,10 +1324,10 @@ function riepilogoMensileHTML(tasks) {
 
 function renderArchivio() {
   const tasks = loadTasks();
-  const fatti = tasks.filter(x => x.completato);
+  const tuttiFatti = tasks.filter(x => x.completato);
   const main = document.getElementById('main-archivio');
 
-  if (fatti.length === 0) {
+  if (tuttiFatti.length === 0) {
     main.innerHTML = `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Nessun task completato ancora.</div></div>`;
     return;
   }
@@ -1332,8 +1337,16 @@ function renderArchivio() {
   const TIPO_EMOJI = { scontrino:'🧾', autofattura:'📄', 'fattura-pm':'💶', alloggiati:'🏛', ross:'📊', manuale:'✏️' };
   const todayISO = new Date().toISOString().slice(0, 10);
 
+  // Filtro attivo
+  const fatti = tuttiFatti.filter(x => {
+    if (archivioFiltro === 'tutto') return true;
+    if (archivioFiltro === 'host')  return CASE_HOST.includes(x.casa);
+    if (archivioFiltro === 'pm')    return CASE_PM.includes(x.casa);
+    return x.tipo === archivioFiltro;
+  });
+
   const perMese = {};
-  fatti.forEach(x => {
+  tuttiFatti.forEach(x => {   // strip usa sempre tutti i mesi
     const mese = (x.completatoIl || '0000-00').slice(0, 7);
     if (!perMese[mese]) perMese[mese] = [];
     perMese[mese].push(x);
@@ -1360,11 +1373,16 @@ function renderArchivio() {
   };
 
   const tipoBreakdown = items => {
-    const counts = {};
-    items.forEach(x => { counts[x.tipo] = (counts[x.tipo] || 0) + 1; });
-    return Object.entries(counts)
-      .map(([t, n]) => `${TIPO_EMOJI[t] || '✏️'} ${n}`)
-      .join('  ');
+    const counts = {}, totals = {};
+    items.forEach(x => {
+      counts[x.tipo] = (counts[x.tipo] || 0) + 1;
+      totals[x.tipo] = (totals[x.tipo] || 0) + (x.cohost || x.importo || 0);
+    });
+    return Object.entries(counts).map(([t, n]) => {
+      const tot = totals[t];
+      const totStr = tot > 0 ? ` <span style="color:var(--verde);font-weight:600">${fmtEuro(tot)} €</span>` : '';
+      return `${TIPO_EMOJI[t] || '✏️'} <strong>${n}</strong>${totStr}`;
+    }).join(' &nbsp;·&nbsp; ');
   };
 
   const renderGruppo = (label, emoji, items, hideDate) => {
@@ -1376,6 +1394,24 @@ function renderArchivio() {
   };
 
   const mesiKeys = Object.keys(perMese).sort().reverse();
+
+  // ── Barra filtri ──
+  const filtriDef = [
+    { key:'tutto',       label:'Tutto' },
+    { key:'host',        label:'🏠 HOST' },
+    { key:'pm',          label:'👔 PM' },
+    { key:'fattura-pm',  label:'💶 Fatture' },
+    { key:'scontrino',   label:'🧾 Scontrini' },
+    { key:'autofattura', label:'📄 Autofatture' },
+    { key:'alloggiati',  label:'🏛 Alloggiati' },
+    { key:'ross',        label:'📊 ROSS' },
+  ];
+  let filtriHTML = `<div class="archivio-filtri">`;
+  filtriDef.forEach(f => {
+    const active = archivioFiltro === f.key ? ' active' : '';
+    filtriHTML += `<button class="archivio-filtro${active}" onclick="setArchivioFiltro('${f.key}')">${f.label}</button>`;
+  });
+  filtriHTML += `</div>`;
 
   // ── Strip navigazione mesi ──
   let strip = `<div class="archivio-mesi-strip">`;
@@ -1404,30 +1440,72 @@ function renderArchivio() {
   // ── Mesi ──
   let html = '';
   mesiKeys.forEach(mese => {
-    const lista = perMese[mese].sort((a,b) => {
-      if (a.completatoIl === todayISO && b.completatoIl !== todayISO) return -1;
-      if (b.completatoIl === todayISO && a.completatoIl !== todayISO) return 1;
-      return (b.completatoIl||'').localeCompare(a.completatoIl||'');
-    });
-    const totale = lista.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
+    const listaFiltrata = fatti
+      .filter(x => (x.completatoIl || '0000-00').slice(0,7) === mese)
+      .sort((a,b) => {
+        if (a.completatoIl === todayISO && b.completatoIl !== todayISO) return -1;
+        if (b.completatoIl === todayISO && a.completatoIl !== todayISO) return 1;
+        return (b.completatoIl||'').localeCompare(a.completatoIl||'');
+      });
+    if (!listaFiltrata.length) return;
+
+    const totale = listaFiltrata.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
     const [y, m] = mese.split('-').map(Number);
     const meseLabel = mese === '0000-00' ? 'Data sconosciuta' : `${MESI_L[m-1]} ${y}`;
 
-    const hostItems  = lista.filter(x => CASE_HOST.includes(x.casa));
-    const pmItems    = lista.filter(x => CASE_PM.includes(x.casa));
-    const altroItems = lista.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
+    const hostItems  = listaFiltrata.filter(x => CASE_HOST.includes(x.casa));
+    const pmItems    = listaFiltrata.filter(x => CASE_PM.includes(x.casa));
+    const altroItems = listaFiltrata.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
 
     html += `<div class="archivio-month-header" id="archivio-mese-${mese}">
       <span class="archivio-month-title">${meseLabel}</span>
-      <span class="archivio-month-totale">${lista.length} task${totale > 0 ? ' · ' + fmtEuro(totale) + ' €' : ''}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="archivio-month-totale">${listaFiltrata.length} task${totale > 0 ? ' · ' + fmtEuro(totale) + ' €' : ''}</span>
+        <button class="archivio-csv-btn" onclick="exportMeseCSV('${mese}')">↓ CSV</button>
+      </div>
     </div>
-    <div class="archivio-tipo-summary">${tipoBreakdown(lista)}</div>`;
+    <div class="archivio-tipo-summary">${tipoBreakdown(listaFiltrata)}</div>`;
     html += renderGruppo('HOST', '🏠', hostItems);
     html += renderGruppo('PM', '👔', pmItems);
     html += renderGruppo('Altro', '✏️', altroItems);
   });
 
-  main.innerHTML = strip + bannerOggi + html;
+  if (!html) html = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nessun task con questo filtro.</div></div>`;
+
+  main.innerHTML = filtriHTML + strip + bannerOggi + html;
+}
+
+function setArchivioFiltro(key) {
+  archivioFiltro = key;
+  renderArchivio();
+}
+
+function exportMeseCSV(mese) {
+  const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const items = loadTasks().filter(x => x.completato && (x.completatoIl || '0000-00').slice(0,7) === mese)
+    .sort((a,b) => (a.completatoIl||'').localeCompare(b.completatoIl||''));
+  if (!items.length) return;
+  const [y, m] = mese.split('-').map(Number);
+  const meseLabel = mese === '0000-00' ? 'sconosciuto' : `${MESI_L[m-1]}_${y}`;
+  const rows = [['Data', 'Tipo', 'Casa', 'Ospite', 'Canale', 'Importo lordo €', 'Compenso/cohost €']];
+  items.forEach(x => {
+    const cfg = TIPO_CONFIG[x.tipo] || TIPO_CONFIG.manuale;
+    rows.push([
+      x.completatoIl || '',
+      cfg.label.replace(/\p{Emoji}/gu, '').trim(),
+      x.casa || '',
+      x.ospite || '',
+      x.canale && x.canale !== '—' ? x.canale : '',
+      x.importo != null ? String(x.importo).replace('.', ',') : '',
+      x.cohost  != null ? String(x.cohost ).replace('.', ',') : '',
+    ]);
+  });
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })),
+    download: `archivio_${meseLabel}.csv`,
+  });
+  a.click(); URL.revokeObjectURL(a.href);
 }
 
 function fmtEuro(n) {
