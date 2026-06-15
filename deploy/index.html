@@ -107,6 +107,21 @@
   .tipo-filter:hover { border-color: var(--nero); color: var(--nero); }
   .tipo-filter.active { background: var(--nero); border-color: var(--nero); color: white; }
 
+  .scaduti-section { background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+  .scaduti-toggle { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .scaduti-toggle-label { font-size: 13px; font-weight: 700; color: var(--rosso-alert); }
+  .scaduti-toggle-arrow { font-size: 11px; color: var(--rosso-alert); font-weight: 600; }
+  .scaduti-list { padding: 0 10px 10px; }
+
+  .archivio-month-header { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 0 8px; border-bottom: 2px solid var(--nero); margin-bottom: 6px; }
+  .archivio-month-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .archivio-month-totale { font-size: 13px; color: var(--grigio); font-weight: 500; }
+  .archivio-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--grigio-light); }
+  .archivio-item-body { flex: 1; min-width: 0; }
+  .archivio-item-title { font-size: 13px; font-weight: 600; color: var(--nero); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .archivio-item-meta { font-size: 11px; color: var(--grigio); margin-top: 1px; }
+  .archivio-item-importo { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+
   .copy-btn { display: inline-flex; align-items: center; gap: 5px; background: var(--grigio-light); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-family: 'Inter', monospace; color: var(--nero); cursor: pointer; transition: background 0.15s; margin-right: 6px; margin-bottom: 4px; font-weight: 500; }
   .copy-btn:active { background: var(--border); }
   .copy-btn.copied { background: var(--verde-light); color: var(--verde); border-color: #B8E4B8; }
@@ -254,19 +269,10 @@
     </div>
   </div>
   <div class="filter-bar-role">
-    <button class="role-filter active" id="rf-tutti"  onclick="setRoleFilter('tutti')">Tutti</button>
-    <button class="role-filter"        id="rf-host"   onclick="setRoleFilter('host')">🏠 HOST</button>
-    <button class="role-filter"        id="rf-pm"     onclick="setRoleFilter('pm')">👔 PM</button>
-    <button class="role-filter"        id="rf-altro"  onclick="setRoleFilter('altro')">Altro</button>
+    <button class="role-filter" id="rf-pm"   onclick="setRoleFilter('pm')">👔 PM</button>
+    <button class="role-filter" id="rf-host" onclick="setRoleFilter('host')">🏠 HOST</button>
   </div>
-  <div class="filter-bar-tipo">
-    <button class="tipo-filter active" id="tf-tutte"      onclick="setTipoFilter('tutte')">Tutte</button>
-    <button class="tipo-filter"        id="tf-scontrino"   onclick="setTipoFilter('scontrino')">🧾 Scontrini</button>
-    <button class="tipo-filter"        id="tf-autofattura" onclick="setTipoFilter('autofattura')">📄 Autofatture</button>
-    <button class="tipo-filter"        id="tf-fattura-pm"  onclick="setTipoFilter('fattura-pm')">💶 Fee PM</button>
-    <button class="tipo-filter"        id="tf-alloggiati"  onclick="setTipoFilter('alloggiati')">🏛 Alloggiati</button>
-    <button class="tipo-filter"        id="tf-manuale"     onclick="setTipoFilter('manuale')">✏️ Altro</button>
-  </div>
+  <div class="filter-bar-tipo" id="tipo-bar" style="display:none"></div>
   <div class="main" id="main-oggi"></div>
 </div>
 
@@ -407,7 +413,7 @@
 
 const LINK_MAP = {
   ade:        { url: 'https://ivaservizi.agenziaentrate.gov.it/portale/', label: '→ Apri ADE' },
-  passgo:     { url: 'https://www.passweb.it',                           label: '→ Apri Passgo' },
+  passgo:     { url: 'https://webdesk.passgo.cloud/webdesk/wd',           label: '→ Apri Passgo' },
   alloggiati: { url: 'https://alloggiati.poliziadistato.it',             label: '→ Alloggiati Web' },
   ross:       { url: 'https://www.ross1000.it',                          label: '→ ROSS1000 (solo se non usi Kross)' },
 };
@@ -714,8 +720,8 @@ function calcolaFinestra(tasks) {
     }
   });
 
-  // Il giorno migliore è quello con meno check-in in PRESENZA (self non pesa)
-  const candidati = giorni.slice(1);
+  // Il giorno migliore è quello con meno check-in in PRESENZA (self non pesa); include oggi
+  const candidati = giorni;
   const minP = Math.min(...candidati.map(g => presenza[g]));
   const bestDay = candidati.find(g => presenza[g] === minP);
   return { giorni, presenza, self, bestDay };
@@ -724,43 +730,7 @@ function calcolaFinestra(tasks) {
 function finestraBannerHTML(tasks) {
   const hasFuture = tasks.some(x => !x.completato);
   if (!hasFuture) return '';
-  const { giorni, presenza, self, bestDay } = calcolaFinestra(tasks);
-
-  const giorniHTML = giorni.map(g => {
-    const d = isoToDate(g);
-    const nP = presenza[g], nS = self[g];
-    const isBest = g === bestDay;
-
-    let cls, icona, dettaglio;
-    if (isBest) {
-      cls = 'best';
-      icona = '✨';
-      dettaglio = nP === 0 && nS === 0 ? 'libera' : nS > 0 ? `self ok` : '';
-    } else if (nP >= 2) {
-      cls = 'busy';
-      icona = '🔴';
-      dettaglio = `${nP} check-in`;
-    } else if (nP === 1) {
-      cls = 'semi';
-      icona = '🟡';
-      dettaglio = '1 check-in';
-    } else if (nS > 0) {
-      cls = '';
-      icona = '🟢';
-      dettaglio = `${nS} self`;
-    } else {
-      cls = '';
-      icona = '🟢';
-      dettaglio = 'libera';
-    }
-
-    return `<div class="finestra-giorno ${cls}">
-      <div class="finestra-giorno-nome">${GIORNI_S[d.getDay()]}</div>
-      <div class="finestra-giorno-data">${d.getDate()}</div>
-      <div class="finestra-giorno-icona">${icona}</div>
-      <div class="finestra-giorno-dettaglio">${dettaglio}</div>
-    </div>`;
-  }).join('');
+  const { presenza, self, bestDay } = calcolaFinestra(tasks);
 
   const bd = isoToDate(bestDay);
   const nPbest = presenza[bestDay], nSbest = self[bestDay];
@@ -769,34 +739,45 @@ function finestraBannerHTML(tasks) {
     ? (nSbest > 0 ? `nessun check-in in presenza (${nSbest} self, non serve esserci)` : 'nessun check-in previsto')
     : `solo ${nPbest} check-in in presenza`;
 
+  // Fee PM su Booking: disponibile dal 3 del mese dopo la scadenza (Booking paga ~il 3)
+  const isDisponibile = x => {
+    if (x.tipo !== 'fattura-pm' || x.canale !== 'Booking') return true;
+    const s = isoToDate(x.scadenza);
+    const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
+    return isoToDate(today()) >= disp;
+  };
+
   // Task inamovibili che cadono nel giorno migliore (scadenza esatta)
   const inamovibiliBestDay = tasks.filter(x =>
     !x.completato && x.scadenza === bestDay &&
     TIPO_CONFIG[x.tipo] && !TIPO_CONFIG[x.tipo].accorpabile
   );
 
-  // Task accorpabili aperti — solo entro 14 giorni per non sommergere
+  // Task accorpabili aperti — entro 14 giorni e già disponibili
   const accorpabili = tasks.filter(x =>
     !x.completato && x.scadenza >= today() && x.scadenza <= inDays(14) &&
-    TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile
+    TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile && isDisponibile(x)
   ).sort((a,b) => a.scadenza.localeCompare(b.scadenza));
 
-  // Task anticipabili: scadenza > 14gg ma accorpabili — conviene farli nella finestra
+  // Task anticipabili: scadenza > 14gg, accorpabili, disponibili
   const anticipabili = tasks.filter(x =>
     !x.completato && x.scadenza > inDays(14) &&
-    TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile
+    TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile && isDisponibile(x)
   ).sort((a,b) => a.scadenza.localeCompare(b.scadenza));
 
-  // Riga lista: link AL TASK dentro l'app (apre la card con dettagli e pulsanti Copia)
+  // Fee PM Booking non ancora disponibili (Booking non ha ancora pagato)
+  const inAttesa = tasks.filter(x =>
+    !x.completato && x.tipo === 'fattura-pm' && x.canale === 'Booking' && !isDisponibile(x)
+  );
+
   const taskRow = (x, scadLabel, isAnticipo) => {
     const cfg = TIPO_CONFIG[x.tipo] || TIPO_CONFIG.manuale;
-    const tipoLabel = cfg.label;
     const anticipoBadge = isAnticipo
       ? `<span style="font-size:9px;background:#FFF8E6;color:#996A00;border:1px solid #FFE9A0;border-radius:4px;padding:1px 5px;margin-left:6px">anticipo</span>`
       : '';
     return `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;color:var(--nero)">${tipoLabel} <span style="color:var(--grigio);font-weight:400">· ${x.casa}</span></div>
+        <div style="font-size:12px;font-weight:600;color:var(--nero)">${cfg.label} <span style="color:var(--grigio);font-weight:400">· ${x.casa}</span></div>
         <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'} · scade ${scadLabel}${anticipoBadge}</div>
       </div>
       <span style="font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;border:1px solid #FFD0D8;background:var(--accent-light);border-radius:6px;padding:3px 8px">Apri ↓</span>
@@ -807,7 +788,7 @@ function finestraBannerHTML(tasks) {
   const oggiList = [...inamovibiliBestDay, ...accorpabili];
   if (oggiList.length > 0) {
     todoHTML += `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">`;
-    todoHTML += `<div style="font-size:12px;font-weight:700;color:var(--nero);margin-bottom:4px">✅ Da fare ${bestLabel === 'oggi' ? 'oggi' : bestLabel === 'domani' ? 'domani' : bestLabel}</div>`;
+    todoHTML += `<div style="font-size:12px;font-weight:700;color:var(--nero);margin-bottom:4px">✅ Da fare ${bestLabel}</div>`;
     oggiList.forEach(x => {
       const d = isoToDate(x.scadenza);
       const diff = daysDiff(x.scadenza);
@@ -821,8 +802,23 @@ function finestraBannerHTML(tasks) {
     todoHTML += `<div style="font-size:12px;font-weight:700;color:var(--oro);margin-bottom:4px">⏩ Già che ci sei, puoi anticipare</div>`;
     anticipabili.forEach(x => {
       const d = isoToDate(x.scadenza);
-      const scadLabel = `${d.getDate()} ${MESI_S[d.getMonth()]}`;
-      todoHTML += taskRow(x, scadLabel, true);
+      todoHTML += taskRow(x, `${d.getDate()} ${MESI_S[d.getMonth()]}`, true);
+    });
+    todoHTML += `</div>`;
+  }
+  if (inAttesa.length > 0) {
+    todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
+    todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">⏳ In attesa pagamento Booking</div>`;
+    inAttesa.forEach(x => {
+      const s = isoToDate(x.scadenza);
+      const disp = new Date(s.getFullYear(), s.getMonth() + 1, 3);
+      const dispLabel = `${disp.getDate()} ${MESI_S[disp.getMonth()]}`;
+      todoHTML += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--grigio)">💶 Fee PM <span style="font-weight:400">· ${x.casa}</span></div>
+          <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'} · disponibile dal ${dispLabel}</div>
+        </div>
+      </div>`;
     });
     todoHTML += `</div>`;
   }
@@ -833,8 +829,6 @@ function finestraBannerHTML(tasks) {
       <div style="background:var(--accent-light);color:var(--accent);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #FFD0D8">${bestLabel}</div>
     </div>
     <div class="finestra-text">${motivazione}.</div>
-    <div class="finestra-giorni">${giorniHTML}</div>
-    <div style="font-size:10px;color:var(--grigio);margin-top:6px">🔴 2+ check-in · 🟡 1 check-in · 🟢 libera</div>
     ${todoHTML}
   </div>`;
 }
@@ -868,20 +862,34 @@ function batchSuggestHTML(tasks) {
 let currentRoleFilter = 'tutti';
 let currentTipoFilter = 'tutte';
 
+const TIPO_FILTRI_PM   = [['fattura-pm','💶 Fee PM'],['alloggiati','🏛 Alloggiati'],['manuale','✏️ Promemoria']];
+const TIPO_FILTRI_HOST = [['scontrino','🧾 Scontrini'],['autofattura','📄 Autofatture'],['alloggiati','🏛 Alloggiati']];
+
+function updateTipoBar() {
+  const bar = document.getElementById('tipo-bar');
+  if (!bar) return;
+  if (currentRoleFilter === 'tutti') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  const filtri = currentRoleFilter === 'pm' ? TIPO_FILTRI_PM : TIPO_FILTRI_HOST;
+  bar.innerHTML = filtri.map(([t, label]) =>
+    `<button class="tipo-filter${currentTipoFilter === t ? ' active' : ''}" onclick="setTipoFilter('${t}')">${label}</button>`
+  ).join('');
+  bar.style.display = 'flex';
+}
+
 function setRoleFilter(role) {
-  currentRoleFilter = role;
-  ['tutti','host','pm','altro'].forEach(r => {
-    document.getElementById('rf-'+r).classList.toggle('active', r === role);
+  currentRoleFilter = currentRoleFilter === role ? 'tutti' : role;
+  currentTipoFilter = 'tutte';
+  ['pm','host'].forEach(r => {
+    const el = document.getElementById('rf-'+r);
+    if (el) el.classList.toggle('active', r === currentRoleFilter);
   });
+  updateTipoBar();
   renderOggi();
 }
 
 function setTipoFilter(tipo) {
-  currentTipoFilter = tipo;
-  ['tutte','scontrino','autofattura','fattura-pm','alloggiati','manuale'].forEach(t => {
-    const el = document.getElementById('tf-' + t);
-    if (el) el.classList.toggle('active', t === tipo);
-  });
+  currentTipoFilter = currentTipoFilter === tipo ? 'tutte' : tipo;
+  updateTipoBar();
   renderOggi();
 }
 
@@ -926,11 +934,24 @@ function renderOggi() {
 
   let html = '';
 
-  if (scaduti.length > 0) {
-    html += `<div class="alert-banner"><div class="alert-banner-title">⚠ ${scaduti.length} task in ritardo recente</div><div class="alert-banner-text">${scaduti.map(x=>`${x.casa}${x.ospite?' / '+x.ospite:''}`).join(' — ')}</div></div>`;
+  const tuttiScaduti = [...scaduti, ...daRecuperare];
+  if (tuttiScaduti.length > 0) {
+    html += `<div class="scaduti-section">
+      <div class="scaduti-toggle" onclick="
+        var list=this.nextElementSibling;
+        var arrow=this.querySelector('.scaduti-toggle-arrow');
+        var open=list.style.display!=='none';
+        list.style.display=open?'none':'block';
+        arrow.textContent=open?'▼ apri':'▲ chiudi';
+      ">
+        <span class="scaduti-toggle-label">⚠ ${tuttiScaduti.length} task in ritardo — tocca per vedere</span>
+        <span class="scaduti-toggle-arrow">▼ apri</span>
+      </div>
+      <div class="scaduti-list" style="display:none">${tuttiScaduti.map(task => taskCardHTML(task, true)).join('')}</div>
+    </div>`;
   }
 
-  const daFare = [...scaduti, ...urgenti];
+  const daFare = [...urgenti];
   if (daFare.length > 0) {
     html += sectionLabelHTML('Da fare oggi', daFare.length);
     daFare.forEach(task => { html += taskCardHTML(task, true); });
@@ -1222,67 +1243,47 @@ function renderArchivio() {
     return;
   }
 
-  function sezioneHTML(titolo, emoji, caseLista) {
-    const taskDiRuolo = fatti.filter(x => caseLista.includes(x.casa) || (caseLista.length===0 && !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa)));
-    if (taskDiRuolo.length === 0) return '';
+  const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
-    const totaleRuolo = taskDiRuolo.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
+  // Raggruppa per mese (YYYY-MM), più recente prima
+  const perMese = {};
+  fatti.forEach(x => {
+    const mese = (x.completatoIl || '0000-00').slice(0, 7);
+    if (!perMese[mese]) perMese[mese] = [];
+    perMese[mese].push(x);
+  });
 
-    let html = `<div class="archivio-ruolo">${emoji} ${titolo}<span class="archivio-ruolo-totale">${fmtEuro(totaleRuolo)} €</span></div>`;
+  let html = riepilogo;
+  Object.keys(perMese).sort().reverse().forEach(mese => {
+    const lista = perMese[mese].sort((a,b) => (b.completatoIl||'').localeCompare(a.completatoIl||''));
+    const totale = lista.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
+    const [y, m] = mese.split('-').map(Number);
+    const meseLabel = mese === '0000-00' ? 'Data sconosciuta' : `${MESI_L[m-1]} ${y}`;
 
-    // raggruppa per casa
-    const perCasa = {};
-    taskDiRuolo.forEach(x => { if (!perCasa[x.casa]) perCasa[x.casa]=[]; perCasa[x.casa].push(x); });
+    html += `<div class="archivio-month-header">
+      <span class="archivio-month-title">${meseLabel}</span>
+      <span class="archivio-month-totale">${lista.length} fatt${lista.length===1?'o':'i'}${totale > 0 ? ' · ' + fmtEuro(totale) + ' €' : ''}</span>
+    </div>`;
 
-    Object.keys(perCasa).sort().forEach(casa => {
-      const lista = perCasa[casa].sort((a,b)=>b.completatoIl.localeCompare(a.completatoIl));
-      const totaleCasa = lista.reduce((s,x)=>s+(x.cohost||x.importo||0),0);
-      html += `<div class="archivio-casa">${casa}<span class="archivio-casa-totale">${fmtEuro(totaleCasa)} €</span></div>`;
-      lista.forEach(task => {
-        const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
-        const val = task.cohost || task.importo;
-        const metaParts = [];
-        if (task.completatoIl) metaParts.push(formatShort(task.completatoIl));
-        if (task.completatoAlle) metaParts.push(`ore ${task.completatoAlle}`);
-        if (task.ospite) metaParts.push(task.ospite);
-        if (task.canale && task.canale!=='—') metaParts.push(task.canale);
-        if (val) metaParts.push(`${fmtEuro(val)} €`);
-        if (task.note) metaParts.push(task.note);
-        html += `<div class="task-card done-card" style="margin-bottom:6px">
-          <div class="task-check done"></div>
-          <div class="task-body">
-            <div class="task-tipo ${cfg.cls}">${cfg.label}</div>
-            <div class="task-titolo done">${task.ospite || task.casa}</div>
-            <div class="task-meta">${metaParts.join(' · ')}</div>
-          </div>
-          <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
-        </div>`;
-      });
-    });
-    return html;
-  }
-
-  let html = riepilogo + `<div class="section-label" style="padding-top:14px">Completati nel dettaglio</div>`;
-  html += sezioneHTML('Host', '🏡', CASE_HOST);
-  html += sezioneHTML('Property Manager', '🤝', CASE_PM);
-
-  // task senza casa riconosciuta (manuali ecc)
-  const altri = fatti.filter(x => !CASE_HOST.includes(x.casa) && !CASE_PM.includes(x.casa));
-  if (altri.length > 0) {
-    html += `<div class="archivio-ruolo">✏️ Altri<span class="archivio-ruolo-totale"></span></div>`;
-    altri.sort((a,b)=>b.completatoIl.localeCompare(a.completatoIl)).forEach(task => {
+    lista.forEach(task => {
       const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
-      html += `<div class="task-card done-card" style="margin-bottom:6px">
-        <div class="task-check done"></div>
-        <div class="task-body">
-          <div class="task-tipo ${cfg.cls}">${cfg.label}</div>
-          <div class="task-titolo done">${task.casa}${task.ospite?' · '+task.ospite:''}</div>
-          <div class="task-meta">${task.completatoIl?formatShort(task.completatoIl)+' ':''}${task.note||''}</div>
+      const val = task.cohost || task.importo;
+      const meta = [
+        task.completatoIl ? formatShort(task.completatoIl) : '',
+        task.casa && task.ospite ? task.casa : '',
+        task.canale && task.canale !== '—' ? task.canale : '',
+      ].filter(Boolean).join(' · ');
+      html += `<div class="archivio-item">
+        <span class="task-tipo ${cfg.cls}" style="font-size:10px;padding:2px 7px;white-space:nowrap;flex-shrink:0">${cfg.label}</span>
+        <div class="archivio-item-body">
+          <div class="archivio-item-title">${task.ospite || task.casa}</div>
+          ${meta ? `<div class="archivio-item-meta">${meta}</div>` : ''}
         </div>
+        ${val ? `<span class="archivio-item-importo">${fmtEuro(val)} €</span>` : ''}
         <button class="delete-btn" onclick="deleteTask('${task.id}')" title="Elimina">✕</button>
       </div>`;
     });
-  }
+  });
 
   main.innerHTML = html;
 }
