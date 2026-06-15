@@ -288,7 +288,6 @@
     <div class="oggi-sub" id="oggi-sub">—</div>
     <div class="oggi-pills" id="oggi-pills"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-      <button onclick="downloadICS()" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--nero);cursor:pointer;display:inline-flex;align-items:center;gap:6px">📅 Scadenze al calendario</button>
       <button id="btn-notifiche" onclick="attivaNotifiche()" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--nero);cursor:pointer;display:inline-flex;align-items:center;gap:6px">🔔 Attiva notifiche</button>
     </div>
   </div>
@@ -808,13 +807,6 @@ function finestraBannerHTML(tasks) {
     TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile && isDisponibile(x)
   ).sort((a,b) => a.scadenza.localeCompare(b.scadenza));
 
-  // Fattura prop non ancora disponibili (split per motivo)
-  const inAttesaBooking = tasks.filter(x =>
-    !x.completato && x.tipo === 'fattura-pm' && x.canale === 'Booking' && !isDisponibile(x)
-  );
-  const inAttesaCheckin = tasks.filter(x =>
-    !x.completato && x.tipo === 'fattura-pm' && x.canale !== 'Booking' && !isDisponibile(x)
-  );
 
   const taskRow = (x, scadLabel, isAnticipo) => {
     const cfg = TIPO_CONFIG[x.tipo] || TIPO_CONFIG.manuale;
@@ -857,41 +849,6 @@ function finestraBannerHTML(tasks) {
     anticipabili.forEach(x => {
       const d = isoToDate(x.scadenza);
       todoHTML += taskRow(x, `${d.getDate()} ${MESI_S[d.getMonth()]}`, true);
-    });
-    todoHTML += `</div>`;
-  }
-  if (inAttesaBooking.length > 0) {
-    todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
-    todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">⏳ In attesa pagamento Booking</div>`;
-    inAttesaBooking.forEach(x => {
-      const dispLabel = formatShort(addDays(x.scadenza, -12));
-      const scadLabel = formatShort(x.scadenza);
-      const giorniText = `puoi iniziare dal <strong>${dispLabel}</strong> · scade <strong>${scadLabel}</strong>`;
-      todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600;color:var(--grigio)">${TIPO_CONFIG['fattura-pm'].label} ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
-          <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'}</div>
-          <div style="font-size:10px;color:var(--grigio);margin-top:3px">${giorniText}</div>
-        </div>
-        <span style="font-size:11px;font-weight:600;color:var(--grigio);white-space:nowrap;border:1px solid var(--border);border-radius:6px;padding:3px 8px">Apri ↓</span>
-      </div>`;
-    });
-    todoHTML += `</div>`;
-  }
-  if (inAttesaCheckin.length > 0) {
-    todoHTML += `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">`;
-    todoHTML += `<div style="font-size:12px;font-weight:600;color:var(--grigio);margin-bottom:4px">📅 Dopo il check-in</div>`;
-    inAttesaCheckin.forEach(x => {
-      const checkinLabel = formatShort(addDays(x.scadenza, -12));
-      const scadLabel = formatShort(x.scadenza);
-      todoHTML += `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600;color:var(--grigio)">${TIPO_CONFIG['fattura-pm'].label} ${canaleBadge(x.canale)} <span style="font-weight:400">· ${x.casa}</span></div>
-          <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'}</div>
-          <div style="font-size:10px;color:var(--grigio);margin-top:3px">check-in <strong>${checkinLabel}</strong> · poi hai <strong>12 giorni</strong> · scade <strong>${scadLabel}</strong></div>
-        </div>
-        <span style="font-size:11px;font-weight:600;color:var(--grigio);white-space:nowrap;border:1px solid var(--border);border-radius:6px;padding:3px 8px">Apri ↓</span>
-      </div>`;
     });
     todoHTML += `</div>`;
   }
@@ -2098,6 +2055,12 @@ function setNotificheAttive(btn) {
   btn.classList.add('notifiche-attive');
 }
 
+function setNotificheDisattive(btn) {
+  if (!btn) return;
+  btn.textContent = '🔔 Attiva notifiche';
+  btn.classList.remove('notifiche-attive');
+}
+
 async function checkNotificheStatus() {
   const btn = document.getElementById('btn-notifiche');
   if (!btn) return;
@@ -2123,6 +2086,26 @@ async function attivaNotifiche() {
     showToast('Push non supportate su questo browser');
     return;
   }
+  const btn = document.getElementById('btn-notifiche');
+
+  // Toggle off if already active
+  if (localStorage.getItem('notifiche_attive') === '1') {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        if (CURRENT_USER) {
+          await sb.from('push_subscriptions').delete().eq('user_id', CURRENT_USER.id).eq('endpoint', sub.endpoint);
+        }
+        await sub.unsubscribe();
+      }
+    } catch (e) { console.error(e); }
+    localStorage.removeItem('notifiche_attive');
+    setNotificheDisattive(btn);
+    showToast('🔕 Notifiche disattivate');
+    return;
+  }
+
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') { showToast('Notifiche non autorizzate'); return; }
 
@@ -2143,7 +2126,7 @@ async function attivaNotifiche() {
       );
     }
     localStorage.setItem('notifiche_attive', '1');
-    setNotificheAttive(document.getElementById('btn-notifiche'));
+    setNotificheAttive(btn);
     showToast('🔔 Notifiche attivate — riceverai un alert ogni mattina alle 8');
   } catch (e) {
     console.error(e);
