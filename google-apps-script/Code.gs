@@ -187,9 +187,10 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     dati.tipo = 'autofattura';
   }
 
-  // Trova la casa — cerca in oggetto + corpo (normalizza accenti)
+  // Trova la casa — cerca in oggetto + corpo (normalizza accenti e apostrofi)
   function _normalizza(s) {
     return s.toLowerCase()
+      .replace(/[‘’‚‛′‵]/g, "'") // apostrofi curvi → dritti
       .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
       .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
   }
@@ -222,14 +223,26 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     if (d > '2024-01-01') dateSlash.push(d);
   }
 
-  // Date nel formato "15 giugno 2026"
+  // Date nel formato "15 giugno 2026" o "15 giugno"
+  var MESI_IT_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
   var dateParole = [];
-  var regMese = new RegExp('\\b(\\d{1,2})\\s+(' + MESI_IT.join('|') + ')\\s+(\\d{4})\\b', 'gi');
-  while ((match = regMese.exec(corpo)) !== null) {
+  var regMese = new RegExp('\\b(\\d{1,2})\\s+(' + MESI_IT.join('|') + ')(?:\\s+(\\d{4}))?\\b', 'gi');
+  while ((match = regMese.exec(testo)) !== null) {
     var mIdx = MESI_IT.indexOf(match[2].toLowerCase()) + 1;
     if (mIdx > 0) {
-      var d2 = match[3] + '-' + String(mIdx).padStart(2,'0') + '-' + match[1].padStart(2,'0');
+      var anno = match[3] || '2026';
+      var d2 = anno + '-' + String(mIdx).padStart(2,'0') + '-' + match[1].padStart(2,'0');
       if (d2 > '2024-01-01') dateParole.push(d2);
+    }
+  }
+  // Date nel formato abbreviato "22 set" o "22 set 2026"
+  var regMeseShort = new RegExp('\\b(\\d{1,2})\\s+(' + MESI_IT_SHORT.join('|') + ')(?:\\s+(\\d{4}))?\\b', 'gi');
+  while ((match = regMeseShort.exec(testo)) !== null) {
+    var mIdx2 = MESI_IT_SHORT.indexOf(match[2].toLowerCase()) + 1;
+    if (mIdx2 > 0) {
+      var anno2 = match[3] || '2026';
+      var d3 = anno2 + '-' + String(mIdx2).padStart(2,'0') + '-' + match[1].padStart(2,'0');
+      if (d3 > '2024-01-01') dateParole.push(d3);
     }
   }
 
@@ -345,7 +358,7 @@ function _creaTask(d, storico) {
         canale: 'Airbnb', scadenza: scad, codice: 'af_' + d.mese_fattura,
         importo: d.compenso || null, cohost: null,
         note: 'IVA commissioni Airbnb ' + d.mese_fattura + ' — emetti TD17 entro il 15.',
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
     }
@@ -377,7 +390,7 @@ function _creaTask(d, storico) {
         id: id_sc, tipo: 'scontrino', casa: casa, ospite: d.ospite || '—',
         canale: canale, scadenza: d.checkin, codice: cod + '_sc',
         importo: d.importo || null, cohost: null, note: nota,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
     }
@@ -388,7 +401,7 @@ function _creaTask(d, storico) {
         id: id_al, tipo: 'alloggiati', casa: casa, ospite: d.ospite || '—',
         canale: canale, scadenza: d.checkin, codice: cod + '_al',
         importo: null, cohost: null, note: nota,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
     }
@@ -401,7 +414,7 @@ function _creaTask(d, storico) {
         id: id_fp, tipo: 'fattura-pm', casa: casa, ospite: d.ospite || '—',
         canale: canale, scadenza: scadenza, codice: cod,
         importo: d.importo || null, cohost: d.compenso || null, note: nota,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
     }
@@ -464,7 +477,7 @@ function _esistePerCodice(codice, id) {
 
 function _annullaTask(codice) {
   var oggi = new Date().toISOString().slice(0, 10);
-  var dati = { note: '❌ Prenotazione cancellata.', completato: true, completatoIl: oggi };
+  var dati = { note: '❌ Prenotazione cancellata.', completato: true, completato_il: oggi };
   ['sc','al','fp'].forEach(function(s) { _aggiornaCampo(_idTask(codice, s), dati); });
   _db('tasks?codice=eq.' + encodeURIComponent(codice) + '&user_id=eq.' + CFG.SUPABASE_USER_ID, {
     metodo: 'patch', dati: dati,
