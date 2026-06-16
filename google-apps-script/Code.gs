@@ -126,6 +126,20 @@ function _leggiEmail(msg, storico) {
 }
 
 /**
+ * Rimuove l'etichetta "elaborata" dalle email degli ultimi 60 giorni
+ * così possono essere rilette da recuperaEmailPassate.
+ * Sicuro da eseguire: i task già salvati non vengono duplicati.
+ */
+function sblocca() {
+  var label = GmailApp.getUserLabelByName(LABEL_OK);
+  if (!label) { Logger.log('Etichetta non trovata.'); return; }
+  var threads = GmailApp.search('label:' + LABEL_OK + ' from:(airbnb.com OR booking.com OR kross) newer_than:60d', 0, 200);
+  Logger.log('🔓 Rimozione etichetta da ' + threads.length + ' discussioni...');
+  threads.forEach(function(t) { t.removeLabel(label); });
+  Logger.log('✅ Fatto! Ora esegui recuperaEmailPassate per rilavorarle.');
+}
+
+/**
  * Funzione di test: mostra le ultime 10 email di Airbnb/Booking e cosa ne pensa il programma.
  * Eseguila manualmente per vedere cosa succede con le email recenti.
  */
@@ -447,7 +461,11 @@ function _salvaTask(task) {
     dati: task,
     prefer: 'resolution=ignore-duplicates,return=minimal',
   });
-  if (r.getResponseCode() >= 400) Logger.log('Errore database: ' + r.getContentText());
+  if (r.getResponseCode() >= 400) {
+    // Lancia errore: così l'email viene etichettata "errore" e non "elaborata",
+    // e potrà essere riprovata la volta successiva.
+    throw new Error('DB: ' + r.getContentText().slice(0, 200));
+  }
 }
 
 function _aggiornaCampo(id, campi) {
