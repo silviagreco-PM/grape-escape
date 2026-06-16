@@ -114,12 +114,43 @@ function _leggiEmail(msg, storico) {
   if (!piattaforma) return 0;
 
   var dati = _analizzaEmail(msg.getSubject(), msg.getPlainBody(), piattaforma, msg.getDate());
-  if (!dati || dati.tipo === 'altro') return 0;
+  if (!dati || dati.tipo === 'altro') {
+    Logger.log('⏭ Tipo non riconosciuto — oggetto: ' + msg.getSubject().slice(0, 80));
+    return 0;
+  }
 
   Logger.log('📨 ' + piattaforma + ' · ' + dati.tipo
     + ' · ' + (dati.casa || '—') + ' · ' + (dati.ospite || '—'));
 
   return _creaTask(dati, storico);
+}
+
+/**
+ * Funzione di test: mostra le ultime 10 email di Airbnb/Booking e cosa ne pensa il programma.
+ * Eseguila manualmente per vedere cosa succede con le email recenti.
+ */
+function diagnostica() {
+  var righe = GmailApp.search('from:(airbnb.com OR booking.com OR kross) newer_than:7d', 0, 20);
+  Logger.log('📬 Trovate ' + righe.length + ' discussioni negli ultimi 7 giorni');
+  righe.forEach(function(thread) {
+    var msg = thread.getMessages()[thread.getMessageCount() - 1]; // ultima email del thread
+    var mittente = msg.getFrom().toLowerCase();
+    var piattaforma = mittente.indexOf('airbnb') >= 0  ? 'airbnb'
+                    : mittente.indexOf('booking') >= 0 ? 'booking'
+                    : mittente.indexOf('kross') >= 0   ? 'kross'
+                    : '?';
+    var labels = thread.getLabels().map(function(l){ return l.getName(); }).join(', ');
+    var dati = _analizzaEmail(msg.getSubject(), msg.getPlainBody(), piattaforma, msg.getDate());
+    Logger.log('---');
+    Logger.log('Da: ' + msg.getFrom());
+    Logger.log('Oggetto: ' + msg.getSubject());
+    Logger.log('Etichette: ' + (labels || 'nessuna'));
+    Logger.log('→ Tipo riconosciuto: ' + (dati ? dati.tipo : '?'));
+    Logger.log('→ Casa: ' + (dati && dati.casa ? dati.casa : 'NON TROVATA'));
+    Logger.log('→ Ospite: ' + (dati && dati.ospite ? dati.ospite : '—'));
+    Logger.log('→ Check-in: ' + (dati && dati.checkin ? dati.checkin : '—'));
+  });
+  Logger.log('✅ Fine diagnostica');
 }
 
 // ═══ LETTURA DEL CONTENUTO DELL'EMAIL ════════════════════════════════════════
@@ -146,29 +177,31 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
   // Capisce di che tipo di email si tratta
   if (ogg.match(/cancell/)) {
     dati.tipo = 'cancellazione';
-  } else if (ogg.match(/prenotaz|conferm|nuova prenot|new reserv|booking confirm|new booking/)) {
+  } else if (ogg.match(/prenotaz|conferm|nuova prenot|new reserv|booking confirm|new booking|reservation|richiesta|ha prenotato|has booked|booked your/)) {
     dati.tipo = 'prenotazione';
-  } else if (ogg.match(/modific|modif/)) {
+  } else if (ogg.match(/modific|modif|alterat|changed/)) {
     dati.tipo = 'modifica';
-  } else if (ogg.match(/pagamento|payout|compenso|guadagno|trasferimento|co.host/)) {
+  } else if (ogg.match(/pagamento|payout|compenso|guadagno|trasferimento|co.host|earning/)) {
     dati.tipo = 'pagamento';
   } else if (ogg.match(/fattura|invoice|iva|td17|riepilogo commissioni/)) {
     dati.tipo = 'autofattura';
   }
 
-  // Trova la casa (cerca le parole chiave del nome annuncio nel testo)
+  // Trova la casa — cerca in oggetto + corpo (normalizza accenti)
+  function _normalizza(s) {
+    return s.toLowerCase()
+      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
+      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
+  }
+  var testoPulito = _normalizza(testo); // oggetto + corpo
   for (var k = 0; k < CASE_MAP.length; k++) {
-    var parola = CASE_MAP[k][0].toLowerCase()
-      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
-      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
-    var testoPulito = cor
-      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
-      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
+    var parola = _normalizza(CASE_MAP[k][0]);
     if (testoPulito.indexOf(parola) >= 0) {
       dati.casa = CASE_MAP[k][1];
       break;
     }
   }
+  if (!dati.casa) Logger.log('⚠ Casa non trovata — oggetto: ' + oggetto.slice(0, 80));
 
   // Codice prenotazione Airbnb (es. HMKANPNZFF)
   var codAir = testo.match(/\b(HM[A-Z0-9]{6,10})\b/i);
