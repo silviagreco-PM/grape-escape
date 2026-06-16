@@ -1,5 +1,5 @@
 // The Grape Escape — service worker (network-first per restare aggiornati)
-const CACHE = 'grape-v8';
+const CACHE = 'grape-v9';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {
@@ -50,7 +50,7 @@ self.addEventListener('notificationclick', e => {
   const url = e.notification.data?.url || '/';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      const existing = list.find(c => c.url.includes('thegrapeescape.netlify.app') || c.url.includes('localhost'));
+      const existing = list.find(c => c.url.includes('grape-escape.vercel.app') || c.url.includes('thegrapeescape.netlify.app') || c.url.includes('localhost'));
       if (existing) { existing.focus(); existing.navigate(url); }
       else clients.openWindow(url);
     })

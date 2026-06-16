@@ -34,20 +34,25 @@ Tienilo da parte — ti serve al Passo 4.
 
 ---
 
-## PARTE 3 — Aggiungere una parola segreta a Netlify
+## PARTE 3 — Aggiungere le parole segrete a Vercel
 
 Questo serve per far comunicare Gmail e le notifiche in modo sicuro.
 
-1. Vai su **https://app.netlify.com** e fai login
-2. Clicca sul tuo sito (The Grape Escape)
-3. Clicca su **Site configuration** in alto
-4. Nel menu a sinistra clicca su **Environment variables**
-5. Clicca su **Add a variable**
-6. Scrivi esattamente:
-   - **Key:** `PUSH_SECRET`
-   - **Value:** inventati una parola segreta qualunque, es. `grape2026segreto!`
-7. Clicca **Save**
-8. Ora vai su **Deploys** (in alto) e clicca **Trigger deploy → Deploy site** per rendere attiva la modifica
+1. Vai su **https://vercel.com** e fai login
+2. Clicca sul progetto **grape-escape**
+3. Clicca su **Settings** (in alto)
+4. Nel menu a sinistra clicca su **Environment Variables**
+5. Aggiungi queste voci una alla volta (per ognuna: scrivi il Nome, incolla il Valore, clicca **Save**):
+
+| Nome (Key)                  | Valore (Value)                                        |
+|-----------------------------|-------------------------------------------------------|
+| `PUSH_SECRET`               | inventati una parola segreta, es. `grape2026segreto!` |
+| `VAPID_PUBLIC_KEY`          | copia da Supabase → Settings → API → VAPID public key (oppure chiedimi di generarle) |
+| `VAPID_PRIVATE_KEY`         | come sopra, chiave privata                            |
+| `SUPABASE_URL`              | `https://vjurwiqeiummanltsdtt.supabase.co`            |
+| `SUPABASE_SERVICE_ROLE_KEY` | la chiave `service_role` di Supabase (Passo 1)        |
+
+6. Dopo aver aggiunto tutte le voci, vai su **Deployments** e clicca **Redeploy** sull'ultimo deploy per attivare le modifiche.
 
 Annota la parola segreta che hai scelto — ti serve al Passo 4.
 
@@ -77,7 +82,7 @@ Annota la parola segreta che hai scelto — ti serve al Passo 4.
 | `SUPABASE_URL`     | `https://vjurwiqeiummanltsdtt.supabase.co`                   |
 | `SUPABASE_KEY`     | la chiave `service_role` copiata al Passo 1                  |
 | `SUPABASE_USER_ID` | il tuo codice utente copiato al Passo 2                      |
-| `PUSH_URL`         | `https://thegrapeescape.netlify.app/.netlify/functions/send-push` |
+| `PUSH_URL`         | `https://grape-escape.vercel.app/api/send-push`               |
 | `PUSH_SECRET`      | la parola segreta che hai scelto al Passo 3                  |
 
 5. Clicca **Salva proprietà script**

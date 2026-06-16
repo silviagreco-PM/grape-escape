@@ -1,0 +1,9 @@
+{
+  "outputDirectory": "deploy",
+  "crons": [
+    {
+      "path": "/api/daily-push",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}
