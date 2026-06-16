@@ -134,9 +134,17 @@ function sblocca() {
   var label = GmailApp.getUserLabelByName(LABEL_OK);
   if (!label) { Logger.log('Etichetta non trovata.'); return; }
   var threads = GmailApp.search('label:' + LABEL_OK + ' from:(airbnb.com OR booking.com OR kross) newer_than:60d', 0, 200);
-  Logger.log('🔓 Rimozione etichetta da ' + threads.length + ' discussioni...');
-  threads.forEach(function(t) { t.removeLabel(label); });
-  Logger.log('✅ Fatto! Ora esegui recuperaEmailPassate per rilavorarle.');
+  Logger.log('🔓 Trovate ' + threads.length + ' discussioni, rimozione etichetta...');
+  var ok = 0, err = 0;
+  for (var i = 0; i < threads.length; i++) {
+    try {
+      label.removeFromThread(threads[i]);
+      ok++;
+    } catch(e) {
+      err++;
+    }
+  }
+  Logger.log('✅ Sbloccat' + (ok === 1 ? 'a' : 'e') + ' ' + ok + ' discussion' + (ok === 1 ? 'e' : 'i') + (err > 0 ? ' (' + err + ' errori ignorati)' : '') + '. Ora esegui recuperaEmailPassate.');
 }
 
 /**
