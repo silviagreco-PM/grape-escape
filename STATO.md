@@ -30,3 +30,10 @@
 - **Regina Weinheimer** — Ca' Balenga (casa propria), Airbnb HMDJX2MEAW, 16→18 giu, 198,40 € → scontrino + alloggiati.
 - **Pasovski Metin** — Callianetto/La Tana del Tasso (gestione), Booking 5113508343, 18→21 giu, 412,43 € → fattura PM.
 - **Loffredo Fabia** — Casa Amalia (gestione), Booking 6205466032, 12→14 dic, 221,07 € → fattura PM.
+
+## ⭐ DA RICORDARE (richiesto da Silvia)
+- **Fonte dati prenotazioni**: Kross è la fonte principale (Airbnb/Booking ci passano tutti; Booking NON manda conferme dirette). Airbnb diretto = riprova del nome.
+- **Gmail — regole**: non cancellare MAI prenotazioni e compensi/fatture. Si possono archiviare solo le notifiche di messaggi che intasano.
+- **Richieste ospiti**: le email "messaggio da un ospite" con richieste vere (parcheggio, culla, orario check-in) servono a Silvia per il **suo DB della gestione** e per le **ragazze delle pulizie**. Etichettate in Gmail con **"OSPITI - richieste (gestione+pulizie)"** (Label_173). Una futura app/area staff dovrà attingere da qui.
+- **Pulizia Gmail completa**: da fare più avanti (etichettare prenotazioni per casa, archiviare spam/solleciti co-host, togliere vecchie etichette ALIBERTI/DA CESTINARE). Per ora sospesa su richiesta di Silvia.
+
