@@ -1162,7 +1162,7 @@ function renderOggi() {
   const tasks = filterByRole(allTasks);
   const t = today(), w = inDays(7);
 
-  const SOGLIA_BATCH = 14; // giorni — oltre questa soglia va in "Da recuperare"
+  const SOGLIA_BATCH = 7; // giorni — entro 1 settimana = in evidenza; oltre = "Da recuperare"
   const scadutiTutti = tasks.filter(x => !x.completato && x.scadenza && x.scadenza < t);
   const scaduti      = scadutiTutti.filter(x => x.inBatch !== true  && Math.abs(daysDiff(x.scadenza)) <= SOGLIA_BATCH);
   const daRecuperare = scadutiTutti.filter(x => x.inBatch === true  || Math.abs(daysDiff(x.scadenza)) > SOGLIA_BATCH);
@@ -1187,20 +1187,14 @@ function renderOggi() {
 
   let html = novitaOggiHTML(allTasks);
 
-  const tuttiScaduti = [...scaduti, ...daRecuperare];
-  if (tuttiScaduti.length > 0) {
-    html += `<div class="scaduti-section">
-      <div class="scaduti-toggle" onclick="
-        var list=this.nextElementSibling;
-        var arrow=this.querySelector('.scaduti-toggle-arrow');
-        var open=list.style.display!=='none';
-        list.style.display=open?'none':'block';
-        arrow.textContent=open?'▼ apri':'▲ chiudi';
-      ">
-        <span class="scaduti-toggle-label">⚠ ${tuttiScaduti.length} task in ritardo — tocca per vedere</span>
-        <span class="scaduti-toggle-arrow">▼ apri</span>
+  // In ritardo RECENTI (≤7 giorni): in evidenza, rossi, aperti, in cima
+  if (scaduti.length > 0) {
+    const scOrd = [...scaduti].sort((a,b) => a.scadenza.localeCompare(b.scadenza));
+    html += `<div class="scaduti-section" id="sec-ritardo">
+      <div class="scaduti-toggle" style="cursor:default">
+        <span class="scaduti-toggle-label">⚠ ${scOrd.length} in ritardo · ultimi 7 giorni</span>
       </div>
-      <div class="scaduti-list" style="display:none">${tuttiScaduti.map(task => taskCardHTML(task, true)).join('')}</div>
+      <div class="scaduti-list">${scOrd.map(task => taskCardHTML(task, true)).join('')}</div>
     </div>`;
   }
 
@@ -1246,10 +1240,10 @@ function renderOggi() {
     const totale = daRecuperare.reduce((s,x) => s + (x.importo||0), 0);
     html += `<div class="recupera-header">
       <div class="recupera-title">
-        📦 Da recuperare in batch
+        📦 In ritardo da tempo (oltre 1 settimana)
         <span style="font-family:'Inter',monospace;font-size:12px">${daRecuperare.length} task · ${fmtEuro(totale)} €</span>
       </div>
-      <div class="recupera-subtitle">Queste pratiche sono in ritardo — le farai tutte insieme quando hai una finestra. Nessuna urgenza aggiuntiva.</div>
+      <div class="recupera-subtitle">Queste pratiche sono in ritardo da più di una settimana — falle tutte insieme quando hai una finestra. Nessuna urgenza aggiuntiva.</div>
     </div>
     <div class="recupera-body">`;
     daRecuperare.forEach(task => { html += taskCardHTML(task, false, false, true); });
