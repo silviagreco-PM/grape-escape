@@ -23,6 +23,7 @@ var CASE_MAP = [
   ['balenga',              "Ca' Balenga"],
   ['tana del tasso',       'La Tana del Tasso'],
   ['authentic monferrato', 'La Tana del Tasso'],
+  ['callianetto',          'La Tana del Tasso'],
   ['palio',                'Appartamento del Palio'],
   ['casa amalia',          'Casa Amalia'],
   ['amalia monferrato',    'Casa Amalia'],
@@ -133,6 +134,7 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     piattaforma: piattaforma,
     tipo: 'altro',
     casa: null,
+    canale: null,
     ospite: null,
     checkin: null,
     checkout: null,
@@ -243,6 +245,45 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     }
   }
 
+  // ── KROSS: formato strutturato e affidabile (override preciso dei campi) ──
+  // Le email di krossbooking hanno campi fissi: usiamoli invece di indovinare.
+  if (piattaforma === 'kross') {
+    // Canale OTA reale dal soggetto ("Nuova Prenotazione Airbnb / Booking.com")
+    if (/booking\.com/i.test(oggetto))   dati.canale = 'Booking';
+    else if (/airbnb/i.test(oggetto))    dati.canale = 'Airbnb';
+
+    // Codice: "Prenotazione n. HMXXXX" oppure numero Booking
+    var mCod = corpo.match(/prenotazione\s+n\.?\s*([A-Z0-9]+)/i);
+    if (mCod) dati.codice = mCod[1].toUpperCase();
+
+    // Ospite: "Riferimento: Cognome Nome"
+    var mRif = corpo.match(/riferimento:\s*([^\n\r]+)/i);
+    if (mRif) dati.ospite = mRif[1].trim();
+
+    // Date precise: "Arrivo: GG/MM/AAAA" e "Partenza: GG/MM/AAAA"
+    var mArr = corpo.match(/arrivo:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    var mPar = corpo.match(/partenza:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    if (mArr) dati.checkin  = mArr[3] + '-' + mArr[2].padStart(2,'0') + '-' + mArr[1].padStart(2,'0');
+    if (mPar) dati.checkout = mPar[3] + '-' + mPar[2].padStart(2,'0') + '-' + mPar[1].padStart(2,'0');
+
+    // Importo ospite: "Totale tariffa: Euro 412,43"
+    var mTot = corpo.match(/totale tariffa:\s*(?:euro|eur|€)\s*([0-9.,]+)/i);
+    if (mTot) {
+      var nTot = parseFloat(mTot[1].replace(/\./g,'').replace(',','.'));
+      if (!isNaN(nTot) && nTot > 0) dati.importo = nTot;
+    }
+    // Le email Kross di prenotazione non contengono il compenso co-host:
+    // azzeriamo il valore "indovinato" (era la commissione, es. EUR 6.18).
+    dati.compenso = null;
+
+    // Casa: dai campi "Camere assegnate:" / "Prenotazione per: 1 x NOME - ..."
+    if (!dati.casa) {
+      var mCam = corpo.match(/camere assegnate:\s*([^\n\r]+)/i)
+             || corpo.match(/prenotazione per:\s*\d*\s*x?\s*([^\n\r-]+)/i);
+      if (mCam) dati.casa = _trovaCasa(mCam[1]);
+    }
+  }
+
   return dati;
 }
 
@@ -328,8 +369,11 @@ function _creaTask(d, storico) {
   }
 
   var isHost    = CASE_HOST.indexOf(casa) >= 0;
-  var isBooking = d.piattaforma === 'booking' || d.piattaforma === 'kross';
-  var canale    = isBooking ? 'Booking' : 'Airbnb';
+  // Canale OTA reale: per le email Kross lo leggiamo dal soggetto (d.canale);
+  // solo come ultima spiaggia ipotizziamo dalla piattaforma mittente.
+  var canale    = d.canale
+                  || ((d.piattaforma === 'booking' || d.piattaforma === 'kross') ? 'Booking' : 'Airbnb');
+  var isBooking = canale === 'Booking';
   var cod       = d.codice || '';
   var nota      = d.checkin && d.checkout
     ? 'Check-in ' + d.checkin + ', check-out ' + d.checkout
