@@ -746,6 +746,12 @@ async function applyMigrations() {
   });
   // 3) elimina doppioni: stesso tipo+casa+scadenza+ospite → tieni il più completo
   const _delIds = TASKS.filter(x => x.tipo === 'arrivo').map(x => x.id);
+  // 3a) spazzatura del vecchio script: task prenotazione SENZA nome e SENZA codice valido
+  //     (es. codice "_sc"/"_al" o vuoto) → non identificabili, da rimuovere
+  TASKS.filter(x =>
+    ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) &&
+    _vuoto(x.ospite) && _baseCod(x.codice) === ''
+  ).forEach(x => _delIds.push(x.id));
   const _grp = {};
   TASKS.filter(x => ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) && !_vuoto(x.ospite)).forEach(x => {
     const k = x.tipo + '|' + (x.casa||'') + '|' + (x.scadenza||'') + '|' + x.ospite;
@@ -756,6 +762,12 @@ async function applyMigrations() {
     if (g.length < 2) return;
     g.sort((a,b) => (b.importo!=null?1:0)-(a.importo!=null?1:0) || (b.codice||'').length-(a.codice||'').length);
     g.slice(1).forEach(x => _delIds.push(x.id));
+  });
+  // 3b) doppioni tra task CON nome e gemello SENZA nome (stesso tipo+casa+scadenza) → via il senza nome
+  TASKS.filter(x => ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) && _vuoto(x.ospite)).forEach(x => {
+    const gemello = TASKS.find(y => y.id !== x.id && y.tipo === x.tipo &&
+      (y.casa||'') === (x.casa||'') && (y.scadenza||'') === (x.scadenza||'') && !_vuoto(y.ospite));
+    if (gemello) _delIds.push(x.id);
   });
   const _delU = [...new Set(_delIds)];
   TASKS = TASKS.filter(x => !_delU.includes(x.id));
