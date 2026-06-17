@@ -512,6 +512,7 @@ const TIPO_CONFIG = {
   alloggiati:   { label: '🏛 Alloggiati',    cls: 'tipo-alloggiati',  defaultLink: '',          accorpabile: false, perché: 'entro 24h dall\'arrivo' },
   ross:         { label: '📊 ROSS / ISTAT',  cls: 'tipo-ross',        defaultLink: 'ross',      accorpabile: false, perché: 'entro il 10 del mese' },
   manuale:      { label: '✏️ Promemoria',    cls: 'tipo-manuale',     defaultLink: '',          accorpabile: true,  perché: 'scadenza flessibile' },
+  arrivo:       { label: '🛬 Arrivo',        cls: 'tipo-arrivo',      defaultLink: '',          accorpabile: false, perché: 'giorno del check-in' },
 };
 
 const CASE_HOST = ["Ca' Balenga", "La Ciucarina"];
@@ -696,6 +697,22 @@ async function applyMigrations() {
       const { error } = await sb.from('tasks').upsert(_m5add.map(taskToRow));
       if (error) console.error('Migration 5 error', error);
       else showToast(`✓ ${_m5add.length} prenotazioni nuove aggiunte`);
+    }
+  }
+
+  // ── Migration 6: promemoria ARRIVO per le case in gestione ──
+  const _m6now = new Date().toISOString();
+  const _m6 = [
+    { id:'pas_ar', tipo:'arrivo', casa:'La Tana del Tasso', ospite:'Pasovski Metin', canale:'Booking', importo:null, cohost:null, codice:'5113508343', dataDoc:null, scadenza:'2026-06-18', link:'', note:'Arrivo ospite. Check-in 18/06, check-out 21/06 (3 notti, 4 adulti).', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m6now },
+    { id:'lof_ar', tipo:'arrivo', casa:'Casa Amalia',       ospite:'Loffredo Fabia',  canale:'Booking', importo:null, cohost:null, codice:'6205466032', dataDoc:null, scadenza:'2026-12-12', link:'', note:'Arrivo ospite. Check-in 12/12, check-out 14/12 (2 notti, 2 adulti).', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m6now },
+  ];
+  const _m6add = _m6.filter(t => !TASKS.find(x => x.id === t.id));
+  if (_m6add.length) {
+    _m6add.forEach(t => TASKS.push(t));
+    if (CURRENT_USER) {
+      const { error } = await sb.from('tasks').upsert(_m6add.map(taskToRow));
+      if (error) console.error('Migration 6 error', error);
+      else showToast(`✓ ${_m6add.length} promemoria arrivo aggiunti`);
     }
   }
 }
@@ -1475,7 +1492,7 @@ function renderArchivio() {
 
   const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const MESI_S = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  const TIPO_EMOJI = { scontrino:'🧾', autofattura:'📄', 'fattura-pm':'💶', alloggiati:'🏛', ross:'📊', manuale:'✏️' };
+  const TIPO_EMOJI = { scontrino:'🧾', autofattura:'📄', 'fattura-pm':'💶', alloggiati:'🏛', ross:'📊', manuale:'✏️', arrivo:'🛬' };
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // Filtro attivo
