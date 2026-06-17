@@ -755,6 +755,7 @@ async function applyMigrations() {
     'HM5YPBZHS3':'Leonardo Lanave', 'HMW5BCAK3W':'Simona Govetosa', 'HM9EXR3WKB':'Jeanette Jansen-Heerding',
     'HMSJFANNYB':'Noemi Bisceglia', '5620491578':'Traverso Eddie', 'HMZ8SJXCWA':'Madeleine Graaman',
     'HMMXMNZNKZ':'Verdiana Busato', 'HMZ94DQZMC':'Carlotta Barbolla',
+    '5288275855':'krauchthaler kathy et Urs',
   };
   const _baseCod = c => (c || '').replace(/_(sc|al|ar|fp)$/, '');
   const _vuoto = o => !o || o === '—' || String(o).trim() === '';
@@ -2504,7 +2505,7 @@ const REGOLE = [
     quando: 'Entro il 15 del mese successivo a quello in cui la prenotazione è stata confermata (Airbnb) o alla data fattura mensile (Booking).',
     dove: 'Passepartout / Passgo → emissione autofattura tipo documento TD17.',
     causale: 'Imponibile = commissione del canale. IVA 22% calcolata sopra. Dati documento = numero e data della fattura del canale (Airbnb: Conto → Fatture host; Booking: PDF allegato alla mail mensile).',
-    note: 'Accorpabile: puoi farne più di una nella stessa sessione. L\'IVA versata qui è un costo reale da sottrarre ai guadagni.'
+    note: 'Accorpabile: puoi farne più di una nella stessa sessione. L\'IVA versata qui è un costo reale da sottrarre ai guadagni. ⚠️ CANCELLAZIONI: se una prenotazione viene cancellata, l\'autofattura va comunque emessa (con la data della prenotazione) e poi si emette un\'autofattura di STORNO con la data della cancellazione — non basta cancellarla.'
   },
   {
     icon: '💶', titolo: 'Fattura Fee PM (compenso gestione)', ruolo: 'PM',
