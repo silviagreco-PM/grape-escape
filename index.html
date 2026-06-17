@@ -677,6 +677,27 @@ async function applyMigrations() {
       else showToast('✓ Task Ana Krapovickas ripristinato');
     }
   }
+
+  // ── Migration 5: prenotazioni nuove giugno 2026 (Regina, Pasovski, Loffredo) ──
+  const _m5now = new Date().toISOString();
+  const _m5 = [
+    // Regina Weinheimer — Ca' Balenga (casa propria/host), Airbnb, check-in 16/06
+    { id:'reg_sc', tipo:'scontrino',  casa:"Ca' Balenga",       ospite:'Regina Weinheimer', canale:'Airbnb',  importo:198.40, cohost:null, codice:'HMDJX2MEAW', dataDoc:null, scadenza:'2026-06-16', link:'ade', note:'Check-in 16/06, check-out 18/06 (2 notti, 2 adulti). Totale ospite 198,40 €.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
+    { id:'reg_al', tipo:'alloggiati', casa:"Ca' Balenga",       ospite:'Regina Weinheimer', canale:'Airbnb',  importo:null,   cohost:null, codice:'',           dataDoc:null, scadenza:'2026-06-16', link:'',    note:'Check-in 16/06, check-out 18/06. Comunicazione Alloggiati entro 24h dall\'arrivo.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
+    // Pasovski Metin — Callianetto / La Tana del Tasso (gestione), Booking, check-in 18/06
+    { id:'pas_fp', tipo:'fattura-pm', casa:'La Tana del Tasso', ospite:'Pasovski Metin',    canale:'Booking', importo:412.43, cohost:null, codice:'5113508343', dataDoc:null, scadenza:'2026-07-15', link:'',    note:'Check-in 18/06, check-out 21/06 (3 notti, 4 adulti). Totale ospite 412,43 €. Fattura fee PM Booking quando arriva il pagamento.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
+    // Loffredo Fabia — Casa Amalia (gestione), Booking, check-in 12/12
+    { id:'lof_fp', tipo:'fattura-pm', casa:'Casa Amalia',       ospite:'Loffredo Fabia',    canale:'Booking', importo:221.07, cohost:null, codice:'6205466032', dataDoc:null, scadenza:'2027-01-15', link:'',    note:'Check-in 12/12, check-out 14/12 (2 notti, 2 adulti). Totale ospite 221,07 €. Fattura fee PM Booking quando arriva il pagamento.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
+  ];
+  const _m5add = _m5.filter(t => !TASKS.find(x => x.id === t.id));
+  if (_m5add.length) {
+    _m5add.forEach(t => TASKS.push(t));
+    if (CURRENT_USER) {
+      const { error } = await sb.from('tasks').upsert(_m5add.map(taskToRow));
+      if (error) console.error('Migration 5 error', error);
+      else showToast(`✓ ${_m5add.length} prenotazioni nuove aggiunte`);
+    }
+  }
 }
 
 async function initData() {
