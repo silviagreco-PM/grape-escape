@@ -485,17 +485,6 @@ function _creaTask(d, storico) {
       });
       creati++;
     }
-    // ARRIVO — promemoria il giorno del check-in (per vedere chi arriva)
-    var id_ar = _idTask(cod, 'ar');
-    if (!storico || !_esistePerCodice(cod + '_ar', id_ar)) {
-      _salvaTask({
-        id: id_ar, tipo: 'arrivo', casa: casa, ospite: d.ospite || '—',
-        canale: canale, scadenza: d.checkin, codice: cod + '_ar',
-        importo: null, cohost: null, note: 'Arrivo ospite. ' + nota,
-        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
-      });
-      creati++;
-    }
     // ALLOGGIATI WEB — entro 24h dall'arrivo (anche per le case in gestione)
     var id_alg = _idTask(cod, 'al');
     if (!storico || !_esistePerCodice(cod + '_al', id_alg)) {
@@ -601,7 +590,6 @@ var RECAP_TIPI = {
   alloggiati:   '🏛 Alloggiati',
   ross:         '📊 ROSS/ISTAT',
   manuale:      '✏️ Promemoria',
-  arrivo:       '🛬 Arrivo',
 };
 
 function _oggiISO(offset) {

@@ -512,7 +512,6 @@ const TIPO_CONFIG = {
   alloggiati:   { label: '🏛 Alloggiati',    cls: 'tipo-alloggiati',  defaultLink: '',          accorpabile: false, perché: 'entro 24h dall\'arrivo' },
   ross:         { label: '📊 ROSS / ISTAT',  cls: 'tipo-ross',        defaultLink: 'ross',      accorpabile: false, perché: 'entro il 10 del mese' },
   manuale:      { label: '✏️ Promemoria',    cls: 'tipo-manuale',     defaultLink: '',          accorpabile: true,  perché: 'scadenza flessibile' },
-  arrivo:       { label: '🛬 Arrivo',        cls: 'tipo-arrivo',      defaultLink: '',          accorpabile: false, perché: 'giorno del check-in' },
 };
 
 const CASE_HOST = ["Ca' Balenga", "La Ciucarina"];
@@ -700,21 +699,8 @@ async function applyMigrations() {
     }
   }
 
-  // ── Migration 6: promemoria ARRIVO per le case in gestione ──
-  const _m6now = new Date().toISOString();
-  const _m6 = [
-    { id:'pas_ar', tipo:'arrivo', casa:'La Tana del Tasso', ospite:'Pasovski Metin', canale:'Booking', importo:null, cohost:null, codice:'5113508343', dataDoc:null, scadenza:'2026-06-18', link:'', note:'Arrivo ospite. Check-in 18/06, check-out 21/06 (3 notti, 4 adulti).', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m6now },
-    { id:'lof_ar', tipo:'arrivo', casa:'Casa Amalia',       ospite:'Loffredo Fabia',  canale:'Booking', importo:null, cohost:null, codice:'6205466032', dataDoc:null, scadenza:'2026-12-12', link:'', note:'Arrivo ospite. Check-in 12/12, check-out 14/12 (2 notti, 2 adulti).', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m6now },
-  ];
-  const _m6add = _m6.filter(t => !TASKS.find(x => x.id === t.id));
-  if (_m6add.length) {
-    _m6add.forEach(t => TASKS.push(t));
-    if (CURRENT_USER) {
-      const { error } = await sb.from('tasks').upsert(_m6add.map(taskToRow));
-      if (error) console.error('Migration 6 error', error);
-      else showToast(`✓ ${_m6add.length} promemoria arrivo aggiunti`);
-    }
-  }
+  // ── Migration 6: (rimossa) — il concetto "Arrivo" è stato eliminato ──
+  // L'arrivo si vede dall'Alloggiati, che cade il giorno del check-in.
 
   // ── Migration 7: Alloggiati Web anche per le case in gestione ──
   const _m7now = new Date().toISOString();
@@ -729,6 +715,31 @@ async function applyMigrations() {
       const { error } = await sb.from('tasks').upsert(_m7add.map(taskToRow));
       if (error) console.error('Migration 7 error', error);
       else showToast(`✓ ${_m7add.length} Alloggiati aggiunti`);
+    }
+  }
+
+  // ── Migration 8: pulizia — via i task "arrivo" e i doppioni senza nome ospite ──
+  const _del = [];
+  // 1) rimuovi i task tipo 'arrivo' (concetto eliminato)
+  TASKS.filter(x => x.tipo === 'arrivo').forEach(x => _del.push(x.id));
+  // 2) rimuovi i task prenotazione SENZA nome ospite quando esiste già un gemello CON nome
+  const _baseCod = c => (c || '').replace(/_(sc|al|ar|fp)$/, '');
+  const _senzaNome = TASKS.filter(x =>
+    ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) &&
+    (!x.ospite || x.ospite === '—' || x.ospite.trim() === ''));
+  _senzaNome.forEach(x => {
+    const gemello = TASKS.find(y => y.id !== x.id && y.tipo === x.tipo &&
+      _baseCod(y.codice) && _baseCod(y.codice) === _baseCod(x.codice) &&
+      y.ospite && y.ospite !== '—' && y.ospite.trim() !== '');
+    if (gemello) _del.push(x.id);
+  });
+  const _delU = [...new Set(_del)];
+  if (_delU.length) {
+    TASKS = TASKS.filter(x => !_delU.includes(x.id));
+    if (CURRENT_USER) {
+      const { error } = await sb.from('tasks').delete().in('id', _delU);
+      if (error) console.error('Migration 8 error', error);
+      else showToast(`✓ pulizia: ${_delU.length} rimossi`);
     }
   }
 }
@@ -1263,12 +1274,12 @@ function novitaOggiHTML(allTasks) {
   if (!righe.length) return '';
 
   return `<div style="background:var(--verde-light,#eef7ee);border:1px solid #cfe8cf;border-radius:12px;padding:10px 12px;margin-bottom:12px">
-    <div style="font-size:11px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:var(--verde,#2e7d32);margin-bottom:5px">📣 Cosa è successo oggi</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:var(--verde,#2e7d32);margin-bottom:5px">📣 Oggi · prenotazioni nuove / modifiche / cancellazioni</div>
     <div style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.4">${righe.join('')}</div>
   </div>`;
 }
 
-// Apri la lista delle cose da fare di una singola casa (ricerca per nome casa)
+// Apri la lista delle cose da fare filtrando per un termine (casa o ospite)
 function vaiACasa(nome) {
   const inp = document.getElementById('search-input');
   if (inp) {
@@ -1278,6 +1289,17 @@ function vaiACasa(nome) {
   }
   doSearch(nome);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function vaiAOspite(nome) { vaiACasa(nome); }
+
+// Rende casa/ospite un link che apre tutti i task collegati
+function casaLink(casa) {
+  if (!casa) return '';
+  return `<span onclick="event.stopPropagation();vaiACasa('${casa.replace(/'/g, "\\'")}')" style="text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:pointer">${casa}</span>`;
+}
+function ospiteLink(osp) {
+  if (!osp || osp === '—') return osp || '';
+  return `<span onclick="event.stopPropagation();vaiAOspite('${osp.replace(/'/g, "\\'")}')" style="text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:pointer">${osp}</span>`;
 }
 
 function scrollToSection(id) {
@@ -1494,7 +1516,7 @@ function taskCardHTML(task, urgent, done, isBatch) {
     <div class="task-body">
       <div class="task-tipo ${cfg.cls}">${cfg.label}${ruoloBadge}</div>
       ${aggiuntoTs ? `<div class="task-aggiunto">Aggiunto il ${aggiuntoTs}</div>` : ''}
-      <div class="task-titolo ${titoloCls}">${task.casa}${task.ospite?' · '+task.ospite:''}</div>
+      <div class="task-titolo ${titoloCls}">${casaLink(task.casa)}${task.ospite?' · '+ospiteLink(task.ospite):''}</div>
       ${!done ? checkinOutHTML(task.note) : ''}
       ${extra}
     </div>
@@ -1560,7 +1582,7 @@ function renderArchivio() {
 
   const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const MESI_S = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-  const TIPO_EMOJI = { scontrino:'🧾', autofattura:'📄', 'fattura-pm':'💶', alloggiati:'🏛', ross:'📊', manuale:'✏️', arrivo:'🛬' };
+  const TIPO_EMOJI = { scontrino:'🧾', autofattura:'📄', 'fattura-pm':'💶', alloggiati:'🏛', ross:'📊', manuale:'✏️' };
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // Filtro attivo

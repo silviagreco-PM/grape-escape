@@ -10,7 +10,6 @@ const TIPO_LABEL = {
   alloggiati:   '🏛 Alloggiati',
   ross:         '📊 ROSS/ISTAT',
   manuale:      '✏️ Promemoria',
-  arrivo:       '🛬 Arrivo',
 };
 
 export default async function handler(req, res) {
