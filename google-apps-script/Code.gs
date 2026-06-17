@@ -53,7 +53,8 @@ var MESI_IT = [
 function impostaTrigger() {
   ScriptApp.getProjectTriggers().forEach(function(t) { ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('controllaEmailNuove').timeBased().everyMinutes(5).create();
-  Logger.log('✅ Fatto! Il programma controllerà le email ogni 5 minuti.');
+  ScriptApp.newTrigger('inviaRecapGiornaliero').timeBased().everyDays(1).atHour(7).create();
+  Logger.log('✅ Fatto! Controllo email ogni 5 minuti + mail di recap ogni mattina alle 7.');
 }
 
 /**
@@ -493,6 +494,76 @@ function _notifica(titolo, testo) {
     payload: JSON.stringify({ title: titolo, body: testo }),
     muteHttpExceptions: true,
   });
+}
+
+// ═══ MAIL DI RECAP GIORNALIERO ════════════════════════════════════════════════
+// Ogni mattina alle 7 ti arriva una email con le scadenze di oggi e domani.
+// Usa la tua Gmail (gratis) e legge i task direttamente dal database.
+
+var RECAP_TIPI = {
+  scontrino:    '🧾 Scontrino',
+  autofattura:  '📄 Autofattura',
+  'fattura-pm': '💶 Fattura PM',
+  alloggiati:   '🏛 Alloggiati',
+  ross:         '📊 ROSS/ISTAT',
+  manuale:      '✏️ Promemoria',
+};
+
+function _oggiISO(offset) {
+  var d = new Date();
+  d.setDate(d.getDate() + (offset || 0));
+  return Utilities.formatDate(d, 'Europe/Rome', 'yyyy-MM-dd');
+}
+
+function _taskInScadenza(date) {
+  try {
+    var q = 'tasks?select=tipo,casa,ospite,scadenza,note,importo'
+      + '&completato=eq.false'
+      + '&scadenza=in.(' + date.join(',') + ')'
+      + '&user_id=eq.' + CFG.SUPABASE_USER_ID
+      + '&order=scadenza';
+    return JSON.parse(_db(q).getContentText()) || [];
+  } catch (e) { Logger.log('Errore lettura task recap: ' + e); return []; }
+}
+
+function _rigaTask(t) {
+  var et = RECAP_TIPI[t.tipo] || t.tipo;
+  var imp = t.importo ? ' — ' + Number(t.importo).toFixed(2).replace('.', ',') + ' €' : '';
+  return et + ': ' + (t.casa || '—') + (t.ospite ? ' · ' + t.ospite : '') + imp;
+}
+
+/**
+ * Inviata in automatico ogni mattina. Puoi eseguirla a mano per fare una prova.
+ */
+function inviaRecapGiornaliero() {
+  var oggi = _oggiISO(0), domani = _oggiISO(1);
+  var tasks = _taskInScadenza([oggi, domani]);
+  var tOggi   = tasks.filter(function(t) { return t.scadenza === oggi; });
+  var tDomani = tasks.filter(function(t) { return t.scadenza === domani; });
+
+  var dest = CFG.RECAP_EMAIL || 'silvia.greco@gmail.com';
+  var oggetto = tOggi.length
+    ? '📋 The Grape Escape — ' + tOggi.length + ' cosa/e da fare oggi'
+    : (tDomani.length ? '📋 The Grape Escape — scadenze di domani' : '✅ The Grape Escape — nessuna scadenza');
+
+  function blocco(titolo, arr) {
+    if (!arr.length) return '<p style="color:#888">' + titolo + ': nulla.</p>';
+    var li = arr.map(function(t) { return '<li>' + _rigaTask(t) + '</li>'; }).join('');
+    return '<p><b>' + titolo + '</b></p><ul>' + li + '</ul>';
+  }
+
+  var html = '<div style="font-family:system-ui,Arial,sans-serif;font-size:15px;color:#222">'
+    + '<h2>🍇 Buongiorno Silvia</h2>'
+    + blocco('Oggi (' + oggi + ')', tOggi)
+    + blocco('Domani (' + domani + ')', tDomani)
+    + '<p><a href="' + (CFG.APP_URL || 'https://thegrapeescape.netlify.app') + '">Apri l\'app →</a></p>'
+    + '</div>';
+
+  var plain = 'Oggi:\n' + (tOggi.map(_rigaTask).join('\n') || 'nulla')
+    + '\n\nDomani:\n' + (tDomani.map(_rigaTask).join('\n') || 'nulla');
+
+  GmailApp.sendEmail(dest, oggetto, plain, { htmlBody: html, name: 'The Grape Escape' });
+  Logger.log('✅ Recap inviato a ' + dest + ' (' + tOggi.length + ' oggi, ' + tDomani.length + ' domani)');
 }
 
 // ═══ ETICHETTE GMAIL ══════════════════════════════════════════════════════════
