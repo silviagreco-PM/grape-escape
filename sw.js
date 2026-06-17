@@ -50,7 +50,7 @@ self.addEventListener('notificationclick', e => {
   const url = e.notification.data?.url || '/';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      const existing = list.find(c => c.url.startsWith(self.registration.scope) || c.url.includes('localhost'));
+      const existing = list.find(c => c.url.includes('grape-escape.vercel.app') || c.url.includes('thegrapeescape.netlify.app') || c.url.includes('localhost'));
       if (existing) { existing.focus(); existing.navigate(url); }
       else clients.openWindow(url);
     })

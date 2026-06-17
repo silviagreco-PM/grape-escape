@@ -1,5 +1,4 @@
-// api/send-push.js — endpoint HTTP per inviare notifiche push dall'esterno (Vercel)
-// Chiamato dal Google Apps Script ogni volta che crea task nuovi.
+// Vercel API route — riceve la chiamata dal Google Apps Script e manda la notifica push
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
@@ -7,15 +6,11 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method not allowed');
 
   const auth = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!auth || auth !== process.env.PUSH_SECRET) return res.status(401).send('Unauthorized');
-
-  // Vercel di solito fa già il parse del JSON; gestiamo anche il caso stringa.
-  let payloadIn = req.body || {};
-  if (typeof payloadIn === 'string') {
-    try { payloadIn = JSON.parse(payloadIn || '{}'); }
-    catch { return res.status(400).send('Invalid JSON'); }
+  if (!auth || auth !== process.env.PUSH_SECRET) {
+    return res.status(401).send('Unauthorized');
   }
-  const { title, body, url } = payloadIn;
+
+  const { title, body, url } = req.body || {};
   if (!title) return res.status(400).send('Missing title');
 
   webpush.setVapidDetails(
@@ -23,6 +18,7 @@ export default async function handler(req, res) {
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY,
   );
+
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const { data: subs } = await sb.from('push_subscriptions').select('id, subscription');
   if (!subs?.length) return res.status(200).json({ sent: 0 });
@@ -30,7 +26,7 @@ export default async function handler(req, res) {
   const payload = JSON.stringify({
     title,
     body: body || '',
-    url: url || '/',
+    url: url || 'https://grape-escape.vercel.app',
     icon: '/icon.svg',
     badge: '/icon.svg',
   });

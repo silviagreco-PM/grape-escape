@@ -116,12 +116,65 @@ function _leggiEmail(msg, storico) {
   if (!piattaforma) return 0;
 
   var dati = _analizzaEmail(msg.getSubject(), msg.getPlainBody(), piattaforma, msg.getDate());
-  if (!dati || dati.tipo === 'altro') return 0;
+  if (!dati || dati.tipo === 'altro') {
+    Logger.log('⏭ Tipo non riconosciuto — oggetto: ' + msg.getSubject().slice(0, 80));
+    return 0;
+  }
 
   Logger.log('📨 ' + piattaforma + ' · ' + dati.tipo
     + ' · ' + (dati.casa || '—') + ' · ' + (dati.ospite || '—'));
 
   return _creaTask(dati, storico);
+}
+
+/**
+ * Rimuove l'etichetta "elaborata" dalle email degli ultimi 60 giorni
+ * così possono essere rilette da recuperaEmailPassate.
+ * Sicuro da eseguire: i task già salvati non vengono duplicati.
+ */
+function sblocca() {
+  var label = GmailApp.getUserLabelByName(LABEL_OK);
+  if (!label) { Logger.log('Etichetta non trovata.'); return; }
+  var threads = GmailApp.search('label:' + LABEL_OK + ' from:(airbnb.com OR booking.com OR kross) newer_than:60d', 0, 200);
+  Logger.log('🔓 Trovate ' + threads.length + ' discussioni, rimozione etichetta...');
+  var ok = 0, err = 0;
+  for (var i = 0; i < threads.length; i++) {
+    try {
+      label.removeFromThread(threads[i]);
+      ok++;
+    } catch(e) {
+      err++;
+    }
+  }
+  Logger.log('✅ Sbloccat' + (ok === 1 ? 'a' : 'e') + ' ' + ok + ' discussion' + (ok === 1 ? 'e' : 'i') + (err > 0 ? ' (' + err + ' errori ignorati)' : '') + '. Ora esegui recuperaEmailPassate.');
+}
+
+/**
+ * Funzione di test: mostra le ultime 10 email di Airbnb/Booking e cosa ne pensa il programma.
+ * Eseguila manualmente per vedere cosa succede con le email recenti.
+ */
+function diagnostica() {
+  var righe = GmailApp.search('from:(airbnb.com OR booking.com OR kross) newer_than:7d', 0, 20);
+  Logger.log('📬 Trovate ' + righe.length + ' discussioni negli ultimi 7 giorni');
+  righe.forEach(function(thread) {
+    var msg = thread.getMessages()[thread.getMessageCount() - 1]; // ultima email del thread
+    var mittente = msg.getFrom().toLowerCase();
+    var piattaforma = mittente.indexOf('airbnb') >= 0  ? 'airbnb'
+                    : mittente.indexOf('booking') >= 0 ? 'booking'
+                    : mittente.indexOf('kross') >= 0   ? 'kross'
+                    : '?';
+    var labels = thread.getLabels().map(function(l){ return l.getName(); }).join(', ');
+    var dati = _analizzaEmail(msg.getSubject(), msg.getPlainBody(), piattaforma, msg.getDate());
+    Logger.log('---');
+    Logger.log('Da: ' + msg.getFrom());
+    Logger.log('Oggetto: ' + msg.getSubject());
+    Logger.log('Etichette: ' + (labels || 'nessuna'));
+    Logger.log('→ Tipo riconosciuto: ' + (dati ? dati.tipo : '?'));
+    Logger.log('→ Casa: ' + (dati && dati.casa ? dati.casa : 'NON TROVATA'));
+    Logger.log('→ Ospite: ' + (dati && dati.ospite ? dati.ospite : '—'));
+    Logger.log('→ Check-in: ' + (dati && dati.checkin ? dati.checkin : '—'));
+  });
+  Logger.log('✅ Fine diagnostica');
 }
 
 // ═══ LETTURA DEL CONTENUTO DELL'EMAIL ════════════════════════════════════════
@@ -149,29 +202,32 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
   // Capisce di che tipo di email si tratta
   if (ogg.match(/cancell/)) {
     dati.tipo = 'cancellazione';
-  } else if (ogg.match(/prenotaz|conferm|nuova prenot|new reserv|booking confirm|new booking/)) {
+  } else if (ogg.match(/prenotaz|conferm|nuova prenot|new reserv|booking confirm|new booking|reservation|richiesta|ha prenotato|has booked|booked your/)) {
     dati.tipo = 'prenotazione';
-  } else if (ogg.match(/modific|modif/)) {
+  } else if (ogg.match(/modific|modif|alterat|changed/)) {
     dati.tipo = 'modifica';
-  } else if (ogg.match(/pagamento|payout|compenso|guadagno|trasferimento|co.host/)) {
+  } else if (ogg.match(/pagamento|payout|compenso|guadagno|trasferimento|co.host|earning/)) {
     dati.tipo = 'pagamento';
   } else if (ogg.match(/fattura|invoice|iva|td17|riepilogo commissioni/)) {
     dati.tipo = 'autofattura';
   }
 
-  // Trova la casa (cerca le parole chiave del nome annuncio nel testo)
+  // Trova la casa — cerca in oggetto + corpo (normalizza accenti e apostrofi)
+  function _normalizza(s) {
+    return s.toLowerCase()
+      .replace(/[‘’‚‛′‵]/g, "'") // apostrofi curvi → dritti
+      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
+      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
+  }
+  var testoPulito = _normalizza(testo); // oggetto + corpo
   for (var k = 0; k < CASE_MAP.length; k++) {
-    var parola = CASE_MAP[k][0].toLowerCase()
-      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
-      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
-    var testoPulito = cor
-      .replace(/à/g,'a').replace(/è/g,'e').replace(/é/g,'e')
-      .replace(/ì/g,'i').replace(/ò/g,'o').replace(/ù/g,'u');
+    var parola = _normalizza(CASE_MAP[k][0]);
     if (testoPulito.indexOf(parola) >= 0) {
       dati.casa = CASE_MAP[k][1];
       break;
     }
   }
+  if (!dati.casa) Logger.log('⚠ Casa non trovata — oggetto: ' + oggetto.slice(0, 80));
 
   // Codice prenotazione Airbnb (es. HMKANPNZFF)
   var codAir = testo.match(/\b(HM[A-Z0-9]{6,10})\b/i);
@@ -192,14 +248,26 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     if (d > '2024-01-01') dateSlash.push(d);
   }
 
-  // Date nel formato "15 giugno 2026"
+  // Date nel formato "15 giugno 2026" o "15 giugno"
+  var MESI_IT_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
   var dateParole = [];
-  var regMese = new RegExp('\\b(\\d{1,2})\\s+(' + MESI_IT.join('|') + ')\\s+(\\d{4})\\b', 'gi');
-  while ((match = regMese.exec(corpo)) !== null) {
+  var regMese = new RegExp('\\b(\\d{1,2})\\s+(' + MESI_IT.join('|') + ')(?:\\s+(\\d{4}))?\\b', 'gi');
+  while ((match = regMese.exec(testo)) !== null) {
     var mIdx = MESI_IT.indexOf(match[2].toLowerCase()) + 1;
     if (mIdx > 0) {
-      var d2 = match[3] + '-' + String(mIdx).padStart(2,'0') + '-' + match[1].padStart(2,'0');
+      var anno = match[3] || '2026';
+      var d2 = anno + '-' + String(mIdx).padStart(2,'0') + '-' + match[1].padStart(2,'0');
       if (d2 > '2024-01-01') dateParole.push(d2);
+    }
+  }
+  // Date nel formato abbreviato "22 set" o "22 set 2026"
+  var regMeseShort = new RegExp('\\b(\\d{1,2})\\s+(' + MESI_IT_SHORT.join('|') + ')(?:\\s+(\\d{4}))?\\b', 'gi');
+  while ((match = regMeseShort.exec(testo)) !== null) {
+    var mIdx2 = MESI_IT_SHORT.indexOf(match[2].toLowerCase()) + 1;
+    if (mIdx2 > 0) {
+      var anno2 = match[3] || '2026';
+      var d3 = anno2 + '-' + String(mIdx2).padStart(2,'0') + '-' + match[1].padStart(2,'0');
+      if (d3 > '2024-01-01') dateParole.push(d3);
     }
   }
 
@@ -354,7 +422,7 @@ function _creaTask(d, storico) {
         canale: 'Airbnb', scadenza: scad, codice: 'af_' + d.mese_fattura,
         importo: d.compenso || null, cohost: null,
         note: 'IVA commissioni Airbnb ' + d.mese_fattura + ' — emetti TD17 entro il 15.',
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
     }
@@ -389,7 +457,7 @@ function _creaTask(d, storico) {
         id: id_sc, tipo: 'scontrino', casa: casa, ospite: d.ospite || '—',
         canale: canale, scadenza: d.checkin, codice: cod + '_sc',
         importo: d.importo || null, cohost: null, note: nota,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
     }
@@ -400,7 +468,7 @@ function _creaTask(d, storico) {
         id: id_al, tipo: 'alloggiati', casa: casa, ospite: d.ospite || '—',
         canale: canale, scadenza: d.checkin, codice: cod + '_al',
         importo: null, cohost: null, note: nota,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
     }
@@ -413,7 +481,7 @@ function _creaTask(d, storico) {
         id: id_fp, tipo: 'fattura-pm', casa: casa, ospite: d.ospite || '—',
         canale: canale, scadenza: scadenza, codice: cod,
         importo: d.importo || null, cohost: d.compenso || null, note: nota,
-        completato: false, completatoIl: null, completatoAlle: null, creatoIl: ora,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
     }
@@ -446,7 +514,11 @@ function _salvaTask(task) {
     dati: task,
     prefer: 'resolution=ignore-duplicates,return=minimal',
   });
-  if (r.getResponseCode() >= 400) Logger.log('Errore database: ' + r.getContentText());
+  if (r.getResponseCode() >= 400) {
+    // Lancia errore: così l'email viene etichettata "errore" e non "elaborata",
+    // e potrà essere riprovata la volta successiva.
+    throw new Error('DB: ' + r.getContentText().slice(0, 200));
+  }
 }
 
 function _aggiornaCampo(id, campi) {
@@ -476,7 +548,7 @@ function _esistePerCodice(codice, id) {
 
 function _annullaTask(codice) {
   var oggi = new Date().toISOString().slice(0, 10);
-  var dati = { note: '❌ Prenotazione cancellata.', completato: true, completatoIl: oggi };
+  var dati = { note: '❌ Prenotazione cancellata.', completato: true, completato_il: oggi };
   ['sc','al','fp'].forEach(function(s) { _aggiornaCampo(_idTask(codice, s), dati); });
   _db('tasks?codice=eq.' + encodeURIComponent(codice) + '&user_id=eq.' + CFG.SUPABASE_USER_ID, {
     metodo: 'patch', dati: dati,
