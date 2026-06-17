@@ -396,10 +396,27 @@ function _creaTask(d, storico) {
   var casa = d.casa || _trovaCasa(d.casa);
   var creati = 0;
 
-  // CANCELLAZIONE: segna i task come annullati
+  // CANCELLAZIONE: segna scontrino/alloggiati/fattura come annullati.
+  // Per le case PROPRIE (host) serve anche un'AUTOFATTURA DI STORNO (data cancellazione):
+  // l'autofattura originale resta emessa, lo storno la annulla fiscalmente.
   if (d.tipo === 'cancellazione') {
     if (d.codice) _annullaTask(d.codice);
-    return 0;
+    if (casa && CASE_HOST.indexOf(casa) >= 0) {
+      var oggiC = new Date().toISOString().slice(0, 10);
+      var id_st = _idTask(d.codice || casa, 'st');
+      if (!_esiste(id_st)) {
+        _salvaTask({
+          id: id_st, tipo: 'autofattura', casa: casa,
+          ospite: 'Storno autofattura' + (d.ospite ? ' — ' + d.ospite : ''),
+          canale: d.canale || 'Airbnb', scadenza: oggiC, codice: (d.codice || '') + '_st',
+          importo: d.compenso || null, cohost: null,
+          note: 'Autofattura di STORNO (prenotazione cancellata). Emetti lo storno con data odierna; l\'autofattura originale resta valida.',
+          completato: false, completato_il: null, completato_alle: null, creato_il: ora,
+        });
+        creati++;
+      }
+    }
+    return creati;
   }
 
   // PAGAMENTO: aggiorna l'importo sulla fattura esistente
