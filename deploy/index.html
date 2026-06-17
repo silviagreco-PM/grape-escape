@@ -715,6 +715,22 @@ async function applyMigrations() {
       else showToast(`✓ ${_m6add.length} promemoria arrivo aggiunti`);
     }
   }
+
+  // ── Migration 7: Alloggiati Web anche per le case in gestione ──
+  const _m7now = new Date().toISOString();
+  const _m7 = [
+    { id:'pas_al', tipo:'alloggiati', casa:'La Tana del Tasso', ospite:'Pasovski Metin', canale:'Booking', importo:null, cohost:null, codice:'', dataDoc:null, scadenza:'2026-06-18', link:'', note:'Check-in 18/06, check-out 21/06. Comunicazione Alloggiati Web entro 24h dall\'arrivo.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m7now },
+    { id:'lof_al', tipo:'alloggiati', casa:'Casa Amalia',       ospite:'Loffredo Fabia',  canale:'Booking', importo:null, cohost:null, codice:'', dataDoc:null, scadenza:'2026-12-12', link:'', note:'Check-in 12/12, check-out 14/12. Comunicazione Alloggiati Web entro 24h dall\'arrivo.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m7now },
+  ];
+  const _m7add = _m7.filter(t => !TASKS.find(x => x.id === t.id));
+  if (_m7add.length) {
+    _m7add.forEach(t => TASKS.push(t));
+    if (CURRENT_USER) {
+      const { error } = await sb.from('tasks').upsert(_m7add.map(taskToRow));
+      if (error) console.error('Migration 7 error', error);
+      else showToast(`✓ ${_m7add.length} Alloggiati aggiunti`);
+    }
+  }
 }
 
 async function initData() {
@@ -1129,7 +1145,7 @@ function renderOggi() {
   if (settimana.length>0)pillsEl.innerHTML += `<div class="pill pill-todo" style="cursor:pointer" onclick="scrollToSection('sec-scadenza')"><div class="pill-dot"></div>${settimana.length} in scadenza</div>`;
   if (fatti.length>0)    pillsEl.innerHTML += `<div class="pill pill-done" style="cursor:pointer" onclick="scrollToSection('sec-fatte')"><div class="pill-dot"></div>${fatti.length} fatt${fatti.length===1?'a':'e'}</div>`;
 
-  let html = '';
+  let html = novitaOggiHTML(allTasks);
 
   const tuttiScaduti = [...scaduti, ...daRecuperare];
   if (tuttiScaduti.length > 0) {
@@ -1210,6 +1226,58 @@ function renderOggi() {
 
 function sectionLabelHTML(label, count, id='') {
   return `<div class="section-label"${id ? ` id="${id}"` : ''}>${label}<span class="section-label-count">${count}</span></div>`;
+}
+
+// Estrae "↘ gg/mm · ↗ gg/mm" dalla nota, se presente
+function estraiDateBreve(note) {
+  if (!note) return '';
+  const m = note.match(/[Cc]heck-?in\s+(\d{1,2}\/\d{2})[^0-9]*[Cc]heck-?out\s+(\d{1,2}\/\d{2})/);
+  return m ? `↘ ${m[1]} · ↗ ${m[2]}` : '';
+}
+
+// Riga in cima a "Oggi": cosa è successo oggi (nuove prenotazioni, cancellazioni)
+function novitaOggiHTML(allTasks) {
+  const t = today();
+  const nuovi = allTasks.filter(x => (x.creatoIl || '').slice(0,10) === t && x.tipo !== 'manuale');
+  const cancellati = allTasks.filter(x => x.completato && x.completatoIl === t && /cancell/i.test(x.note || ''));
+  if (!nuovi.length && !cancellati.length) return '';
+
+  const grp = {};
+  nuovi.forEach(x => {
+    const key = (x.casa || '') + '|' + (x.ospite || '');
+    if (!grp[key]) grp[key] = { casa: x.casa, ospite: x.ospite, note: x.note, canale: x.canale };
+    else if (!grp[key].note && x.note) grp[key].note = x.note;
+  });
+  const righe = [];
+  Object.keys(grp).forEach(k => {
+    const b = grp[k];
+    const date = estraiDateBreve(b.note);
+    righe.push(`<div>🆕 <b>${b.casa || '—'}</b> · ${b.ospite || '—'}${b.canale ? ' · ' + b.canale : ''}${date ? ` <span style="color:var(--grigio)">${date}</span>` : ''}</div>`);
+  });
+  const grpC = {};
+  cancellati.forEach(x => { const k = (x.casa||'')+'|'+(x.ospite||''); if (!grpC[k]) grpC[k] = { casa:x.casa, ospite:x.ospite }; });
+  Object.keys(grpC).forEach(k => {
+    const b = grpC[k];
+    righe.push(`<div>❌ <b>${b.casa || '—'}</b> · ${b.ospite || '—'} — cancellata</div>`);
+  });
+  if (!righe.length) return '';
+
+  return `<div style="background:var(--verde-light,#eef7ee);border:1px solid #cfe8cf;border-radius:12px;padding:10px 12px;margin-bottom:12px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:var(--verde,#2e7d32);margin-bottom:5px">📣 Cosa è successo oggi</div>
+    <div style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.4">${righe.join('')}</div>
+  </div>`;
+}
+
+// Apri la lista delle cose da fare di una singola casa (ricerca per nome casa)
+function vaiACasa(nome) {
+  const inp = document.getElementById('search-input');
+  if (inp) {
+    inp.value = nome;
+    const cb = document.getElementById('search-clear');
+    if (cb) cb.style.display = '';
+  }
+  doSearch(nome);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function scrollToSection(id) {
@@ -2443,13 +2511,23 @@ function renderCase() {
   let html = `<div class="oggi-section" style="margin:0 -14px 8px;border-radius:0">
     <div class="oggi-label">Property management</div>
     <div style="font-size:22px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px">Case in gestione</div>
-    <div class="oggi-sub">Proprietari, percentuali e clausole di ogni contratto.</div>
+    <div class="oggi-sub">Tocca una casa per vedere le sue cose da fare.</div>
   </div>`;
+
+  // Le mie case (host) — scorciatoie cliccabili alle cose da fare
+  html += `<div class="section-label" style="margin-top:4px">Le mie case</div>`;
+  html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">`;
+  CASE_HOST.forEach(h => {
+    html += `<button onclick="vaiACasa('${h.replace(/'/g, "\\'")}')" style="font-size:13px;font-weight:700;border:1px solid #cfe8cf;background:var(--verde-light,#eef7ee);color:var(--nero);border-radius:10px;padding:8px 12px;cursor:pointer">🏠 ${h} ›</button>`;
+  });
+  html += `</div>`;
+  html += `<div class="section-label">Case in gestione</div>`;
+
   const chip = (lbl, val) => `<span style="font-size:10px;font-weight:700;color:var(--verde);background:var(--verde-light);border:1px solid #B8E4B8;border-radius:6px;padding:3px 8px;white-space:nowrap">${lbl} ${val}</span>`;
   CASE_GESTIONE.forEach(c => {
-    html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:7px;border-top:3px solid var(--verde)">
+    html += `<div class="task-card" onclick="vaiACasa('${c.casa.replace(/'/g, "\\'")}')" style="flex-direction:column;align-items:stretch;gap:7px;border-top:3px solid var(--verde);cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-        <span style="font-size:15px;font-weight:700">${c.casa}</span>
+        <span style="font-size:15px;font-weight:700">${c.casa} ›</span>
         <span style="font-size:11px;color:var(--grigio)">${c.luogo}</span>
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--nero)">${c.prop}</div>

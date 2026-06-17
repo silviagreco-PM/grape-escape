@@ -496,6 +496,17 @@ function _creaTask(d, storico) {
       });
       creati++;
     }
+    // ALLOGGIATI WEB — entro 24h dall'arrivo (anche per le case in gestione)
+    var id_alg = _idTask(cod, 'al');
+    if (!storico || !_esistePerCodice(cod + '_al', id_alg)) {
+      _salvaTask({
+        id: id_alg, tipo: 'alloggiati', casa: casa, ospite: d.ospite || '—',
+        canale: canale, scadenza: d.checkin, codice: cod + '_al',
+        importo: null, cohost: null, note: 'Comunicazione Alloggiati Web entro 24h dall\'arrivo. ' + nota,
+        completato: false, completato_il: null, completato_alle: null, creato_il: ora,
+      });
+      creati++;
+    }
   }
 
   return creati;
