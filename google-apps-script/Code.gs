@@ -560,10 +560,9 @@ function _esistePerCodice(codice, id) {
 function _annullaTask(codice) {
   var oggi = new Date().toISOString().slice(0, 10);
   var dati = { note: '❌ Prenotazione cancellata.', completato: true, completato_il: oggi };
+  // Solo i task derivati da QUESTA prenotazione (scontrino, alloggiati, fattura PM).
+  // NON facciamo un patch globale per codice: le autofatture IVA restano dovute.
   ['sc','al','fp'].forEach(function(s) { _aggiornaCampo(_idTask(codice, s), dati); });
-  _db('tasks?codice=eq.' + encodeURIComponent(codice) + '&user_id=eq.' + CFG.SUPABASE_USER_ID, {
-    metodo: 'patch', dati: dati,
-  });
 }
 
 // ═══ NOTIFICA PUSH ════════════════════════════════════════════════════════════
