@@ -757,17 +757,37 @@ async function applyMigrations() {
     'HMMXMNZNKZ':'Verdiana Busato', 'HMZ94DQZMC':'Carlotta Barbolla',
     '5288275855':'krauchthaler kathy et Urs',
   };
+  // Data di arrivo (check-in) vera per codice → scontrino e alloggiati vanno in quel giorno
+  const CODICE_CHECKIN = {
+    '5288275855':'2026-09-14', 'HMDJX2MEAW':'2026-06-16', '5113508343':'2026-06-18',
+    '6205466032':'2026-12-12', 'HMKDK5T4NZ':'2026-07-27', 'HMFAJRH8XB':'2026-07-25',
+    'HMXNBRYTX2':'2026-10-16', 'HM45KWMH3B':'2026-06-11', '6447407135':'2026-06-11',
+    'HM2ANAEW4H':'2026-10-26', '6587914144':'2026-10-10', 'HMPC3QTMCY':'2026-07-05',
+    'HMFBDHYT8Y':'2026-07-04', 'HMSBM944WW':'2026-07-05', 'HMSPHPSXEQ':'2026-07-04',
+    'HMSPPHSXEQ':'2026-07-04', '5538353455':'2026-10-26', 'HM3KYWS3WA':'2026-06-12',
+    'HMMSJFCE92':'2026-09-22', 'HMW32DESAA':'2026-06-28', 'HMAMTMRQH4':'2026-05-29',
+    'HM5YPBZHS3':'2026-05-30', 'HMW5BCAK3W':'2026-05-31', 'HM9EXR3WKB':'2026-08-03',
+    'HMSJFANNYB':'2026-05-29', '5620491578':'2026-05-24', 'HMZ8SJXCWA':'2026-05-27',
+    'HMMXMNZNKZ':'2026-07-20', 'HMZ94DQZMC':'2026-06-18',
+  };
   const _baseCod = c => (c || '').replace(/_(sc|al|ar|fp)$/, '');
   const _vuoto = o => !o || o === '—' || String(o).trim() === '';
 
   // 1) elimina i task tipo 'arrivo' (concetto rimosso)
-  // 2) metti il nome vero ai task senza nome (dal codice)
+  // 2) metti il nome vero ai task senza nome + correggi la data di scontrino/alloggiati
+  //    (lo script vecchio metteva "oggi" invece del giorno di check-in)
   const _patch = [];
   TASKS.forEach(x => {
+    let cambiato = false;
     if (_vuoto(x.ospite)) {
       const nome = CODICE_NOMI[_baseCod(x.codice)];
-      if (nome) { x.ospite = nome; _patch.push(x); }
+      if (nome) { x.ospite = nome; cambiato = true; }
     }
+    if ((x.tipo === 'scontrino' || x.tipo === 'alloggiati')) {
+      const ci = CODICE_CHECKIN[_baseCod(x.codice)];
+      if (ci && x.scadenza !== ci) { x.scadenza = ci; cambiato = true; }
+    }
+    if (cambiato) _patch.push(x);
   });
   // IMPORTANTE: si cancellano SOLO i task creati dallo script (id "gas_*"),
   // mai quelli creati o modificati a mano dall'utente.

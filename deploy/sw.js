@@ -1,5 +1,5 @@
 // The Grape Escape — service worker (network-first per restare aggiornati)
-const CACHE = 'grape-v18';
+const CACHE = 'grape-v19';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {
