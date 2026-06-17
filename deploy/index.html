@@ -755,7 +755,7 @@ async function applyMigrations() {
     'HM5YPBZHS3':'Leonardo Lanave', 'HMW5BCAK3W':'Simona Govetosa', 'HM9EXR3WKB':'Jeanette Jansen-Heerding',
     'HMSJFANNYB':'Noemi Bisceglia', '5620491578':'Traverso Eddie', 'HMZ8SJXCWA':'Madeleine Graaman',
     'HMMXMNZNKZ':'Verdiana Busato', 'HMZ94DQZMC':'Carlotta Barbolla',
-    '5288275855':'krauchthaler kathy et Urs',
+    '5288275855':'krauchthaler kathy et Urs', 'HM2NNWBFKK':'Karina Barquet',
   };
   // Data di arrivo (check-in) vera per codice → scontrino e alloggiati vanno in quel giorno
   const CODICE_CHECKIN = {
@@ -768,7 +768,12 @@ async function applyMigrations() {
     'HMMSJFCE92':'2026-09-22', 'HMW32DESAA':'2026-06-28', 'HMAMTMRQH4':'2026-05-29',
     'HM5YPBZHS3':'2026-05-30', 'HMW5BCAK3W':'2026-05-31', 'HM9EXR3WKB':'2026-08-03',
     'HMSJFANNYB':'2026-05-29', '5620491578':'2026-05-24', 'HMZ8SJXCWA':'2026-05-27',
-    'HMMXMNZNKZ':'2026-07-20', 'HMZ94DQZMC':'2026-06-18',
+    'HMMXMNZNKZ':'2026-07-20', 'HMZ94DQZMC':'2026-06-18', 'HM2NNWBFKK':'2026-07-10',
+  };
+  // Prenotazioni cancellate (codice → data cancellazione). Vengono segnate come
+  // annullate: escono dalle attività e dai conti, e compaiono nel feed del giorno.
+  const CODICE_CANCELLATI = {
+    '6205466032':'2026-06-17', 'HMZ8SJXCWA':'2026-05-23',
   };
   const _baseCod = c => (c || '').replace(/_(sc|al|ar|fp)$/, '');
   const _vuoto = o => !o || o === '—' || String(o).trim() === '';
@@ -779,13 +784,28 @@ async function applyMigrations() {
   const _patch = [];
   TASKS.forEach(x => {
     let cambiato = false;
+    const _bc = _baseCod(x.codice);
     if (_vuoto(x.ospite)) {
-      const nome = CODICE_NOMI[_baseCod(x.codice)];
+      const nome = CODICE_NOMI[_bc];
       if (nome) { x.ospite = nome; cambiato = true; }
     }
     if ((x.tipo === 'scontrino' || x.tipo === 'alloggiati')) {
-      const ci = CODICE_CHECKIN[_baseCod(x.codice)];
+      const ci = CODICE_CHECKIN[_bc];
       if (ci && x.scadenza !== ci) { x.scadenza = ci; cambiato = true; }
+    }
+    // canale corretto dal prefisso del codice: i codici "HM..." sono Airbnb
+    // (lo script vecchio li segnava come Booking)
+    if (_bc && /^HM/i.test(_bc) && x.canale !== 'Airbnb') { x.canale = 'Airbnb'; cambiato = true; }
+    // codice "sporco" col suffisso _sc/_al/... finito nel campo codice → ripulisci
+    if (x.codice && x.codice !== _bc) { x.codice = _bc; cambiato = true; }
+    // prenotazione cancellata → segna annullata: esce dalle attività e dai conti
+    const _cancIl = CODICE_CANCELLATI[_bc];
+    if (_cancIl && !/cancellat|annullat|❌/i.test(x.note || '')) {
+      x.note = '❌ CANCELLATA — ' + (x.note || '');
+      x.completato = true;
+      x.completatoIl = _cancIl;
+      x.completatoAlle = x.completatoAlle || '00:00';
+      cambiato = true;
     }
     if (cambiato) _patch.push(x);
   });
