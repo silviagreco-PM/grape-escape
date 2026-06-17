@@ -525,6 +525,7 @@ const FEE_PM = {
   "La Tana del Tasso":      { Airbnb:0.26, Booking:0.26, default:0.26 },
   "Tenuta del Mulino":      { Airbnb:0.20, Booking:0.20, default:0.20 },
   "Villa Omedè":            { Airbnb:0.30, Booking:0.30, default:0.30 },
+  "Castellero (Nocciole)":  { Airbnb:0.25, Booking:0.25, default:0.25 },
 };
 
 // ─── STORAGE (Supabase cloud + sync realtime) ────────────────────────────────
@@ -596,6 +597,31 @@ function rerenderCurrent() {
   else renderOggi();
 }
 
+// Protezione testi: evita che nomi/note con < > & " ' rompano la grafica
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+// Registro (per dispositivo) delle prenotazioni-seed già inserite una volta:
+// così, se l'utente cancella un task aggiunto da una migrazione, NON resuscita.
+function _migrDone(id) {
+  try { return (JSON.parse(localStorage.getItem('grape_seed') || '[]')).includes(id); }
+  catch { return false; }
+}
+function _markMigr(id) {
+  try {
+    const a = JSON.parse(localStorage.getItem('grape_seed') || '[]');
+    if (!a.includes(id)) { a.push(id); localStorage.setItem('grape_seed', JSON.stringify(a)); }
+  } catch {}
+}
+// true se il task-seed va inserito: non già presente E mai inserito prima
+function _seedNew(t) {
+  if (TASKS.find(x => x.id === t.id)) { _markMigr(t.id); return false; }
+  if (_migrDone(t.id)) return false;
+  return true;
+}
+
 async function applyMigrations() {
   const patches = [];
   const f4 = TASKS.find(t => t.id === 'f4' && t.note && t.note.includes('Cerca email'));
@@ -635,9 +661,9 @@ async function applyMigrations() {
     { id:'ys1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:390.00, cohost:null, codice:'HM2ANAEW4H', dataDoc:null, scadenza:'2026-10-26', link:'ade',    note:'Check-in 26/10, check-out 28/10 (2 notti, 4A). Totale ospite 390,00 €.',                                                                                                                                                                    completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
     { id:'ys2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-10-27', link:'',       note:'Check-in 26/10, check-out 28/10.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
   ];
-  const _daInserire = _nuovi.filter(t => !TASKS.find(x => x.id === t.id));
+  const _daInserire = _nuovi.filter(_seedNew);
   if (_daInserire.length) {
-    _daInserire.forEach(t => TASKS.push(t));
+    _daInserire.forEach(t => { TASKS.push(t); _markMigr(t.id); });
     if (CURRENT_USER) {
       const { error } = await sb.from('tasks').upsert(_daInserire.map(taskToRow));
       if (error) console.error('Migration insert error', error);
@@ -662,15 +688,13 @@ async function applyMigrations() {
   }
 
   // ── Migration 4: ripristino task eliminati per errore ──
-  const _ripristina = [];
-  if (!TASKS.find(x => x.id === 'bk1')) {
-    _ripristina.push({ id:'bk1', tipo:'manuale', casa:'Appartamento del Palio', ospite:'Fattura fee PM — Ana Krapovickas',
+  const _bk1 = { id:'bk1', tipo:'manuale', casa:'Appartamento del Palio', ospite:'Fattura fee PM — Ana Krapovickas',
       canale:'Booking', importo:null, cohost:null, codice:'1654882612', scadenza:'2026-06-15', link:'',
       note:'Booking ha pagato Ana (~3 giu, rif. 1654882612). Crea fattura fee PM: importo soggiorno × 20%, scadenza oggi +12gg.',
-      completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:new Date().toISOString() });
-  }
+      completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:new Date().toISOString() };
+  const _ripristina = _seedNew(_bk1) ? [_bk1] : [];
   if (_ripristina.length) {
-    _ripristina.forEach(t => TASKS.push(t));
+    _ripristina.forEach(t => { TASKS.push(t); _markMigr(t.id); });
     if (CURRENT_USER) {
       const { error } = await sb.from('tasks').upsert(_ripristina.map(taskToRow));
       if (error) console.error('Migration 4 error', error);
@@ -689,9 +713,9 @@ async function applyMigrations() {
     // Loffredo Fabia — Casa Amalia (gestione), Booking, check-in 12/12
     { id:'lof_fp', tipo:'fattura-pm', casa:'Casa Amalia',       ospite:'Loffredo Fabia',    canale:'Booking', importo:221.07, cohost:null, codice:'6205466032', dataDoc:null, scadenza:'2027-01-15', link:'',    note:'Check-in 12/12, check-out 14/12 (2 notti, 2 adulti). Totale ospite 221,07 €. Fattura fee PM Booking quando arriva il pagamento.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
   ];
-  const _m5add = _m5.filter(t => !TASKS.find(x => x.id === t.id));
+  const _m5add = _m5.filter(_seedNew);
   if (_m5add.length) {
-    _m5add.forEach(t => TASKS.push(t));
+    _m5add.forEach(t => { TASKS.push(t); _markMigr(t.id); });
     if (CURRENT_USER) {
       const { error } = await sb.from('tasks').upsert(_m5add.map(taskToRow));
       if (error) console.error('Migration 5 error', error);
@@ -708,9 +732,9 @@ async function applyMigrations() {
     { id:'pas_al', tipo:'alloggiati', casa:'La Tana del Tasso', ospite:'Pasovski Metin', canale:'Booking', importo:null, cohost:null, codice:'', dataDoc:null, scadenza:'2026-06-18', link:'', note:'Check-in 18/06, check-out 21/06. Comunicazione Alloggiati Web entro 24h dall\'arrivo.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m7now },
     { id:'lof_al', tipo:'alloggiati', casa:'Casa Amalia',       ospite:'Loffredo Fabia',  canale:'Booking', importo:null, cohost:null, codice:'', dataDoc:null, scadenza:'2026-12-12', link:'', note:'Check-in 12/12, check-out 14/12. Comunicazione Alloggiati Web entro 24h dall\'arrivo.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m7now },
   ];
-  const _m7add = _m7.filter(t => !TASKS.find(x => x.id === t.id));
+  const _m7add = _m7.filter(_seedNew);
   if (_m7add.length) {
-    _m7add.forEach(t => TASKS.push(t));
+    _m7add.forEach(t => { TASKS.push(t); _markMigr(t.id); });
     if (CURRENT_USER) {
       const { error } = await sb.from('tasks').upsert(_m7add.map(taskToRow));
       if (error) console.error('Migration 7 error', error);
@@ -744,11 +768,15 @@ async function applyMigrations() {
       if (nome) { x.ospite = nome; _patch.push(x); }
     }
   });
-  // 3) elimina doppioni: stesso tipo+casa+scadenza+ospite → tieni il più completo
-  const _delIds = TASKS.filter(x => x.tipo === 'arrivo').map(x => x.id);
+  // IMPORTANTE: si cancellano SOLO i task creati dallo script (id "gas_*"),
+  // mai quelli creati o modificati a mano dall'utente.
+  const _isGas = x => x.id && x.id.indexOf('gas_') === 0;
+
+  // 3) elimina doppioni: stesso tipo+casa+scadenza+ospite → tieni il più completo (e non-gas)
+  const _delIds = TASKS.filter(x => x.tipo === 'arrivo' && _isGas(x)).map(x => x.id);
   // 3a) spazzatura del vecchio script: task prenotazione SENZA nome e SENZA codice valido
   //     (es. codice "_sc"/"_al" o vuoto) → non identificabili, da rimuovere
-  TASKS.filter(x =>
+  TASKS.filter(x => _isGas(x) &&
     ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) &&
     _vuoto(x.ospite) && _baseCod(x.codice) === ''
   ).forEach(x => _delIds.push(x.id));
@@ -760,11 +788,12 @@ async function applyMigrations() {
   Object.keys(_grp).forEach(k => {
     const g = _grp[k];
     if (g.length < 2) return;
-    g.sort((a,b) => (b.importo!=null?1:0)-(a.importo!=null?1:0) || (b.codice||'').length-(a.codice||'').length);
-    g.slice(1).forEach(x => _delIds.push(x.id));
+    // tieni per primo il task NON-gas (utente/migrazione), poi quello con importo/codice
+    g.sort((a,b) => (_isGas(a)?1:0)-(_isGas(b)?1:0) || (b.importo!=null?1:0)-(a.importo!=null?1:0) || (b.codice||'').length-(a.codice||'').length);
+    g.slice(1).filter(_isGas).forEach(x => _delIds.push(x.id)); // cancella solo i doppioni gas_
   });
-  // 3b) doppioni tra task CON nome e gemello SENZA nome (stesso tipo+casa+scadenza) → via il senza nome
-  TASKS.filter(x => ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) && _vuoto(x.ospite)).forEach(x => {
+  // 3b) doppioni gas_ SENZA nome con gemello CON nome (stesso tipo+casa+scadenza) → via il gas senza nome
+  TASKS.filter(x => _isGas(x) && ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) && _vuoto(x.ospite)).forEach(x => {
     const gemello = TASKS.find(y => y.id !== x.id && y.tipo === x.tipo &&
       (y.casa||'') === (x.casa||'') && (y.scadenza||'') === (x.scadenza||'') && !_vuoto(y.ospite));
     if (gemello) _delIds.push(x.id);
@@ -916,10 +945,10 @@ function downloadICS() {
 
 // ─── DATE UTILS ───────────────────────────────────────────────────────────────
 
-function today()   { return new Date().toISOString().slice(0,10); }
-function inDays(n) { const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function today()   { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }); }
+function inDays(n) { const d = new Date(); d.setDate(d.getDate()+n); return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }); }
 function daysDiff(iso) {
-  const t = new Date(); t.setHours(0,0,0,0);
+  const t = new Date(today() + 'T00:00:00');
   const s = new Date(iso + 'T00:00:00');
   return Math.round((s - t) / 86400000);
 }
@@ -1299,13 +1328,13 @@ function novitaOggiHTML(allTasks) {
   Object.keys(grp).forEach(k => {
     const b = grp[k];
     const date = estraiDateBreve(b.note);
-    righe.push(`<div>🆕 <b>${b.casa || '—'}</b> · ${b.ospite || '—'}${b.canale ? ' · ' + b.canale : ''}${date ? ` <span style="color:var(--grigio)">${date}</span>` : ''}</div>`);
+    righe.push(`<div>🆕 <b>${escapeHtml(b.casa || '—')}</b> · ${escapeHtml(b.ospite || '—')}${b.canale ? ' · ' + escapeHtml(b.canale) : ''}${date ? ` <span style="color:var(--grigio)">${date}</span>` : ''}</div>`);
   });
   const grpC = {};
   cancellati.forEach(x => { const k = (x.casa||'')+'|'+(x.ospite||''); if (!grpC[k]) grpC[k] = { casa:x.casa, ospite:x.ospite }; });
   Object.keys(grpC).forEach(k => {
     const b = grpC[k];
-    righe.push(`<div>❌ <b>${b.casa || '—'}</b> · ${b.ospite || '—'} — cancellata</div>`);
+    righe.push(`<div>❌ <b>${escapeHtml(b.casa || '—')}</b> · ${escapeHtml(b.ospite || '—')} — cancellata</div>`);
   });
   if (!righe.length) return '';
 
@@ -1331,11 +1360,13 @@ function vaiAOspite(nome) { vaiACasa(nome); }
 // Rende casa/ospite un link che apre tutti i task collegati
 function casaLink(casa) {
   if (!casa) return '';
-  return `<span onclick="event.stopPropagation();vaiACasa('${casa.replace(/'/g, "\\'")}')" style="text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:pointer">${casa}</span>`;
+  const js = casa.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return `<span onclick="event.stopPropagation();vaiACasa('${js}')" style="text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:pointer">${escapeHtml(casa)}</span>`;
 }
 function ospiteLink(osp) {
-  if (!osp || osp === '—') return osp || '';
-  return `<span onclick="event.stopPropagation();vaiAOspite('${osp.replace(/'/g, "\\'")}')" style="text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:pointer">${osp}</span>`;
+  if (!osp || osp === '—') return escapeHtml(osp || '');
+  const js = osp.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return `<span onclick="event.stopPropagation();vaiAOspite('${js}')" style="text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:pointer">${escapeHtml(osp)}</span>`;
 }
 
 function scrollToSection(id) {
@@ -1390,7 +1421,7 @@ function taskCardHTML(task, urgent, done, isBatch) {
   // meta: canale + codice
   let metaParts = [];
   if (task.canale && task.canale !== '—') metaParts.push(canaleBadge(task.canale));
-  if (task.codice) metaParts.push(`cod. ${task.codice}`);
+  if (task.codice) metaParts.push(`cod. ${escapeHtml(task.codice)}`);
   const meta = metaParts.join(' <span class="task-meta-sep">·</span> ');
 
   let extra = '';
@@ -1512,7 +1543,7 @@ function taskCardHTML(task, urgent, done, isBatch) {
     if (task.note) {
       const isWarn = task.note.startsWith('⚠') || task.note.startsWith('⏸');
       if (task.tipo === 'manuale' || isWarn) {
-        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${task.note}</div>`;
+        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${escapeHtml(task.note)}</div>`;
       }
     }
     if (task.tipo === 'manuale') {
@@ -1789,8 +1820,7 @@ function renderCalendario(allTasks) {
     if (!t.completato && t.scadenza) {
       const [ty,tm,td] = t.scadenza.split('-').map(Number);
       if (ty===y && tm-1===m) {
-        const diff = new Date(t.scadenza) - new Date(now.toISOString().slice(0,10));
-        if (diff <= 0) urgenti[td] = (urgenti[td]||0)+1;
+        if (t.scadenza <= today()) urgenti[td] = (urgenti[td]||0)+1;
         else scadenza[td] = (scadenza[td]||0)+1;
       }
     }
@@ -2140,14 +2170,14 @@ function doSearch(q) {
     el.innerHTML = _backBtn + `<div class="search-noresult">
       <div class="search-noresult-icon">🔍</div>
       <div style="font-size:14px;font-weight:600;color:var(--nero)">Nessun risultato</div>
-      <div style="font-size:12px;margin-top:4px">per «${trimmed}»</div>
+      <div style="font-size:12px;margin-top:4px">per «${escapeHtml(trimmed)}»</div>
     </div>`;
     return;
   }
 
   const pending  = results.filter(t => !t.completato);
   const done     = results.filter(t =>  t.completato);
-  let html = _backBtn + `<div class="search-count">${results.length} risultat${results.length===1?'o':'i'} per «${trimmed}»</div>`;
+  let html = _backBtn + `<div class="search-count">${results.length} risultat${results.length===1?'o':'i'} per «${escapeHtml(trimmed)}»</div>`;
   if (pending.length)  html += pending.map(t => taskCardHTML(t, false, false)).join('');
   if (done.length) {
     if (pending.length) html += `<div class="search-count" style="margin-top:12px">Completati (${done.length})</div>`;
@@ -2241,9 +2271,15 @@ function pmCompenso(x) {
 function renderConti() {
   const tasks = loadTasks();
 
-  const scontrini = tasks.filter(x => x.tipo === 'scontrino');
-  const pmTasks   = tasks.filter(x => x.tipo === 'fattura-pm');
-  const autof     = tasks.filter(x => x.tipo === 'autofattura');
+  // Conta solo l'anno in corso ed esclude le prenotazioni annullate
+  const ANNO = String(new Date().getFullYear());
+  const annoOk = x => (x.scadenza || x.dataDoc || '').slice(0,4) === ANNO;
+  const nonAnnullato = x => !/cancellat|annullat|❌/i.test(x.note || '');
+  const valido = x => annoOk(x) && nonAnnullato(x);
+
+  const scontrini = tasks.filter(x => x.tipo === 'scontrino'  && valido(x));
+  const pmTasks   = tasks.filter(x => x.tipo === 'fattura-pm' && valido(x));
+  const autof     = tasks.filter(x => x.tipo === 'autofattura' && valido(x));
 
   const hostRicavi  = scontrini.reduce((s,x) => s + (x.importo || 0), 0);
   const pmCompensi  = pmTasks.reduce((s,x) => s + pmCompenso(x), 0);

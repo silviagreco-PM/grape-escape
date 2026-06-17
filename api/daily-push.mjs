@@ -26,10 +26,12 @@ export default async function handler(req, res) {
   webpush.setVapidDetails('mailto:silvia.greco@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
   const sb = createClient(SUPA_URL, SUPA_SRV_KEY);
 
+  // Data in ora italiana (Europe/Rome), non UTC
+  const romeDate = (d) => d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
   const now = new Date();
-  const todayISO    = now.toISOString().slice(0, 10);
+  const todayISO    = romeDate(now);
   const tom = new Date(now); tom.setDate(tom.getDate() + 1);
-  const tomorrowISO = tom.toISOString().slice(0, 10);
+  const tomorrowISO = romeDate(tom);
 
   const { data: tasks } = await sb
     .from('tasks')
@@ -47,7 +49,7 @@ export default async function handler(req, res) {
   const domani = tasks.filter(t => t.scadenza === tomorrowISO);
 
   const formatTask = t =>
-    `${TIPO_LABEL[t.tipo] || t.tipo}: ${t.casa}${t.ospite ? ' · ' + t.ospite : ''}`;
+    `${TIPO_LABEL[t.tipo] || t.tipo}: ${t.casa || '—'}${t.ospite ? ' · ' + t.ospite : ''}`;
 
   const title = oggi.length
     ? `📋 ${oggi.length} cosa${oggi.length > 1 ? 'e' : ''} da fare oggi`
