@@ -72,12 +72,12 @@
   .task-body { flex: 1; min-width: 0; }
   .task-tipo-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 6px; }
   .task-tipo { display: inline-flex; align-items: center; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 800; padding: 4px 10px; border-radius: 8px; color: #fff; }
-  .task-tipo.tipo-scontrino   { background: var(--br-scontrino); }
-  .task-tipo.tipo-autofattura { background: var(--br-autofattura); }
-  .task-tipo.tipo-fattura-pm  { background: var(--br-fattura-pm); }
-  .task-tipo.tipo-alloggiati  { background: var(--br-alloggiati); }
-  .task-tipo.tipo-ross        { background: var(--br-ross); }
-  .task-tipo.tipo-manuale     { background: var(--br-manuale); }
+  .task-tipo.tipo-scontrino   { background: #E01E47; }
+  .task-tipo.tipo-autofattura { background: #D2541C; }
+  .task-tipo.tipo-fattura-pm  { background: #00770A; }
+  .task-tipo.tipo-alloggiati  { background: #8A6400; }
+  .task-tipo.tipo-ross        { background: #5C6470; }
+  .task-tipo.tipo-manuale     { background: #6B4E96; }
   /* etichetta tipo usata come testo (non pillola) altrove */
   .tipo-fattura-pm  { color: var(--verde); }
   .tipo-alloggiati  { color: var(--oro); }
@@ -1597,13 +1597,6 @@ function taskCardHTML(task, urgent, done, isBatch) {
         extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${escapeHtml(task.note)}</div>`;
       }
     }
-    if (task.tipo === 'manuale') {
-      const preVal = task.importo ? task.importo.toFixed(2) : '';
-      extra += `<div class="importo-inline-wrap">
-        <input type="number" id="importo-card-${task.id}" class="importo-inline-inp" inputmode="decimal" step="0.01" placeholder="€ importo" value="${preVal}">
-        <button class="importo-inline-btn" onclick="salvaImportoCard('${task.id}')">✓ Salva</button>
-      </div>`;
-    }
     if (isBatch)
       extra += `<button class="riporta-btn" onclick="riportaInLista('${task.id}')">↑ Riporta in lista urgente</button>`;
     else if (!done && !urgent && daysDiff(task.scadenza) < 0)
@@ -2902,7 +2895,7 @@ async function attivaNotifiche() {
     showToast('🔔 Notifiche attivate — riceverai un alert ogni mattina alle 8');
   } catch (e) {
     console.error(e);
-    showToast('⚠ Errore attivazione notifiche');
+    showToast('⚠ Errore notifiche: ' + (e && e.message ? e.message : e));
   }
 }
 
