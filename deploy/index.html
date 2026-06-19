@@ -1174,8 +1174,6 @@ function renderOggi() {
   // Novità di oggi (nuove prenotazioni / modifiche / cancellazioni) — sotto le cose da fare
   html += novitaOggiHTML(allTasks);
 
-  html += batchSuggestHTML(tasks);
-
   if (settimana.length > 0) {
     html += sectionLabelHTML('In scadenza questa settimana', settimana.length, 'sec-scadenza');
     const perData = {};
@@ -1186,8 +1184,6 @@ function renderOggi() {
       g.forEach(task => { html += taskCardHTML(task, false); });
     });
   }
-
-  html += finestraBannerHTML(tasks);
 
   if (prossimamente.length > 0) {
     html += sectionLabelHTML('Prossimamente', prossimamente.length);
