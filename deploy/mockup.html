@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Grape Escape — 4 proposte di design</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --ink:#16181D; --ink2:#5B6470; --line:#ECECEF;
+    /* colori semantici (pochi, pieni, parlanti) */
+    --c-scontrino:#1F9D55; --c-autofattura:#2563EB; --c-fattura:#7C3AED; --c-alloggiati:#E8590C; --c-promemoria:#64748B;
+    --red:#E11D48; --amber:#D97706; --green:#1F9D55;
+  }
+  html,body{ background:#fff; color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; }
+  body{ padding-bottom:90px; }
+
+  /* ---- switcher in alto ---- */
+  .switch{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.92);
+    backdrop-filter:saturate(180%) blur(12px); border-bottom:1px solid var(--line);
+    padding:10px 12px 11px; }
+  .switch h1{ font-size:13px; font-weight:800; letter-spacing:.2px; margin-bottom:9px; color:var(--ink);}
+  .switch h1 span{ color:var(--ink2); font-weight:600;}
+  .tabs{ display:flex; gap:6px; }
+  .tabs button{ flex:1; border:1px solid var(--line); background:#fff; color:var(--ink2);
+    font-size:12px; font-weight:700; padding:9px 4px; border-radius:11px; cursor:pointer; transition:.15s;}
+  .tabs button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .stage{ max-width:480px; margin:0 auto; }
+  .ver{ display:none; padding:14px 14px 30px; }
+  .ver.show{ display:block; animation:fade .25s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+  .vt{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--ink2);
+    margin:2px 2px 14px; display:flex; align-items:center; gap:8px;}
+  .vt b{ color:var(--ink); }
+  .vt em{ font-style:normal; font-weight:600; color:#9aa3af; }
+
+  .copy{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700;
+    border-radius:8px; padding:6px 10px; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink); }
+  .chan{ font-size:9px; font-weight:800; letter-spacing:.02em; padding:2px 6px; border-radius:4px; color:#fff; }
+  .ab{ background:#FF385C;} .bk{ background:#003B95;}
+  .muted{ color:var(--ink2); }
+
+  /* ============ V1 — AIRBNB ============ */
+  .v1{ background:#fff; }
+  .v1 .head{ padding:6px 4px 16px;}
+  .v1 .head .d{ font-size:13px; color:var(--ink2); font-weight:600;}
+  .v1 .head .t{ font-size:30px; font-weight:800; letter-spacing:-.5px; margin-top:2px;}
+  .v1 .head .t small{ font-size:15px; font-weight:700; color:var(--red); }
+  .v1 .sec{ font-size:13px; font-weight:800; margin:20px 4px 10px;}
+  .v1 .card{ background:#fff; border:1px solid #EFEFF1; border-radius:18px; padding:16px 16px 14px;
+    box-shadow:0 4px 18px rgba(20,24,40,.06); margin-bottom:12px;}
+  .v1 .row1{ display:flex; align-items:center; gap:8px; margin-bottom:9px;}
+  .v1 .ic{ width:34px;height:34px;border-radius:11px; display:grid;place-items:center; font-size:16px; flex:none;}
+  .v1 .kind{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--ink2);}
+  .v1 .when{ margin-left:auto; font-size:11px; font-weight:800; padding:5px 10px; border-radius:999px;}
+  .v1 .w-today{ background:#FDECEF; color:var(--red);} .v1 .w-soon{ background:#FFF4E5; color:var(--amber);} .v1 .w-ok{ background:#EEF2F4; color:var(--ink2);}
+  .v1 .title{ font-size:16px; font-weight:700; letter-spacing:-.2px;}
+  .v1 .sub{ font-size:13px; color:var(--ink2); margin-top:2px; display:flex; align-items:center; gap:7px; flex-wrap:wrap;}
+  .v1 .amt{ font-size:22px; font-weight:800; letter-spacing:-.3px; margin:12px 0 2px;}
+  .v1 .actions{ display:flex; gap:8px; margin-top:11px; flex-wrap:wrap;}
+  .v1 .copy.go{ background:#FF385C; color:#fff; border-color:#FF385C;}
+
+  /* ============ V2 — iOS GROUPED ============ */
+  .v2{ background:#F2F2F7; margin:-14px -14px -30px; padding:14px 14px 30px; border-radius:0;}
+  .v2 .big{ font-size:30px; font-weight:800; letter-spacing:-.5px; padding:8px 4px 2px;}
+  .v2 .dt{ font-size:13px; color:var(--ink2); padding:0 4px 14px; font-weight:600;}
+  .v2 .glabel{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#8A8A8E; margin:18px 8px 7px;}
+  .v2 .group{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04);}
+  .v2 .item{ padding:13px 15px; display:flex; align-items:flex-start; gap:12px; border-bottom:1px solid #EFEFF2;}
+  .v2 .item:last-child{ border-bottom:none;}
+  .v2 .dot{ width:30px;height:30px;border-radius:9px; display:grid;place-items:center; font-size:15px; flex:none; margin-top:1px;}
+  .v2 .it-t{ font-size:16px; font-weight:600; letter-spacing:-.2px;}
+  .v2 .it-s{ font-size:13px; color:var(--ink2); margin-top:2px; display:flex; gap:7px; align-items:center; flex-wrap:wrap;}
+  .v2 .right{ margin-left:auto; text-align:right; flex:none; padding-left:8px;}
+  .v2 .when{ font-size:13px; font-weight:700;}
+  .v2 .w-today{ color:var(--red);} .v2 .w-soon{ color:var(--amber);} .v2 .w-ok{ color:#8A8A8E;}
+  .v2 .amt{ font-size:15px; font-weight:700; margin-top:3px;}
+  .v2 .actions{ display:flex; gap:8px; padding:0 15px 13px 57px; margin-top:-3px;}
+  .v2 .copy{ background:#F2F2F7; border-color:transparent; color:#007AFF; font-weight:700;}
+
+  /* ============ V3 — BOLD EDITORIAL ============ */
+  .v3{ background:#fff;}
+  .v3 .big{ font-size:34px; font-weight:850; letter-spacing:-1px; padding:6px 2px 0;}
+  .v3 .dt{ font-size:13px; color:var(--ink2); font-weight:600; padding:2px 2px 16px;}
+  .v3 .sec{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.14em; color:#9aa3af;
+    border-top:2px solid var(--ink); padding-top:8px; margin:22px 2px 12px;}
+  .v3 .card{ border:1px solid var(--line); border-left:5px solid var(--ac); border-radius:4px 14px 14px 4px;
+    padding:14px 15px; margin-bottom:11px;}
+  .v3 .pill{ display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em;
+    color:#fff; background:var(--ac); padding:3px 9px; border-radius:6px;}
+  .v3 .title{ font-size:18px; font-weight:800; letter-spacing:-.3px; margin:9px 0 1px;}
+  .v3 .sub{ font-size:13px; color:var(--ink2); display:flex; gap:7px; align-items:center; flex-wrap:wrap;}
+  .v3 .meta{ display:flex; align-items:baseline; justify-content:space-between; margin-top:12px; gap:10px;}
+  .v3 .amt{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:21px; font-weight:800; letter-spacing:-.5px;}
+  .v3 .when{ font-size:12px; font-weight:800;}
+  .v3 .w-today{ color:var(--red);} .v3 .w-soon{ color:var(--amber);} .v3 .w-ok{ color:#9aa3af;}
+  .v3 .actions{ display:flex; gap:8px; margin-top:12px;}
+  .v3 .copy{ border-color:var(--line); }
+  .v3 .copy.go{ background:var(--ac); color:#fff; border-color:var(--ac);}
+
+  /* ============ V4 — SOFT TINTED ============ */
+  .v4{ background:#FAFAFA; margin:-14px -14px -30px; padding:16px 14px 30px;}
+  .v4 .big{ font-size:28px; font-weight:800; letter-spacing:-.4px; padding:4px 4px 0;}
+  .v4 .dt{ font-size:13px; color:var(--ink2); font-weight:600; padding:2px 4px 6px;}
+  .v4 .stat{ display:flex; gap:8px; padding:8px 2px 18px;}
+  .v4 .stat div{ flex:1; background:#fff; border-radius:14px; padding:11px; text-align:center; box-shadow:0 1px 2px rgba(0,0,0,.04);}
+  .v4 .stat .n{ font-size:20px; font-weight:800;} .v4 .stat .l{ font-size:10px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.05em; margin-top:1px;}
+  .v4 .day{ position:sticky; top:96px; font-size:12px; font-weight:800; color:var(--ink2); text-transform:uppercase;
+    letter-spacing:.08em; padding:10px 4px 8px; background:#FAFAFA;}
+  .v4 .card{ background:#fff; border-radius:20px; padding:0 0 14px; overflow:hidden; margin-bottom:12px; box-shadow:0 3px 14px rgba(20,24,40,.05);}
+  .v4 .strip{ height:6px; background:var(--ac);}
+  .v4 .pad{ padding:13px 16px 0;}
+  .v4 .row1{ display:flex; align-items:center; gap:9px;}
+  .v4 .ic{ width:30px;height:30px;border-radius:9px; display:grid;place-items:center;font-size:15px; background:var(--acl); color:var(--ac); flex:none;}
+  .v4 .kind{ font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em; color:var(--ac);}
+  .v4 .when{ margin-left:auto; font-size:11px; font-weight:800; padding:4px 10px;border-radius:999px; background:var(--acl); color:var(--ac);}
+  .v4 .title{ font-size:16px; font-weight:700; margin:9px 0 1px;}
+  .v4 .sub{ font-size:13px; color:var(--ink2); display:flex; gap:7px; align-items:center; flex-wrap:wrap;}
+  .v4 .amt{ font-size:20px; font-weight:800; margin:11px 0 0;}
+  .v4 .actions{ display:flex; gap:8px; padding:12px 16px 0;}
+
+  .note{ text-align:center; font-size:12px; color:var(--ink2); padding:22px 20px 6px; line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div class="switch">
+  <h1>The Grape Escape · <span>4 proposte di design — scegline una</span></h1>
+  <div class="tabs">
+    <button class="on" data-v="1">1 · Airbnb</button>
+    <button data-v="2">2 · iOS</button>
+    <button data-v="3">3 · Bold</button>
+    <button data-v="4">4 · Soft</button>
+  </div>
+</div>
+
+<div class="stage">
+
+<!-- ============ VERSIONE 1 — AIRBNB ============ -->
+<section class="ver show" data-ver="1">
+  <div class="vt"><b>Versione 1 — Airbnb</b> <em>bianco, arioso, 1 accento corallo</em></div>
+  <div class="v1">
+    <div class="head">
+      <div class="d">venerdì 19 giugno</div>
+      <div class="t">2 cose da fare <small>oggi</small></div>
+    </div>
+
+    <div class="sec">Oggi</div>
+
+    <div class="card">
+      <div class="row1">
+        <div class="ic" style="background:#E7F6EE;color:#1F9D55">🧾</div>
+        <div class="kind">Scontrino</div>
+        <div class="when w-today">scade oggi</div>
+      </div>
+      <div class="title">Ca' Balenga · Lauren Kennedy</div>
+      <div class="sub"><span class="chan ab">Airbnb</span> ↘ 25 giu → 28 giu</div>
+      <div class="amt">385,00 €</div>
+      <div class="actions">
+        <span class="copy">⎘ Copia importo</span>
+        <span class="copy">⎘ Descrizione ADE</span>
+        <span class="copy go">Apri ADE →</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row1">
+        <div class="ic" style="background:#FDEEE3;color:#E8590C">🏛</div>
+        <div class="kind">Alloggiati</div>
+        <div class="when w-soon">domani</div>
+      </div>
+      <div class="title">App. del Palio · Dmitry Alymov</div>
+      <div class="sub"><span class="chan ab">Airbnb</span> ↘ 19 giu · entro 24h dall'arrivo</div>
+      <div class="actions">
+        <span class="copy go">Apri Alloggiati Web →</span>
+      </div>
+    </div>
+
+    <div class="sec">Questa settimana</div>
+
+    <div class="card">
+      <div class="row1">
+        <div class="ic" style="background:#EFEAFE;color:#7C3AED">💶</div>
+        <div class="kind">Fattura PM</div>
+        <div class="when w-soon">entro 23 giu</div>
+      </div>
+      <div class="title">Tenuta del Mulino · Melissa Sonneveld</div>
+      <div class="sub"><span class="chan ab">Airbnb</span> · compenso cohost</div>
+      <div class="amt">126,56 €</div>
+      <div class="actions">
+        <span class="copy">⎘ Copia importo</span>
+        <span class="copy">⎘ Copia cod.</span>
+        <span class="copy go">Apri Passgo →</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VERSIONE 2 — iOS GROUPED ============ -->
+<section class="ver" data-ver="2">
+  <div class="vt"><b>Versione 2 — iOS</b> <em>liste raggruppate, calmo, 1 accento blu</em></div>
+  <div class="v2">
+    <div class="big">Oggi</div>
+    <div class="dt">venerdì 19 giugno · 2 urgenti</div>
+
+    <div class="glabel">Da fare oggi</div>
+    <div class="group">
+      <div class="item">
+        <div class="dot" style="background:#E7F6EE;color:#1F9D55">🧾</div>
+        <div>
+          <div class="it-t">Ca' Balenga · Lauren Kennedy</div>
+          <div class="it-s"><span class="chan ab">Airbnb</span> Scontrino · ↘ 25 giu</div>
+        </div>
+        <div class="right"><div class="when w-today">oggi</div><div class="amt">385,00 €</div></div>
+      </div>
+      <div class="actions"><span class="copy">⎘ Importo</span><span class="copy">⎘ Descr. ADE</span><span class="copy">Apri ADE →</span></div>
+      <div class="item">
+        <div class="dot" style="background:#FDEEE3;color:#E8590C">🏛</div>
+        <div>
+          <div class="it-t">App. del Palio · Dmitry Alymov</div>
+          <div class="it-s"><span class="chan ab">Airbnb</span> Alloggiati Web</div>
+        </div>
+        <div class="right"><div class="when w-soon">domani</div></div>
+      </div>
+      <div class="actions"><span class="copy">Apri Alloggiati →</span></div>
+    </div>
+
+    <div class="glabel">Questa settimana</div>
+    <div class="group">
+      <div class="item">
+        <div class="dot" style="background:#EFEAFE;color:#7C3AED">💶</div>
+        <div>
+          <div class="it-t">Tenuta del Mulino · Melissa Sonneveld</div>
+          <div class="it-s"><span class="chan ab">Airbnb</span> Fattura PM</div>
+        </div>
+        <div class="right"><div class="when w-soon">23 giu</div><div class="amt">126,56 €</div></div>
+      </div>
+      <div class="actions"><span class="copy">⎘ Importo</span><span class="copy">⎘ Cod.</span><span class="copy">Apri Passgo →</span></div>
+      <div class="item">
+        <div class="dot" style="background:#E6EEFE;color:#2563EB">📄</div>
+        <div>
+          <div class="it-t">La Ciucarina · Yuen Seng So</div>
+          <div class="it-s"><span class="chan ab">Airbnb</span> Autofattura TD17</div>
+        </div>
+        <div class="right"><div class="when w-ok">15 lug</div><div class="amt">60,45 €</div></div>
+      </div>
+      <div class="actions"><span class="copy">⎘ Commissione</span><span class="copy">Apri Passgo →</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VERSIONE 3 — BOLD EDITORIAL ============ -->
+<section class="ver" data-ver="3">
+  <div class="vt"><b>Versione 3 — Bold</b> <em>tipografia forte, bordo colore per tipo</em></div>
+  <div class="v3">
+    <div class="big">2 da fare oggi.</div>
+    <div class="dt">venerdì 19 giugno 2026</div>
+
+    <div class="sec">Oggi</div>
+
+    <div class="card" style="--ac:var(--c-scontrino)">
+      <span class="pill">Scontrino</span>
+      <div class="title">Ca' Balenga · Lauren Kennedy</div>
+      <div class="sub"><span class="chan ab">Airbnb</span> ↘ 25 giu → 28 giu · cod. HMWDJRNNYA</div>
+      <div class="meta"><span class="amt">385,00 €</span><span class="when w-today">SCADE OGGI</span></div>
+      <div class="actions"><span class="copy">⎘ Importo</span><span class="copy">⎘ Descrizione ADE</span><span class="copy go">Apri ADE →</span></div>
+    </div>
+
+    <div class="card" style="--ac:var(--c-alloggiati)">
+      <span class="pill">Alloggiati</span>
+      <div class="title">App. del Palio · Dmitry Alymov</div>
+      <div class="sub"><span class="chan ab">Airbnb</span> ↘ 19 giu · entro 24h dall'arrivo</div>
+      <div class="meta"><span class="muted" style="font-size:13px">Comunicazione Alloggiati Web</span><span class="when w-soon">DOMANI</span></div>
+      <div class="actions"><span class="copy go">Apri Alloggiati Web →</span></div>
+    </div>
+
+    <div class="sec">Questa settimana</div>
+
+    <div class="card" style="--ac:var(--c-fattura)">
+      <span class="pill">Fattura PM</span>
+      <div class="title">Tenuta del Mulino · Melissa Sonneveld</div>
+      <div class="sub"><span class="chan ab">Airbnb</span> · compenso cohost · cod. HM45KWMH3B</div>
+      <div class="meta"><span class="amt">126,56 €</span><span class="when w-soon">ENTRO 23 GIU</span></div>
+      <div class="actions"><span class="copy">⎘ Importo</span><span class="copy">⎘ Cod.</span><span class="copy go">Apri Passgo →</span></div>
+    </div>
+
+    <div class="card" style="--ac:var(--c-autofattura)">
+      <span class="pill">Autofattura</span>
+      <div class="title">La Ciucarina · Yuen Seng So</div>
+      <div class="sub"><span class="chan ab">Airbnb</span> TD17 · cod. HM2ANAEW4H</div>
+      <div class="meta"><span class="amt">60,45 €</span><span class="when w-ok">ENTRO 15 LUG</span></div>
+      <div class="actions"><span class="copy">⎘ Commissione</span><span class="copy go">Apri Passgo →</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VERSIONE 4 — SOFT TINTED ============ -->
+<section class="ver" data-ver="4">
+  <div class="vt"><b>Versione 4 — Soft</b> <em>card morbide, tinte tenui, divisori per giorno</em></div>
+  <div class="v4">
+    <div class="big">Ciao Silvia 👋</div>
+    <div class="dt">venerdì 19 giugno · ecco la tua giornata</div>
+    <div class="stat">
+      <div><div class="n" style="color:var(--red)">2</div><div class="l">Oggi</div></div>
+      <div><div class="n" style="color:var(--amber)">7</div><div class="l">Settimana</div></div>
+      <div><div class="n" style="color:var(--green)">4</div><div class="l">Fatte</div></div>
+    </div>
+
+    <div class="day">Oggi</div>
+
+    <div class="card" style="--ac:var(--c-scontrino);--acl:#E7F6EE">
+      <div class="strip"></div>
+      <div class="pad">
+        <div class="row1"><div class="ic">🧾</div><div class="kind">Scontrino</div><div class="when">scade oggi</div></div>
+        <div class="title">Ca' Balenga · Lauren Kennedy</div>
+        <div class="sub"><span class="chan ab">Airbnb</span> ↘ 25 giu → 28 giu</div>
+        <div class="amt">385,00 €</div>
+      </div>
+      <div class="actions"><span class="copy">⎘ Importo</span><span class="copy">⎘ Descr. ADE</span></div>
+    </div>
+
+    <div class="card" style="--ac:var(--c-alloggiati);--acl:#FDEEE3">
+      <div class="strip"></div>
+      <div class="pad">
+        <div class="row1"><div class="ic">🏛</div><div class="kind">Alloggiati</div><div class="when">domani</div></div>
+        <div class="title">App. del Palio · Dmitry Alymov</div>
+        <div class="sub"><span class="chan ab">Airbnb</span> entro 24h dall'arrivo</div>
+      </div>
+      <div class="actions"><span class="copy">Apri Alloggiati Web →</span></div>
+    </div>
+
+    <div class="day">Questa settimana</div>
+
+    <div class="card" style="--ac:var(--c-fattura);--acl:#EFEAFE">
+      <div class="strip"></div>
+      <div class="pad">
+        <div class="row1"><div class="ic">💶</div><div class="kind">Fattura PM</div><div class="when">23 giu</div></div>
+        <div class="title">Tenuta del Mulino · Melissa Sonneveld</div>
+        <div class="sub"><span class="chan ab">Airbnb</span> · compenso cohost</div>
+        <div class="amt">126,56 €</div>
+      </div>
+      <div class="actions"><span class="copy">⎘ Importo</span><span class="copy">⎘ Cod.</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="note">Tocca 1 · 2 · 3 · 4 in alto per confrontare gli stili.<br>Quando hai scelto, scrivimi il numero (o un mix: “la 3 ma colori della 1”).</div>
+
+</div>
+
+<script>
+  const tabs=[...document.querySelectorAll('.tabs button')];
+  const vers=[...document.querySelectorAll('.ver')];
+  tabs.forEach(b=>b.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.toggle('on',x===b));
+    const v=b.dataset.v;
+    vers.forEach(s=>s.classList.toggle('show', s.dataset.ver===v));
+    window.scrollTo({top:0,behavior:'smooth'});
+  }));
+  // i bottoni "copia" del mockup mostrano solo l'effetto
+  document.addEventListener('click',e=>{ const c=e.target.closest('.copy'); if(!c)return;
+    const t=c.textContent; c.textContent='✓ Fatto'; setTimeout(()=>c.textContent=t,1100); });
+</script>
+</body>
+</html>
