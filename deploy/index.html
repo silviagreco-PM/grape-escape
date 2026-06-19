@@ -1133,8 +1133,8 @@ function finestraBannerHTML(tasks) {
       : '';
     return `<div onclick="goToTask('${x.id}')" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--grigio-light);cursor:pointer">
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;color:var(--nero)">${cfg.label} ${canaleBadge(x.canale)} <span style="color:var(--grigio);font-weight:400">· ${x.casa}</span></div>
-        <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite || '—'} · scade ${scadLabel}${giorniTag}${anticipoBadge}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--nero)">${cfg.label} ${canaleBadge(x.canale)}${x.casa && x.casa !== '—' ? ` <span style="color:var(--grigio);font-weight:400">· ${escapeHtml(x.casa)}</span>` : ''}</div>
+        <div style="font-size:11px;color:var(--grigio);margin-top:1px">${x.ospite && x.ospite !== '—' ? escapeHtml(x.ospite) + ' · ' : ''}scade ${scadLabel}${giorniTag}${anticipoBadge}</div>
       </div>
       <span style="font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;border:1px solid #FFD0D8;background:var(--accent-light);border-radius:6px;padding:3px 8px">Apri ↓</span>
     </div>`;
@@ -1144,7 +1144,7 @@ function finestraBannerHTML(tasks) {
   const oggiList = [...inamovibiliBestDay, ...accorpabili];
   if (oggiList.length > 0) {
     todoHTML += `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">`;
-    todoHTML += `<div style="font-size:12px;font-weight:700;color:var(--nero);margin-bottom:4px">✅ Da fare ${bestLabel}</div>`;
+    todoHTML += `<div style="font-size:12px;font-weight:700;color:var(--nero);margin-bottom:4px">✅ Approfitta della finestra di ${bestLabel}</div>`;
     oggiList.forEach(x => {
       const d = isoToDate(x.scadenza);
       const diff = daysDiff(x.scadenza);
@@ -1257,7 +1257,7 @@ function renderOggi() {
   const urgenti      = tasks.filter(x => !x.completato && x.scadenza === t);
   const settimana    = tasks.filter(x => !x.completato && x.scadenza > t && x.scadenza <= w);
   const prossimamente= tasks.filter(x => !x.completato && x.scadenza > w);
-  const fatti        = tasks.filter(x => x.completato && x.completatoIl === t);
+  const fatti        = tasks.filter(x => x.completato && x.completatoIl === t && !isCancellata(x));
 
   document.getElementById('header-date').textContent = formatLong(t);
 
@@ -1361,11 +1361,15 @@ function estraiDateBreve(note) {
   return m ? `↘ ${m[1]} · ↗ ${m[2]}` : '';
 }
 
+// Una cancellazione è un task completato la cui nota segnala l'annullamento:
+// non è un adempimento "fatto", va mostrato solo nel riquadro 📣 delle novità.
+function isCancellata(x) { return /cancell/i.test(x.note || ''); }
+
 // Riga in cima a "Oggi": cosa è successo oggi (nuove prenotazioni, cancellazioni)
 function novitaOggiHTML(allTasks) {
   const t = today();
   const nuovi = allTasks.filter(x => (x.creatoIl || '').slice(0,10) === t && x.tipo !== 'manuale');
-  const cancellati = allTasks.filter(x => x.completato && x.completatoIl === t && /cancell/i.test(x.note || ''));
+  const cancellati = allTasks.filter(x => x.completato && x.completatoIl === t && isCancellata(x));
   if (!nuovi.length && !cancellati.length) return '';
 
   const grp = {};
@@ -1627,7 +1631,7 @@ function taskCardHTML(task, urgent, done, isBatch) {
     <div class="task-body">
       <div class="task-tipo-row"><span class="task-tipo ${cfg.cls}">${cfg.label}</span>${ruoloBadge}</div>
       ${aggiuntoTs ? `<div class="task-aggiunto">Aggiunto il ${aggiuntoTs}</div>` : ''}
-      <div class="task-titolo ${titoloCls}">${casaLink(task.casa)}${task.ospite?' · '+ospiteLink(task.ospite):''}</div>
+      <div class="task-titolo ${titoloCls}">${casaLink(task.casa)}${task.ospite && task.ospite !== '—' ? ' · '+ospiteLink(task.ospite) : ''}</div>
       ${!done ? checkinOutHTML(task.note) : ''}
       ${extra}
     </div>
