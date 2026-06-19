@@ -1174,10 +1174,6 @@ function renderOggi() {
   // Novità di oggi (nuove prenotazioni / modifiche / cancellazioni) — sotto le cose da fare
   html += novitaOggiHTML(allTasks);
 
-  // Suggerimento task accorpabili (un solo banner: l'altro, "Quando fare burocrazia",
-  // è stato rimosso perché ri-elencava gli stessi task)
-  html += batchSuggestHTML(tasks);
-
   if (settimana.length > 0) {
     html += sectionLabelHTML('In scadenza questa settimana', settimana.length, 'sec-scadenza');
     const perData = {};
@@ -1188,6 +1184,9 @@ function renderOggi() {
       g.forEach(task => { html += taskCardHTML(task, false); });
     });
   }
+
+  // Banner intelligente: il giorno migliore per sbrigare la burocrazia accorpabile
+  html += finestraBannerHTML(tasks);
 
   if (prossimamente.length > 0) {
     html += sectionLabelHTML('Prossimamente', prossimamente.length);
@@ -1432,7 +1431,7 @@ function taskCardHTML(task, urgent, done, isBatch) {
         extra += `<div style="background:rgba(255,255,255,0.7);border:1px solid var(--border);border-radius:8px;padding:7px 10px">
           <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">Descrizione ADE</div>
           <div style="font-family:'Inter',monospace;font-size:11px;font-weight:600">${descADE}</div>
-          <button class="copy-btn" onclick="copyVal(${JSON.stringify(descADE)},this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
+          <button class="copy-btn" onclick="copyVal(${jsAttr(descADE)},this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
         </div>`;
         extra += `</div>`;
       } else {
@@ -1457,7 +1456,7 @@ function taskCardHTML(task, urgent, done, isBatch) {
         ? `<div style="${presentStyle}">
             <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">${label}</div>
             <div style="font-family:'Inter',monospace;font-size:12px;font-weight:600">${value}</div>
-            <button class="copy-btn" onclick="copyVal(${JSON.stringify(String(copyVal_))},this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
+            <button class="copy-btn" onclick="copyVal(${jsAttr(copyVal_)},this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
            </div>`
         : `<div style="${missingStyle}">
             <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">${label}</div>
@@ -1933,6 +1932,9 @@ function deleteTask(id) {
   confermaEliminaTask(id);
 }
 
+// Stringa JS usabile dentro un attributo HTML con doppi apici (onclick="..."):
+// i doppi apici di JSON.stringify romperebbero l'attributo, li converto in &quot;
+function jsAttr(s) { return JSON.stringify(String(s)).replace(/"/g, '&quot;'); }
 function copyVal(val, btn) {
   const s = String(val);
   const done = () => {

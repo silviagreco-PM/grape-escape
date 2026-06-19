@@ -18,12 +18,20 @@ export default async function handler(req, res) {
   const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
   const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
 
-  if (!SUPA_URL || !SUPA_SRV_KEY || !VAPID_PUBLIC || !VAPID_PRIVATE) {
-    console.error('Missing env vars');
-    return res.status(500).send('Missing env vars');
+  const missing = [];
+  if (!SUPA_URL) missing.push('SUPABASE_URL');
+  if (!SUPA_SRV_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  if (!VAPID_PUBLIC) missing.push('VAPID_PUBLIC_KEY');
+  if (!VAPID_PRIVATE) missing.push('VAPID_PRIVATE_KEY');
+  if (missing.length) {
+    return res.status(500).send('Variabili mancanti su Vercel: ' + missing.join(', '));
   }
 
-  webpush.setVapidDetails('mailto:silvia.greco@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
+  try {
+    webpush.setVapidDetails('mailto:silvia.greco@gmail.com', VAPID_PUBLIC, VAPID_PRIVATE);
+  } catch (e) {
+    return res.status(500).send('Chiavi VAPID non valide: ' + (e && e.message ? e.message : e));
+  }
   const sb = createClient(SUPA_URL, SUPA_SRV_KEY);
 
   // Data in ora italiana (Europe/Rome), non UTC
