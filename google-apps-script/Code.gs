@@ -378,6 +378,13 @@ function _aggiungiGiorni(data, giorni) {
   return d.toISOString().slice(0, 10);
 }
 
+// Data ISO (2026-07-10) → "10/07" per le note (stesso formato usato ovunque nell'app)
+function _ggmm(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] : iso;
+}
+
 function _scadenzaBooking(checkout) {
   if (!checkout) return null;
   var d = new Date(checkout + 'T12:00:00Z');
@@ -462,7 +469,7 @@ function _creaTask(d, storico) {
   var isBooking = canale === 'Booking';
   var cod       = d.codice || '';
   var nota      = d.checkin && d.checkout
-    ? 'Check-in ' + d.checkin + ', check-out ' + d.checkout
+    ? 'Check-in ' + _ggmm(d.checkin) + ', check-out ' + _ggmm(d.checkout)
       + (d.notti ? ' (' + d.notti + ' notti).' : '.')
     : '';
 
@@ -483,7 +490,7 @@ function _creaTask(d, storico) {
     if (!storico || !_esistePerCodice(cod + '_al', id_al)) {
       _salvaTask({
         id: id_al, tipo: 'alloggiati', casa: casa, ospite: d.ospite || '—',
-        canale: canale, scadenza: d.checkin, codice: cod + '_al',
+        canale: canale, scadenza: _aggiungiGiorni(d.checkin, 1), codice: cod + '_al',
         importo: null, cohost: null, note: nota,
         completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
@@ -507,7 +514,7 @@ function _creaTask(d, storico) {
     if (!storico || !_esistePerCodice(cod + '_al', id_alg)) {
       _salvaTask({
         id: id_alg, tipo: 'alloggiati', casa: casa, ospite: d.ospite || '—',
-        canale: canale, scadenza: d.checkin, codice: cod + '_al',
+        canale: canale, scadenza: _aggiungiGiorni(d.checkin, 1), codice: cod + '_al',
         importo: null, cohost: null, note: 'Comunicazione Alloggiati Web entro 24h dall\'arrivo. ' + nota,
         completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
