@@ -607,146 +607,12 @@ function escapeHtml(s) {
     ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 }
 
-// Registro (per dispositivo) delle prenotazioni-seed già inserite una volta:
-// così, se l'utente cancella un task aggiunto da una migrazione, NON resuscita.
-function _migrDone(id) {
-  try { return (JSON.parse(localStorage.getItem('grape_seed') || '[]')).includes(id); }
-  catch { return false; }
-}
-function _markMigr(id) {
-  try {
-    const a = JSON.parse(localStorage.getItem('grape_seed') || '[]');
-    if (!a.includes(id)) { a.push(id); localStorage.setItem('grape_seed', JSON.stringify(a)); }
-  } catch {}
-}
-// true se il task-seed va inserito: non già presente E mai inserito prima
-function _seedNew(t) {
-  if (TASKS.find(x => x.id === t.id)) { _markMigr(t.id); return false; }
-  if (_migrDone(t.id)) return false;
-  return true;
-}
-
+// Normalizza i dati grezzi che arrivano dal motore Gmail (task "gas_*"): assegna i
+// nomi ospite mancanti, corregge la data di check-in/canale, ripulisce i codici e
+// propaga le cancellazioni. Le vecchie migrazioni una-tantum (prenotazioni di
+// giugno/luglio 2026, ripristini, fix scadenze) sono state rimosse dopo essere
+// state applicate e salvate nel cloud: erano no-op a ogni avvio.
 async function applyMigrations() {
-  const patches = [];
-  const f4 = TASKS.find(t => t.id === 'f4' && t.note && t.note.includes('Cerca email'));
-  if (f4) {
-    f4.note = 'Check-in 27/07, check-out 01/08 (5 notti, 3A+1B). Airbnb paga il 28/07: CSV movimenti → riga "Compenso co-host" HMKDK5T4NZ → inserisci importo. Fattura entro 12 gg dal check-in = entro l\'8 ago.';
-    patches.push(taskToRow(f4));
-  }
-  if (patches.length && CURRENT_USER) {
-    const { error } = await sb.from('tasks').upsert(patches);
-    if (error) console.error('Migration error', error);
-  }
-
-  // ── Migration 2: nuovi task da prenotazioni email giugno 2026 ──
-  const _now = new Date().toISOString();
-  const _nuovi = [
-    // David Müller — La Ciucarina, check-in 20/06
-    { id:'dm1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:784.00, cohost:null, codice:'HMXYWKSPZS', dataDoc:null, scadenza:'2026-06-20', link:'ade',    note:'Check-in 20/06, check-out 25/06 (5 notti, 2A). Totale ospite 784,00 €.',                                                                                                                                                                           completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'dm2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-06-21', link:'',       note:'Check-in 20/06, check-out 25/06.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'dm3', tipo:'autofattura', casa:'La Ciucarina',          ospite:'David Müller',               canale:'Airbnb', importo:121.52, cohost:null, codice:'HMXYWKSPZS', dataDoc:null, scadenza:'2026-07-15', link:'passgo', note:'Commissione 121,52 € (servizio host 15,5%, conf. 12/06). N. fattura e data dalla fattura IVA Airbnb di giugno.',                                                                                                                    completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    // Rodica Mitu — Ca' Balenga, check-in 04/07
-    { id:'rm1', tipo:'scontrino',   casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:355.30, cohost:null, codice:'HMSPPHSXEQ', dataDoc:null, scadenza:'2026-07-04', link:'ade',    note:'Check-in 04/07, check-out 07/07 (3 notti, 3A + 1 animale). Totale ospite 355,30 €.',                                                                                                                                                               completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'rm2', tipo:'alloggiati',  casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 07/07.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'rm3', tipo:'autofattura', casa:"Ca' Balenga",           ospite:'Rodica Mitu',                canale:'Airbnb', importo:55.07,  cohost:null, codice:'HMSPPHSXEQ', dataDoc:null, scadenza:'2026-07-15', link:'passgo', note:'Commissione 55,07 € (servizio host 15,5%, conf. 01/06). N. fattura e data dalla fattura IVA Airbnb di giugno. Pagante: Airbnb Payments Luxembourg.',                                                                                   completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    // Benn McGrady — Villa Omedè (PM), check-in 05/07
-    { id:'bm1', tipo:'fattura-pm',  casa:'Villa Omedè',           ospite:'Benn McGrady',               canale:'Airbnb', importo:null,   cohost:null, codice:'HMPC3QTMCY', dataDoc:null, scadenza:'2026-07-17', link:'',       note:'Check-in 05/07, check-out 09/07 (4 notti, 4A+4B). Airbnb paga il 06/07: CSV movimenti → riga "Compenso co-host" HMPC3QTMCY oppure calcola 30% × payout 2.123,76 €. Fattura entro 12 gg dal check-in = entro il 17/07.',                   completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'bm2', tipo:'alloggiati',  casa:'Villa Omedè',           ospite:'Benn McGrady',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-06', link:'',       note:'Check-in 05/07, check-out 09/07.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    // Bianca Da Hora — App. del Palio (PM), check-in 05/07
-    { id:'bd1', tipo:'fattura-pm',  casa:'Appartamento del Palio',ospite:'Bianca Da Hora',             canale:'Airbnb', importo:null,   cohost:null, codice:'HMSBM944WW', dataDoc:null, scadenza:'2026-07-17', link:'',       note:'Check-in 05/07, check-out 13/07 (8 notti, 2A). Airbnb paga il 06/07: CSV movimenti → riga "Compenso co-host" HMSBM944WW oppure calcola 20% × payout 661,53 € ≈ 132 €. Fattura entro 12 gg dal check-in = entro il 17/07.',               completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'bd2', tipo:'alloggiati',  casa:'Appartamento del Palio',ospite:'Bianca Da Hora',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-06', link:'',       note:'Check-in 05/07, check-out 13/07.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    // Lucie Guettier — Tenuta del Mulino (PM), check-in 04/07
-    { id:'lg1', tipo:'fattura-pm',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',             canale:'Airbnb', importo:null,   cohost:null, codice:'HMFBDHYT8Y', dataDoc:null, scadenza:'2026-07-16', link:'',       note:'Check-in 04/07, check-out 11/07 (7 notti, 4A+4B+2 neonati). Airbnb paga il 05/07: CSV movimenti → riga "Compenso co-host" HMFBDHYT8Y oppure calcola 20% × payout 1.123,94 € ≈ 225 €. Fattura entro 12 gg dal check-in = entro il 16/07.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'lg2', tipo:'alloggiati',  casa:'Tenuta del Mulino',     ospite:'Lucie Guettier',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-07-05', link:'',       note:'Check-in 04/07, check-out 11/07.',                                                                                                                                                                               completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    // Francesca Loss — La Ciucarina (HOST), check-in 16/10 (autofattura af1 già in app)
-    { id:'fl1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Francesca Loss',             canale:'Airbnb', importo:497.00, cohost:null, codice:'HMXNBRYTX2', dataDoc:null, scadenza:'2026-10-16', link:'ade',    note:'Check-in 16/10, check-out 18/10 (2 notti, 4A+2B+1 neonato). Totale ospite 497,00 €.',                                                                                                                                                           completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'fl2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Francesca Loss',             canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-10-17', link:'',       note:'Check-in 16/10, check-out 18/10.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    // Yuen Seng So — La Ciucarina (HOST), check-in 26/10 (autofattura af2 già in app)
-    { id:'ys1', tipo:'scontrino',   casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:390.00, cohost:null, codice:'HM2ANAEW4H', dataDoc:null, scadenza:'2026-10-26', link:'ade',    note:'Check-in 26/10, check-out 28/10 (2 notti, 4A). Totale ospite 390,00 €.',                                                                                                                                                                    completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-    { id:'ys2', tipo:'alloggiati',  casa:'La Ciucarina',          ospite:'Yuen Seng So',               canale:'Airbnb', importo:null,   cohost:null, codice:'',            dataDoc:null, scadenza:'2026-10-27', link:'',       note:'Check-in 26/10, check-out 28/10.',                                                                                                                                                                                                     completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_now },
-  ];
-  const _daInserire = _nuovi.filter(_seedNew);
-  if (_daInserire.length) {
-    _daInserire.forEach(t => { TASKS.push(t); _markMigr(t.id); });
-    if (CURRENT_USER) {
-      const { error } = await sb.from('tasks').upsert(_daInserire.map(taskToRow));
-      if (error) console.error('Migration insert error', error);
-      else showToast(`✓ ${_daInserire.length} nuovi task aggiunti`);
-    }
-  }
-
-  // ── Migration 3: fix scadenze Booking fattura-pm ──
-  const _bFix = [
-    { id:'cast1', scadenza:'2026-07-15' },
-    { id:'cast2', scadenza:'2026-09-15' },
-    { id:'f3',   scadenza:'2026-07-15' },
-  ];
-  const _bPatches = [];
-  _bFix.forEach(fix => {
-    const t = TASKS.find(x => x.id === fix.id && x.scadenza !== fix.scadenza);
-    if (t) { t.scadenza = fix.scadenza; _bPatches.push(taskToRow(t)); }
-  });
-  if (_bPatches.length && CURRENT_USER) {
-    const { error } = await sb.from('tasks').upsert(_bPatches);
-    if (error) console.error('Booking scadenza fix error', error);
-  }
-
-  // ── Migration 4: ripristino task eliminati per errore ──
-  const _bk1 = { id:'bk1', tipo:'manuale', casa:'Appartamento del Palio', ospite:'Fattura fee PM — Ana Krapovickas',
-      canale:'Booking', importo:null, cohost:null, codice:'1654882612', scadenza:'2026-06-15', link:'',
-      note:'Booking ha pagato Ana (~3 giu, rif. 1654882612). Crea fattura fee PM: importo soggiorno × 20%, scadenza oggi +12gg.',
-      completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:new Date().toISOString() };
-  const _ripristina = _seedNew(_bk1) ? [_bk1] : [];
-  if (_ripristina.length) {
-    _ripristina.forEach(t => { TASKS.push(t); _markMigr(t.id); });
-    if (CURRENT_USER) {
-      const { error } = await sb.from('tasks').upsert(_ripristina.map(taskToRow));
-      if (error) console.error('Migration 4 error', error);
-      else showToast('✓ Task Ana Krapovickas ripristinato');
-    }
-  }
-
-  // ── Migration 5: prenotazioni nuove giugno 2026 (Regina, Pasovski, Loffredo) ──
-  const _m5now = new Date().toISOString();
-  const _m5 = [
-    // Regina Weinheimer — Ca' Balenga (casa propria/host), Airbnb, check-in 16/06
-    { id:'reg_sc', tipo:'scontrino',  casa:"Ca' Balenga",       ospite:'Regina Weinheimer', canale:'Airbnb',  importo:198.40, cohost:null, codice:'HMDJX2MEAW', dataDoc:null, scadenza:'2026-06-16', link:'ade', note:'Check-in 16/06, check-out 18/06 (2 notti, 2 adulti). Totale ospite 198,40 €.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
-    { id:'reg_al', tipo:'alloggiati', casa:"Ca' Balenga",       ospite:'Regina Weinheimer', canale:'Airbnb',  importo:null,   cohost:null, codice:'',           dataDoc:null, scadenza:'2026-06-16', link:'',    note:'Check-in 16/06, check-out 18/06. Comunicazione Alloggiati entro 24h dall\'arrivo.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
-    // Pasovski Metin — Callianetto / La Tana del Tasso (gestione), Booking, check-in 18/06
-    { id:'pas_fp', tipo:'fattura-pm', casa:'La Tana del Tasso', ospite:'Pasovski Metin',    canale:'Booking', importo:412.43, cohost:null, codice:'5113508343', dataDoc:null, scadenza:'2026-07-15', link:'',    note:'Check-in 18/06, check-out 21/06 (3 notti, 4 adulti). Totale ospite 412,43 €. Fattura fee PM Booking quando arriva il pagamento.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
-    // Loffredo Fabia — Casa Amalia (gestione), Booking, check-in 12/12
-    { id:'lof_fp', tipo:'fattura-pm', casa:'Casa Amalia',       ospite:'Loffredo Fabia',    canale:'Booking', importo:221.07, cohost:null, codice:'6205466032', dataDoc:null, scadenza:'2027-01-15', link:'',    note:'Check-in 12/12, check-out 14/12 (2 notti, 2 adulti). Totale ospite 221,07 €. Fattura fee PM Booking quando arriva il pagamento.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m5now },
-  ];
-  const _m5add = _m5.filter(_seedNew);
-  if (_m5add.length) {
-    _m5add.forEach(t => { TASKS.push(t); _markMigr(t.id); });
-    if (CURRENT_USER) {
-      const { error } = await sb.from('tasks').upsert(_m5add.map(taskToRow));
-      if (error) console.error('Migration 5 error', error);
-      else showToast(`✓ ${_m5add.length} prenotazioni nuove aggiunte`);
-    }
-  }
-
-  // ── Migration 6: (rimossa) — il concetto "Arrivo" è stato eliminato ──
-  // L'arrivo si vede dall'Alloggiati, che cade il giorno del check-in.
-
-  // ── Migration 7: Alloggiati Web anche per le case in gestione ──
-  const _m7now = new Date().toISOString();
-  const _m7 = [
-    { id:'pas_al', tipo:'alloggiati', casa:'La Tana del Tasso', ospite:'Pasovski Metin', canale:'Booking', importo:null, cohost:null, codice:'', dataDoc:null, scadenza:'2026-06-18', link:'', note:'Check-in 18/06, check-out 21/06. Comunicazione Alloggiati Web entro 24h dall\'arrivo.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m7now },
-    { id:'lof_al', tipo:'alloggiati', casa:'Casa Amalia',       ospite:'Loffredo Fabia',  canale:'Booking', importo:null, cohost:null, codice:'', dataDoc:null, scadenza:'2026-12-12', link:'', note:'Check-in 12/12, check-out 14/12. Comunicazione Alloggiati Web entro 24h dall\'arrivo.', completato:false, completatoIl:null, completatoAlle:null, inBatch:false, creatoIl:_m7now },
-  ];
-  const _m7add = _m7.filter(_seedNew);
-  if (_m7add.length) {
-    _m7add.forEach(t => { TASKS.push(t); _markMigr(t.id); });
-    if (CURRENT_USER) {
-      const { error } = await sb.from('tasks').upsert(_m7add.map(taskToRow));
-      if (error) console.error('Migration 7 error', error);
-      else showToast(`✓ ${_m7add.length} Alloggiati aggiunti`);
-    }
-  }
-
-  // ── Migration 8: pulizia nomi e doppioni ──
   // Mappa codice prenotazione → nome ospite (dalle email Airbnb/Booking/Kross)
   const CODICE_NOMI = {
     '6205466032':'Loffredo Fabia', '5113508343':'Pasovski Metin', 'HMDJX2MEAW':'Regina Weinheimer',
@@ -784,6 +650,16 @@ async function applyMigrations() {
   const _baseCod = c => (c || '').replace(/_(sc|al|ar|fp)$/, '');
   const _vuoto = o => !o || o === '—' || String(o).trim() === '';
 
+  // Identità (casa|ospite) delle prenotazioni cancellate, ricavate dai task che
+  // hanno un codice annullato: serve per propagare la cancellazione anche ai task
+  // della stessa prenotazione che NON hanno il codice (es. l'Alloggiati), così non
+  // restano orfani tra le attività o tra le "completate".
+  const _cancKeys = {};
+  TASKS.forEach(x => {
+    const _cil = CODICE_CANCELLATI[_baseCod(x.codice)];
+    if (_cil && x.casa && !_vuoto(x.ospite)) _cancKeys[x.casa + '|' + x.ospite] = _cil;
+  });
+
   // 1) elimina i task tipo 'arrivo' (concetto rimosso)
   // 2) metti il nome vero ai task senza nome + correggi la data di scontrino/alloggiati
   //    (lo script vecchio metteva "oggi" invece del giorno di check-in)
@@ -804,8 +680,10 @@ async function applyMigrations() {
     if (_bc && /^HM/i.test(_bc) && x.canale !== 'Airbnb') { x.canale = 'Airbnb'; cambiato = true; }
     // codice "sporco" col suffisso _sc/_al/... finito nel campo codice → ripulisci
     if (x.codice && x.codice !== _bc) { x.codice = _bc; cambiato = true; }
-    // prenotazione cancellata → segna annullata: esce dalle attività e dai conti
-    const _cancIl = CODICE_CANCELLATI[_bc];
+    // prenotazione cancellata → segna annullata: esce dalle attività e dai conti.
+    // Match per codice oppure, per i task senza codice, per casa+ospite.
+    const _cancIl = CODICE_CANCELLATI[_bc]
+      || (_baseCod(x.codice) === '' ? _cancKeys[(x.casa||'') + '|' + (x.ospite||'')] : null);
     if (_cancIl && !/cancellat|annullat|❌/i.test(x.note || '')) {
       x.note = '❌ CANCELLATA — ' + (x.note || '');
       x.completato = true;
