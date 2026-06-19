@@ -1174,6 +1174,10 @@ function renderOggi() {
   // Novità di oggi (nuove prenotazioni / modifiche / cancellazioni) — sotto le cose da fare
   html += novitaOggiHTML(allTasks);
 
+  // Suggerimento task accorpabili (un solo banner: l'altro, "Quando fare burocrazia",
+  // è stato rimosso perché ri-elencava gli stessi task)
+  html += batchSuggestHTML(tasks);
+
   if (settimana.length > 0) {
     html += sectionLabelHTML('In scadenza questa settimana', settimana.length, 'sec-scadenza');
     const perData = {};
