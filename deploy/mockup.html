@@ -3,56 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>The Grape Escape — struttura coerente (campi per regole)</title>
+<title>The Grape Escape — struttura task</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   :root{--ink:#16181D;--ink2:#5B6470;--ink3:#9aa3af;--page:#F1F2F4;--line:#E7E8EC;--accent:#2563EB;
-        --red:#E11D48;--amber:#C2410C;--gray:#64748B}
+        --air:#FF385C;--book:#003B95;--red:#E11D48;--amber:#C2410C;--gray:#64748B}
   body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:40px}
   .wrap{max-width:480px;margin:0 auto;padding:14px 13px}
-  .intro{background:#fff;border-radius:14px;padding:15px 16px;margin-bottom:6px;border:1px solid var(--line)}
-  .intro h1{font-size:16px;font-weight:800}
-  .intro p{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.5}
+  .intro{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:6px;border:1px solid var(--line)}
+  .intro h1{font-size:15px;font-weight:800}
+  .intro p{font-size:13px;color:var(--ink2);margin-top:5px;line-height:1.5}
   .intro b{color:var(--ink)}
-  .legend{display:flex;gap:14px;margin-top:10px;font-size:11px;font-weight:700}
-  .legend span{display:flex;align-items:center;gap:5px;color:var(--ink2)}
-  .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
-  .sw1{background:#EEF1F4;border:1px solid #D5DAE0} .sw2{background:#EAF1FE;border:1px solid #BCD3FB}
 
   .group{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin:22px 4px 6px}
-
   .meta{font-size:11px;color:var(--ink3);font-weight:600;margin:0 4px 5px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
   .meta .ora{background:#E9EBEF;color:var(--ink2);border-radius:5px;padding:1px 6px;font-weight:700}
 
-  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:0;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 10px rgba(20,24,40,.05)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 10px rgba(20,24,40,.05)}
 
-  /* ===== BLOCCO COMUNE — identico in ogni card ===== */
+  /* blocco comune */
   .common{padding:13px 15px 14px;background:#FCFCFD}
   .scad{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800;padding:5px 11px;border-radius:999px;margin-bottom:10px}
   .s-today{background:#FFEAEC;color:var(--red);border:1.5px solid #F3B0B9} .s-tom{background:#FFF1E5;color:var(--amber)} .s-week{background:#EEF1F4;color:var(--gray)} .s-far{background:#F1F3F5;color:var(--ink3)}
   .card.urg{box-shadow:0 0 0 2px var(--red),0 6px 16px rgba(225,29,72,.18)}
   .card.urg .s-today{animation:pulse 1.4s infinite}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(225,29,72,0)}50%{box-shadow:0 0 0 5px rgba(225,29,72,.18)}}
-  .tags{display:flex;gap:6px;margin-bottom:9px}
+  .tags{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap}
   .tag{font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:6px;background:#283042}
   .r{background:#fff;color:var(--ink2);border:1.5px solid #D5DAE0}
+  .c-air{background:var(--air)} .c-book{background:var(--book)}
   .who{font-size:17px;font-weight:800;letter-spacing:-.3px}
   .who span{color:var(--ink2);font-weight:600}
-  .stay{font-size:13px;color:var(--ink2);font-weight:600;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .chip{background:#EEF0F3;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700;color:var(--ink2)}
+  .stay{font-size:13px;color:var(--ink2);font-weight:600;margin-top:4px}
 
-  /* ===== BLOCCO DA COPIARE — specifico del documento ===== */
+  /* blocco da copiare (azzurro) */
   .copy{padding:12px 15px 14px;border-top:1px dashed #E2E4E8;background:#fff}
-  .ctitle{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:9px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .grid.one{grid-template-columns:1fr}
   .f{background:#EAF1FE;border:1px solid #D3E1FC;border-radius:10px;padding:8px 10px}
   .fl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#3B6FD4}
   .fv{font-size:15px;font-weight:800;color:var(--ink);margin-top:2px}
-  .fv.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;word-break:break-all}
+  .fv.mono{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;font-weight:700;word-break:break-all}
+  .fv.est{font-size:15px} .est-tag{display:block;font-size:10px;font-weight:700;color:var(--amber);margin-top:2px}
   .cb{margin-top:6px;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;background:#fff;border:1px solid #BCD3FB;border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--accent)}
+  .hint{font-size:11px;color:var(--ink3);margin-top:7px}
   .info{background:#F7F8FA;border:1px solid #E7E9EC;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink2);line-height:1.45}
-  .nocopy{font-size:13px;color:var(--ink3);padding:2px 0}
   .action{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:11px;background:var(--ink);color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:11px;border-radius:10px}
   .ext{font-size:10px;color:var(--ink3);font-weight:700;text-align:center;margin-top:5px}
   .note{text-align:center;font-size:12px;color:var(--ink2);padding:18px 18px 0;line-height:1.55}
@@ -61,24 +56,22 @@
 <body>
 <div class="wrap">
   <div class="intro">
-    <h1>Stessa struttura per tutti · cambiano solo i campi da copiare</h1>
-    <p>La parte <b>grigia</b> (casa, ospite, soggiorno, scadenza, tipo) è <b>identica in ogni task</b>. La parte <b>azzurra</b> contiene <b>solo i campi della causale</b> di quel documento, copiabili — esattamente quelli previsti dalle regole fiscali.</p>
-    <div class="legend"><span><i class="sw sw1"></i>comune (uguale per tutti)</span><span><i class="sw sw2"></i>da copiare (specifico)</span></div>
+    <h1>Stessa struttura per tutti · cambia solo il blocco azzurro</h1>
+    <p>Grigio = sempre uguale (casa, ospite, soggiorno, scadenza, tipo, ruolo, canale). Azzurro = solo i campi da copiare di quel documento.</p>
   </div>
 
   <div class="group">Airbnb</div>
 
-  <!-- SCONTRINO (host) — Importo + Descrizione ADE -->
+  <!-- SCONTRINO -->
   <div class="meta">Aggiunto il 23 giu · Arrivata il 17 giu <span class="ora">17:27</span></div>
   <div class="card urg">
     <div class="common">
       <div class="scad s-today">🚨 SCADE OGGI · entro stasera</div>
-      <div class="tags"><span class="tag">Scontrino</span><span class="tag r">Host</span></div>
+      <div class="tags"><span class="tag">Scontrino</span><span class="tag r">Host</span><span class="tag c-air">Airbnb</span></div>
       <div class="who">Ca' Balenga · <span>Lauren Kennedy</span></div>
-      <div class="stay">Soggiorno 25 giu → 28 giu <span class="chip">Airbnb</span><span class="chip">HMWDJRNNYA</span></div>
+      <div class="stay">Soggiorno 25 giu → 28 giu</div>
     </div>
     <div class="copy">
-      <div class="ctitle">Da copiare — Scontrino (ADE)</div>
       <div class="grid">
         <div class="f"><div class="fl">Importo (lordo ospite)</div><div class="fv">385,00 €</div><button class="cb">⎘ Copia</button></div>
         <div class="f"><div class="fl">Descrizione</div><div class="fv mono">PRENOTAZIONE Airbnb HMWDJRNNYA</div><button class="cb">⎘ Copia</button></div>
@@ -87,42 +80,37 @@
     </div>
   </div>
 
-  <!-- AUTOFATTURA TD17 (host) — 5 campi da regole -->
+  <!-- AUTOFATTURA — solo imponibile -->
   <div class="meta">Aggiunto il 13 giu · Arrivata il 13 giu <span class="ora">14:20</span></div>
   <div class="card">
     <div class="common">
       <div class="scad s-week">Entro 15 lug · hai 25 giorni</div>
-      <div class="tags"><span class="tag">Autofattura TD17</span><span class="tag r">Host</span></div>
+      <div class="tags"><span class="tag">Autofattura TD17</span><span class="tag r">Host</span><span class="tag c-air">Airbnb</span></div>
       <div class="who">La Ciucarina · <span>Yuen Seng So</span></div>
-      <div class="stay">Soggiorno 26 ott → 28 ott <span class="chip">Airbnb</span><span class="chip">HM2ANAEW4H</span></div>
+      <div class="stay">Soggiorno 26 ott → 28 ott</div>
     </div>
     <div class="copy">
-      <div class="ctitle">Da copiare — Autofattura TD17 (Passgo)</div>
-      <div class="grid">
-        <div class="f"><div class="fl">Data integrativa</div><div class="fv mono">30/06/2026</div><button class="cb">⎘ Copia</button></div>
-        <div class="f"><div class="fl">Data documento</div><div class="fv mono">07/06/2026</div><button class="cb">⎘ Copia</button></div>
-        <div class="f"><div class="fl">Numero documento</div><div class="fv mono">HM2ANAEW4H</div><button class="cb">⎘ Copia</button></div>
-        <div class="f"><div class="fl">Imponibile (commissioni)</div><div class="fv">60,45 €</div><button class="cb">⎘ Copia</button></div>
-        <div class="f"><div class="fl">Imposta (IVA 22%)</div><div class="fv">13,30 €</div><button class="cb">⎘ Copia</button></div>
+      <div class="grid one">
+        <div class="f"><div class="fl">Imponibile (commissione)</div><div class="fv">60,45 €</div><button class="cb">⎘ Copia</button></div>
       </div>
+      <div class="hint">IVA 22%, date e numero documento li inserisci tu in Passgo.</div>
       <a class="action">Apri Passgo ↗</a><div class="ext">si apre fuori dall'app</div>
     </div>
   </div>
 
-  <!-- FATTURA PM AIRBNB — compenso cohost -->
+  <!-- FATTURA PM AIRBNB — causale + importo stimato -->
   <div class="meta">Aggiunto il 13 giu · Arrivata il 13 giu <span class="ora">20:48</span></div>
   <div class="card">
     <div class="common">
       <div class="scad s-week">Entro 9 lug · hai 19 giorni</div>
-      <div class="tags"><span class="tag">Fattura PM</span><span class="tag r">PM</span></div>
+      <div class="tags"><span class="tag">Fattura PM</span><span class="tag r">PM</span><span class="tag c-air">Airbnb</span></div>
       <div class="who">Tenuta del Mulino · <span>Marit Askbo</span></div>
-      <div class="stay">Soggiorno 27 giu → 04 lug <span class="chip">Airbnb</span><span class="chip">HMBNJHZDKW</span></div>
+      <div class="stay">Soggiorno 27 giu → 04 lug</div>
     </div>
     <div class="copy">
-      <div class="ctitle">Da copiare — Fattura fee PM (Passgo)</div>
-      <div class="info">⏳ Compenso cohost in arrivo da Airbnb (paga il giorno dopo il check-in). Quando arriva l'importo, fattura il <b>30%</b> al proprietario.</div>
-      <div class="grid one" style="margin-top:8px">
-        <div class="f"><div class="fl">Importo da fatturare</div><div class="fv">— da inserire —</div></div>
+      <div class="grid one">
+        <div class="f"><div class="fl">Causale</div><div class="fv mono">gestione Tenuta del Mulino - Airbnb - HMBNJHZDKW</div><button class="cb">⎘ Copia</button></div>
+        <div class="f"><div class="fl">Importo da fatturare</div><div class="fv est">≈ 225,00 €<span class="est-tag">stima (lordo × 20%) — in attesa della fattura ufficiale</span></div><button class="cb">⎘ Copia</button></div>
       </div>
       <a class="action">Apri Passgo ↗</a><div class="ext">si apre fuori dall'app</div>
     </div>
@@ -130,54 +118,51 @@
 
   <div class="group">Booking</div>
 
-  <!-- FATTURA PM BOOKING — lordo + fee -->
+  <!-- FATTURA PM BOOKING — causale + importo noto -->
   <div class="meta">Aggiunto il 17 giu · Arrivata il 17 giu <span class="ora">12:13</span></div>
   <div class="card">
     <div class="common">
       <div class="scad s-week">Entro 15 lug · hai 25 giorni</div>
-      <div class="tags"><span class="tag">Fattura PM</span><span class="tag r">PM</span></div>
+      <div class="tags"><span class="tag">Fattura PM</span><span class="tag r">PM</span><span class="tag c-book">Booking</span></div>
       <div class="who">La Tana del Tasso · <span>Pasovski Metin</span></div>
-      <div class="stay">Soggiorno 18 giu → 21 giu <span class="chip">Booking</span><span class="chip">5113508343</span></div>
+      <div class="stay">Soggiorno 18 giu → 21 giu</div>
     </div>
     <div class="copy">
-      <div class="ctitle">Da copiare — Fattura fee PM (Passgo)</div>
-      <div class="grid">
-        <div class="f"><div class="fl">Lordo Booking</div><div class="fv">412,43 €</div><button class="cb">⎘ Copia</button></div>
-        <div class="f"><div class="fl">Da fatturare (26%)</div><div class="fv">107,23 €</div><button class="cb">⎘ Copia</button></div>
+      <div class="grid one">
+        <div class="f"><div class="fl">Causale</div><div class="fv mono">gestione La Tana del Tasso - Booking - 5113508343</div><button class="cb">⎘ Copia</button></div>
+        <div class="f"><div class="fl">Importo da fatturare (26% di 412,43 €)</div><div class="fv">107,23 €</div><button class="cb">⎘ Copia</button></div>
       </div>
       <a class="action">Apri Passgo ↗</a><div class="ext">si apre fuori dall'app</div>
     </div>
   </div>
 
-  <!-- ALLOGGIATI BOOKING — nessun campo fiscale -->
+  <!-- ALLOGGIATI — bottone Kross -->
   <div class="meta">Aggiunto il 19 giu · Arrivata il 19 giu <span class="ora">11:23</span></div>
   <div class="card">
     <div class="common">
       <div class="scad s-tom">⏰ Domani · entro 24h dall'arrivo</div>
-      <div class="tags"><span class="tag">Alloggiati</span><span class="tag r">PM</span></div>
+      <div class="tags"><span class="tag">Alloggiati</span><span class="tag r">PM</span><span class="tag c-book">Booking</span></div>
       <div class="who">Casa Amalia · <span>Elliņš Ervīns</span></div>
-      <div class="stay">Soggiorno 03 lug → 08 lug <span class="chip">Booking</span><span class="chip">6567942106</span></div>
+      <div class="stay">Soggiorno 03 lug → 08 lug</div>
     </div>
     <div class="copy">
-      <div class="ctitle">Da copiare — Alloggiati Web</div>
       <div class="grid one">
         <div class="f"><div class="fl">Codice prenotazione</div><div class="fv mono">6567942106</div><button class="cb">⎘ Copia</button></div>
       </div>
-      <a class="action">Apri Alloggiati Web ↗</a><div class="ext">si apre fuori dall'app</div>
+      <a class="action">Apri Kross ↗</a><div class="ext">lo fai sempre da Kross</div>
     </div>
   </div>
 
-  <!-- SCONTRINO BOOKING — stessa struttura dello scontrino Airbnb -->
+  <!-- SCONTRINO BOOKING -->
   <div class="meta">Aggiunto il 17 giu · Arrivata il 17 giu <span class="ora">15:57</span></div>
   <div class="card">
     <div class="common">
       <div class="scad s-far">Entro 14 set · tra qualche mese</div>
-      <div class="tags"><span class="tag">Scontrino</span><span class="tag r">Host</span></div>
+      <div class="tags"><span class="tag">Scontrino</span><span class="tag r">Host</span><span class="tag c-book">Booking</span></div>
       <div class="who">Ca' Balenga · <span>krauchthaler kathy et Urs</span></div>
-      <div class="stay">Soggiorno 14 set → 21 set <span class="chip">Booking</span><span class="chip">5288275855</span></div>
+      <div class="stay">Soggiorno 14 set → 21 set</div>
     </div>
     <div class="copy">
-      <div class="ctitle">Da copiare — Scontrino (ADE)</div>
       <div class="grid">
         <div class="f"><div class="fl">Importo (lordo ospite)</div><div class="fv">770,95 €</div><button class="cb">⎘ Copia</button></div>
         <div class="f"><div class="fl">Descrizione</div><div class="fv mono">PRENOTAZIONE Booking.com 5288275855</div><button class="cb">⎘ Copia</button></div>
@@ -195,9 +180,7 @@
       <div class="tags"><span class="tag">Promemoria</span><span class="tag r">PM</span></div>
       <div class="who">Appartamento del Palio</div>
     </div>
-    <div class="copy">
-      <div class="info">Contratto in rinnovo automatico il 07/07 per 1 anno. Per disdire serve preavviso entro il <b>22/06</b>. Penale recesso: gestione PM o 50% commissioni.</div>
-    </div>
+    <div class="copy"><div class="info">Contratto in rinnovo automatico il 07/07 per 1 anno. Per disdire serve preavviso entro il <b>22/06</b>. Penale recesso: gestione PM o 50% commissioni.</div></div>
   </div>
 
   <div class="meta">Aggiunto il 13 giu <span class="ora">14:20</span></div>
@@ -207,12 +190,10 @@
       <div class="tags"><span class="tag">Promemoria</span><span class="tag r">Tutte</span></div>
       <div class="who">Dichiarazione annuale tassa di soggiorno</div>
     </div>
-    <div class="copy">
-      <div class="info">Presentazione al Comune di Asti. Verifica modalità e moduli sul sito comunale.</div>
-    </div>
+    <div class="copy"><div class="info">Presentazione al Comune di Asti. Verifica modalità e moduli sul sito comunale.</div></div>
   </div>
 
-  <div class="note">Vedi? Il blocco grigio è sempre identico; cambia solo il blocco azzurro coi campi giusti per ogni documento.<br>Dimmi se i <b>campi da copiare</b> sono corretti (soprattutto l'autofattura) e poi lo applico all'app.</div>
+  <div class="note">Se è così che lo vuoi, lo applico all'app vera.<br>Confermi i campi (soprattutto fattura PM e autofattura)?</div>
 </div>
 <script>
   document.addEventListener('click',e=>{const b=e.target.closest('.cb');if(!b)return;const t=b.textContent;b.textContent='✓ Copiato';setTimeout(()=>b.textContent=t,1000);});
