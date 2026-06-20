@@ -18,15 +18,15 @@
     --shadow: 0 2px 12px rgba(0,0,0,0.08);
     --shadow-md: 0 4px 20px rgba(0,0,0,0.12);
     --bg-scontrino: #FFEDEF;
-    --bg-autofattura: #FFF0E6;
+    --bg-autofattura: #EAF1FE;
     --bg-fattura-pm: #EAF6EA;
-    --bg-alloggiati: #FFF6DB;
+    --bg-alloggiati: #E6F6FA;
     --bg-ross: #f7f7f7;
     --bg-manuale: #f8f5ff;
     --br-scontrino: #FF385C;
-    --br-autofattura: #FF6B35;
+    --br-autofattura: #2563EB;
     --br-fattura-pm: #008A05;
-    --br-alloggiati: #C08B00;
+    --br-alloggiati: #0891B2;
     --br-ross: #999;
     --br-manuale: #7B5EA7;
   }
@@ -77,14 +77,14 @@
   .task-tipo-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 6px; }
   .task-tipo { display: inline-flex; align-items: center; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 800; padding: 4px 10px; border-radius: 8px; color: #fff; }
   .task-tipo.tipo-scontrino   { background: #E01E47; }
-  .task-tipo.tipo-autofattura { background: #D2541C; }
+  .task-tipo.tipo-autofattura { background: #2563EB; }
   .task-tipo.tipo-fattura-pm  { background: #00770A; }
-  .task-tipo.tipo-alloggiati  { background: #8A6400; }
+  .task-tipo.tipo-alloggiati  { background: #0E7490; }
   .task-tipo.tipo-ross        { background: #5C6470; }
   .task-tipo.tipo-manuale     { background: #6B4E96; }
   /* etichetta tipo usata come testo (non pillola) altrove */
   .tipo-fattura-pm  { color: var(--verde); }
-  .tipo-alloggiati  { color: var(--oro); }
+  .tipo-alloggiati  { color: #0E7490; }
 
   .task-titolo { font-size: 15px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; color: var(--nero); }
   .task-titolo.done { text-decoration: line-through; color: var(--grigio); }
@@ -326,11 +326,13 @@
   .nc-card.bg-ross{background:var(--bg-ross);border-left:6px solid var(--br-ross)}
   .nc-card.bg-manuale{background:var(--bg-manuale);border-left:6px solid var(--br-manuale)}
   .nc-cn{font-size:11px;font-weight:800;color:#fff;padding:4px 10px;border-radius:7px}
-  .nc-tag-sco{background:#E11D48} .nc-tag-aut{background:#D2541C} .nc-tag-fat{background:#15803D} .nc-tag-all{background:#8A6400} .nc-tag-pro{background:#7C3AED} .nc-tag-ross{background:#475569}
+  .nc-tag-sco{background:#E11D48} .nc-tag-aut{background:#2563EB} .nc-tag-fat{background:#15803D} .nc-tag-all{background:#0E8AA0} .nc-tag-pro{background:#7C3AED} .nc-tag-ross{background:#475569}
   .nc-ch-air{background:#FF385C} .nc-ch-book{background:#003B95} .nc-ch-vrbo{background:#4338CA} .nc-ch-diretta{background:#16A34A} .nc-ch-bb{background:#0E8AA0}
   .nc-who{font-size:18px;font-weight:800;letter-spacing:-.4px;color:#222}
   .nc-who span{color:#717171;font-weight:600}
-  .nc-stay{font-size:13px;color:#717171;font-weight:600;margin-top:5px}
+  .nc-stay{font-size:13px;color:#444;font-weight:700;margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 20px}
+  .nc-d{display:inline-flex;flex-direction:column;line-height:1.3}
+  .nc-d i{font-style:normal;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:#9aa0a6;font-weight:800;margin-bottom:1px}
   .nc-copy{padding:13px 16px 15px;border-top:1px solid #F2F2F2}
   .nc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
   .nc-grid.one{grid-template-columns:1fr}
@@ -1415,19 +1417,32 @@ const KROSS_URL = 'https://cabalenga.krossbooking.com/login/v2';
 // Soggiorno (check-in→check-out) è un dato della PRENOTAZIONE, comune a tutti i suoi
 // task: lo raccolgo una volta per codice, così compare identico in ogni card.
 let SOGG_COD = {}, SOGG_NAME = {};
+function _mergeInfo(a, b){ return { pren:a.pren||b.pren, ci:a.ci||b.ci, co:a.co||b.co }; }
+function _hasInfo(i){ return !!(i.pren || i.ci || i.co); }
 function buildSoggMap(){
   SOGG_COD = {}; SOGG_NAME = {};
   (TASKS || []).forEach(t => {
-    const s = _ncSoggiorno(t.note); if (!s) return;
-    if (t.codice && !SOGG_COD[t.codice]) SOGG_COD[t.codice] = s;
-    if (t.ospite && t.ospite !== '—') { const k = (t.casa||'')+'|'+t.ospite; if (!SOGG_NAME[k]) SOGG_NAME[k] = s; }
+    const info = _ncDateInfo(t.note); if (!_hasInfo(info)) return;
+    if (t.codice) SOGG_COD[t.codice] = SOGG_COD[t.codice] ? _mergeInfo(SOGG_COD[t.codice], info) : info;
+    if (t.ospite && t.ospite !== '—') { const k = (t.casa||'')+'|'+t.ospite; SOGG_NAME[k] = SOGG_NAME[k] ? _mergeInfo(SOGG_NAME[k], info) : info; }
   });
 }
-// Soggiorno comune alla prenotazione: stesso codice O stessa casa+ospite → stesso valore
-function soggiornoDi(task){
-  return (task.codice && SOGG_COD[task.codice])
-      || (task.ospite && task.ospite !== '—' && SOGG_NAME[(task.casa||'')+'|'+task.ospite])
-      || _ncSoggiorno(task.note) || '';
+// Info prenotazione comuni alla prenotazione: stesso codice O stessa casa+ospite → stesse date.
+// Si fondono i campi presenti su ciascun task così che ogni card mostri lo stesso blocco.
+function soggiornoInfoDi(task){
+  let info = _ncDateInfo(task.note);
+  if (task.codice && SOGG_COD[task.codice]) info = _mergeInfo(info, SOGG_COD[task.codice]);
+  if (task.ospite && task.ospite !== '—') { const n = SOGG_NAME[(task.casa||'')+'|'+task.ospite]; if (n) info = _mergeInfo(info, n); }
+  // data prenotazione: se non è nelle note, usa la data di creazione del task (≈ arrivo email OTA)
+  if (!info.pren && task.creatoIl) info = { ...info, pren: _ggmmDaISO(task.creatoIl) };
+  return info;
+}
+// Blocco uniforme "Prenotazione · Arrivo · Partenza" mostrato identico su ogni card della prenotazione
+function soggiornoBloccoHTML(task){
+  const i = soggiornoInfoDi(task);
+  const cell = (lab, val) => val ? '<span class="nc-d"><i>'+lab+'</i>'+val+'</span>' : '';
+  const html = cell('Prenotazione', i.pren) + cell('Arrivo', i.ci) + cell('Partenza', i.co);
+  return html ? '<div class="nc-stay">'+html+'</div>' : '';
 }
 
 // Riquadro "Ospiti in casa adesso": chi sta soggiornando ora (check-in passato, check-out
@@ -1491,14 +1506,22 @@ function _ncScad(iso){
   if(d<=7)return ['nc-s-week','Entro '+formatShort(iso)+' · '+d+' giorni',false];
   return ['nc-s-far','Entro '+formatShort(iso),false];
 }
-function _ncSoggiorno(note){
-  if(!note)return '';
+function _ggmmDaISO(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+}
+// Estrae le date di una prenotazione dalla nota: prenotazione, arrivo (check-in), partenza (check-out).
+// Formato restituito GG/MM (lo stesso usato in tutta l'app).
+function _ncDateInfo(note){
+  const out = { pren:null, ci:null, co:null };
+  if(!note) return out;
   const fmt=(d,mo)=>String(parseInt(d,10)).padStart(2,'0')+'/'+mo;
-  let m=note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})[^c\d]*[Cc]heck-?out\s+(\d{1,2})\/(\d{2})/);
-  if(m)return 'Soggiorno '+fmt(m[1],m[2])+' → '+fmt(m[3],m[4]);
-  m=note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})/);
-  if(m)return 'Arrivo '+fmt(m[1],m[2]);
-  return '';
+  let m=note.match(/[Pp]renotat[oa]\s+il\s+(\d{1,2})\/(\d{2})/); if(m) out.pren=fmt(m[1],m[2]);
+  m=note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})/);  if(m) out.ci=fmt(m[1],m[2]);
+  m=note.match(/[Cc]heck-?out\s+(\d{1,2})\/(\d{2})/); if(m) out.co=fmt(m[1],m[2]);
+  return out;
 }
 function _ncField(label,value,copyText){
   return '<div class="nc-f"><div class="nc-fl">'+label+'</div><div class="nc-fv">'+value+'</div>'+
@@ -1525,8 +1548,8 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
   }
 
   const sc=_ncScad(task.scadenza), scls=sc[0], slab=sc[1], isUrg=sc[2];
-  // soggiorno: comune a tutta la prenotazione → identico in ogni task
-  const sogg=soggiornoDi(task);
+  // info prenotazione (prenotazione · arrivo · partenza): comuni a tutta la prenotazione → identiche in ogni card
+  const soggBlocco=soggiornoBloccoHTML(task);
   const isPM=task.tipo==='fattura-pm', isAirbnb=task.canale==='Airbnb', isBooking=task.canale==='Booking';
   const canaleTxt=isBooking?'Booking.com':(task.canale||'');
   const fee=(FEE_PM[task.casa]||{}).default||null;
@@ -1582,7 +1605,7 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     +(hideScad?'':'<div class="nc-scad '+scls+'">'+slab+'</div>')
     +'<div class="nc-tags"><span class="nc-tag '+tcls+'">'+tlab+'</span><span class="nc-tag '+roleCls+'">'+ruolo+'</span>'+chBadge+'</div>'
     +'<div class="nc-who">'+casaH+ospiteH+'</div>'
-    +(sogg?'<div class="nc-stay">'+sogg+'</div>':'')
+    +soggBlocco
     +'</div>'
     +'</div>'
     +(hasCopy?'<div class="nc-copy">'+copy+action+'</div>':'')

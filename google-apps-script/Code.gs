@@ -226,8 +226,12 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     codice: null,
     importo: null,
     compenso: null,
-    mese_fattura: null
+    mese_fattura: null,
+    prenotato: null
   };
+
+  // Data prenotazione ≈ data di arrivo dell'email OTA (Kross/Airbnb/Booking notificano alla conferma)
+  try { if (data) dati.prenotato = Utilities.formatDate(new Date(data), 'Europe/Rome', 'yyyy-MM-dd'); } catch (e) {}
 
   // Capisce di che tipo di email si tratta
   if (ogg.match(/cancell/)) {
@@ -520,10 +524,13 @@ function _creaTask(d, storico) {
                   || ((d.piattaforma === 'booking' || d.piattaforma === 'kross') ? 'Booking' : 'Airbnb');
   var isBooking = canale === 'Booking';
   var cod       = d.codice || '';
-  var nota      = d.checkin && d.checkout
-    ? 'Check-in ' + _ggmm(d.checkin) + ', check-out ' + _ggmm(d.checkout)
-      + (d.notti ? ' (' + d.notti + ' notti).' : '.')
+  var notaPren  = d.prenotato ? 'Prenotato il ' + _ggmm(d.prenotato) + '. ' : '';
+  var notaSogg  = d.checkin
+    ? 'Check-in ' + _ggmm(d.checkin)
+      + (d.checkout ? ', check-out ' + _ggmm(d.checkout) + (d.notti ? ' (' + d.notti + ' notti)' : '') : '')
+      + '.'
     : '';
+  var nota      = (notaPren + notaSogg).trim();
 
   if (isHost) {
     // SCONTRINO — il giorno del check-in
