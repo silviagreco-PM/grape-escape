@@ -1034,16 +1034,9 @@ function finestraBannerHTML(tasks) {
     ? (nSbest > 0 ? `nessun check-in in presenza (${nSbest} self, non serve esserci)` : 'nessun check-in previsto')
     : `solo ${nPbest} check-in in presenza`;
 
-  // Fattura: disponibile dalla data di pagamento = scadenza - 12 gg
-  // Autofattura: disponibile dal 1° del mese di scadenza (quando arriva la fattura mensile Airbnb/Booking)
-  const isDisponibile = x => {
-    if (x.tipo === 'fattura-pm') return new Date() >= isoToDate(addDays(x.scadenza, -12));
-    if (x.tipo === 'autofattura') {
-      const s = isoToDate(x.scadenza);
-      return new Date() >= new Date(s.getFullYear(), s.getMonth(), 1);
-    }
-    return true;
-  };
+  // Stesso criterio di "pronto da fare" usato ovunque (vedi isTaskDisponibile):
+  // la fattura PM conta solo se ho anche l'importo, non solo se è passata la data.
+  const isDisponibile = isTaskDisponibile;
 
   // Task inamovibili che cadono nel giorno migliore (scadenza esatta)
   const inamovibiliBestDay = tasks.filter(x =>
@@ -1191,15 +1184,26 @@ function filterTasks(tasks) {
 
 function filterByRole(tasks) { return filterTasks(tasks); }
 
+// Una fattura PM è "pronta" solo se conosco DAVVERO l'importo da fatturare:
+//  - Airbnb: il compenso cohost (arriva col payout, il giorno dopo il check-in);
+//    finché c'è solo la stima lordo×% "in attesa fattura ufficiale" NON è pronta.
+//  - Booking: il lordo da rendiconto + la mia fee %.
+function fatturaPMImportoNoto(x) {
+  if (x.canale === 'Airbnb') return x.cohost != null;
+  if (x.canale === 'Booking') return x.importo != null && !!((FEE_PM[x.casa]||{}).default);
+  return x.cohost != null || x.importo != null;
+}
+
 // Un task è "disponibile" (= ha già tutti i dati per essere fatto adesso) quando:
-//  - Fattura PM: dalla data di pagamento (= scadenza − 12 gg; per Airbnb il compenso
-//    cohost è già nella mail di prenotazione, quindi spesso disponibile subito).
+//  - Fattura PM: dalla data di pagamento (= scadenza − 12 gg) E con l'importo noto
+//    (senza la cifra non è una cosa che posso fare → fuori da "Portati avanti").
 //  - Autofattura: solo dal 1° del mese di scadenza, perché per il TD17 serve la
 //    fattura commissioni OTA, che arriva dopo (non si può anticipare prima).
 //  - Promemoria: sempre.
 // Scontrino/Alloggiati NON sono qui: dipendono dal check-in, non si fanno in anticipo.
 function isTaskDisponibile(x) {
-  if (x.tipo === 'fattura-pm') return new Date() >= isoToDate(addDays(x.scadenza, -12));
+  if (x.tipo === 'fattura-pm')
+    return fatturaPMImportoNoto(x) && new Date() >= isoToDate(addDays(x.scadenza, -12));
   if (x.tipo === 'autofattura') {
     const s = isoToDate(x.scadenza);
     return new Date() >= new Date(s.getFullYear(), s.getMonth(), 1);
