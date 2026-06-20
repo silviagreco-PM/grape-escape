@@ -1431,16 +1431,14 @@ function soggiornoInfoDi(task){
   let info = _ncDateInfo(task.note);
   if (task.codice && SOGG_COD[task.codice]) info = _mergeInfo(info, SOGG_COD[task.codice]);
   if (task.ospite && task.ospite !== '—') { const n = SOGG_NAME[(task.casa||'')+'|'+task.ospite]; if (n) info = _mergeInfo(info, n); }
-  // data prenotazione: se non è nelle note, usa la data di creazione del task (≈ arrivo email OTA)
-  if (!info.pren && task.creatoIl) info = { ...info, pren: _ggmmDaISO(task.creatoIl) };
   return info;
 }
-// Riga compatta "📅 prenotazione · ↘ arrivo · ↗ partenza" (stile produzione), identica su ogni card della prenotazione
+// Riga compatta "↘ arrivo · ↗ partenza" (campi comuni della prenotazione, DESIGN_LOCK §6),
+// identica su ogni card della stessa prenotazione. Niente data di prenotazione indovinata.
 function soggiornoBloccoHTML(task){
   const i = soggiornoInfoDi(task);
   const sep = '<span style="opacity:.3;margin:0 6px">·</span>';
   const parts = [];
-  if (i.pren) parts.push('<span title="Data prenotazione">📅 '+i.pren+'</span>');
   if (i.ci)   parts.push('<span title="Arrivo (check-in)">↘ '+i.ci+'</span>');
   if (i.co)   parts.push('<span title="Partenza (check-out)">↗ '+i.co+'</span>');
   return parts.length ? '<div class="nc-stay">'+parts.join(sep)+'</div>' : '';
