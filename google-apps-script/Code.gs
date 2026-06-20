@@ -338,6 +338,20 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
   }
   if (importi.length > 0) dati.compenso = Math.max.apply(null, importi);
 
+  // PAYOUT co-host Airbnb ("Abbiamo inviato un compenso"): l'importo da fatturare al
+  // proprietario è il COMPENSO CO-HOST, non un importo qualsiasi della mail. Nelle
+  // email di payout il "Totale pagato" coincide col compenso co-host → usiamo quello,
+  // così la cifra è precisa anche se nel testo compaiono altri numeri.
+  if (dati.tipo === 'pagamento' && /co.?host/i.test(testo)) {
+    dati.canale = dati.canale || 'Airbnb';
+    var mTotPag = testo.match(/totale pagato:[^0-9]*([0-9.,]+)/i)
+               || testo.match(/compenso del co.?host[\s\S]{0,200}?(?:EUR|€)\s*([0-9.,]+)/i);
+    if (mTotPag) {
+      var nTotPag = parseFloat(mTotPag[1].replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(nTotPag) && nTotPag > 0) dati.compenso = nTotPag;
+    }
+  }
+
   // Mese per autofattura (es. "commissioni maggio 2026")
   if (dati.tipo === 'autofattura') {
     var regMeseAf = new RegExp('(?:di|del|per il mese di)\\s+(' + MESI_IT.join('|') + ')\\s+(\\d{4})', 'i');
@@ -482,11 +496,12 @@ function _creaTask(d, storico) {
     return creati;
   }
 
-  // PAGAMENTO: aggiorna l'importo sulla fattura esistente
+  // PAGAMENTO (payout co-host Airbnb): scrive il compenso co-host sulla fattura PM
+  // di quella prenotazione, così la card mostra l'importo reale (non più la stima).
+  // Match per CODICE (robusto, indipendente dall'id) e SOLO se il cohost è ancora
+  // vuoto, per non sovrascrivere eventuali correzioni manuali.
   if (d.tipo === 'pagamento') {
-    if (d.codice && d.compenso) {
-      _aggiornaCampo(_idTask(d.codice, 'fp'), { cohost: d.compenso });
-    }
+    if (d.codice && d.compenso) _impostaCohostFattura(d.codice, d.compenso);
     return 0;
   }
 
@@ -620,6 +635,20 @@ function _aggiornaCampo(id, campi) {
     metodo: 'patch',
     dati: campi,
   });
+}
+
+// Scrive il compenso co-host sulla fattura PM di una prenotazione, cercandola per
+// CODICE (non per id calcolato) e solo dove il cohost è ancora vuoto. Così funziona
+// a prescindere da come è stato creato il task e non sovrascrive correzioni manuali.
+function _impostaCohostFattura(codice, compenso) {
+  _db('tasks?codice=eq.' + encodeURIComponent(codice)
+      + '&tipo=eq.fattura-pm'
+      + '&user_id=eq.' + CFG.SUPABASE_USER_ID
+      + '&cohost=is.null', {
+    metodo: 'patch',
+    dati: { cohost: compenso },
+  });
+  Logger.log('💶 Compenso co-host ' + compenso + ' € → fattura PM ' + codice + ' (se mancante)');
 }
 
 function _esiste(id) {
