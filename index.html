@@ -330,9 +330,7 @@
   .nc-ch-air{background:#FF385C} .nc-ch-book{background:#003B95} .nc-ch-vrbo{background:#4338CA} .nc-ch-diretta{background:#16A34A} .nc-ch-bb{background:#0E8AA0}
   .nc-who{font-size:18px;font-weight:800;letter-spacing:-.4px;color:#222}
   .nc-who span{color:#717171;font-weight:600}
-  .nc-stay{font-size:13px;color:#444;font-weight:700;margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 20px}
-  .nc-d{display:inline-flex;flex-direction:column;line-height:1.3}
-  .nc-d i{font-style:normal;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:#9aa0a6;font-weight:800;margin-bottom:1px}
+  .nc-stay{font-size:13px;color:#555;font-weight:600;margin-top:7px}
   .nc-copy{padding:13px 16px 15px;border-top:1px solid #F2F2F2}
   .nc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
   .nc-grid.one{grid-template-columns:1fr}
@@ -1437,12 +1435,15 @@ function soggiornoInfoDi(task){
   if (!info.pren && task.creatoIl) info = { ...info, pren: _ggmmDaISO(task.creatoIl) };
   return info;
 }
-// Blocco uniforme "Prenotazione · Arrivo · Partenza" mostrato identico su ogni card della prenotazione
+// Riga compatta "📅 prenotazione · ↘ arrivo · ↗ partenza" (stile produzione), identica su ogni card della prenotazione
 function soggiornoBloccoHTML(task){
   const i = soggiornoInfoDi(task);
-  const cell = (lab, val) => val ? '<span class="nc-d"><i>'+lab+'</i>'+val+'</span>' : '';
-  const html = cell('Prenotazione', i.pren) + cell('Arrivo', i.ci) + cell('Partenza', i.co);
-  return html ? '<div class="nc-stay">'+html+'</div>' : '';
+  const sep = '<span style="opacity:.3;margin:0 6px">·</span>';
+  const parts = [];
+  if (i.pren) parts.push('<span title="Data prenotazione">📅 '+i.pren+'</span>');
+  if (i.ci)   parts.push('<span title="Arrivo (check-in)">↘ '+i.ci+'</span>');
+  if (i.co)   parts.push('<span title="Partenza (check-out)">↗ '+i.co+'</span>');
+  return parts.length ? '<div class="nc-stay">'+parts.join(sep)+'</div>' : '';
 }
 
 // Riquadro "Ospiti in casa adesso": chi sta soggiornando ora (check-in passato, check-out
