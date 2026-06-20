@@ -2974,7 +2974,7 @@ async function attivaNotifiche() {
     }
     localStorage.setItem('notifiche_attive', '1');
     setNotificheAttive(btn);
-    showToast('🔔 Notifiche attivate — riceverai un alert ogni mattina alle 8');
+    showToast('🔔 Notifiche attive — ti avviso a ogni nuova prenotazione/cambio + riepilogo ogni mattina');
   } catch (e) {
     console.error(e);
     showToast('⚠ Errore notifiche: ' + (e && e.message ? e.message : e));
