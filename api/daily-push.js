@@ -14,7 +14,7 @@ const TIPO_LABEL = {
 
 // Chiave VAPID pubblica: è pubblica per definizione (sta già nell'app), la mettiamo
 // qui per evitare problemi di formato della variabile d'ambiente su Vercel.
-const VAPID_PUBLIC = 'BG5OAo4FCzOjlEXg5SCRI82AuY5rixGpGZBU5f_1ydR8-qbGRmhvUtkx1MumDe4e_wPGGxVccODnQEpYklagpUA';
+const VAPID_PUBLIC = 'BFg0U6thz9uvtoxx56UbnlxRIUq6c07tzTscZ7kYncpwMdxzN95ALGg4E_yMkhPLhrCdpQweSMmcErXgXTbWD7s';
 // web-push vuole le chiavi in base64url: normalizza eventuali +, /, = di troppo.
 const toUrlSafe = (k) => (k || '').replace(/\s/g, '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
