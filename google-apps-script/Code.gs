@@ -54,7 +54,8 @@ function impostaTrigger() {
   ScriptApp.getProjectTriggers().forEach(function(t) { ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('controllaEmailNuove').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('inviaRecapGiornaliero').timeBased().everyDays(1).atHour(7).create();
-  Logger.log('✅ Fatto! Controllo email ogni 5 minuti + mail di recap ogni mattina alle 7.');
+  ScriptApp.newTrigger('riconciliaPrenotazioni').timeBased().everyDays(1).atHour(6).create();
+  Logger.log('✅ Fatto! Controllo email ogni 5 minuti + recap alle 7 + riconciliazione alle 6.');
 }
 
 /**
@@ -75,6 +76,35 @@ function controllaEmailNuove() {
     'from:(airbnb.com OR booking.com OR kross) -label:' + LABEL_OK + ' newer_than:3d',
     false
   );
+}
+
+/**
+ * RETE DI SICUREZZA — gira ogni giorno. Ricontrolla i messaggi degli ospiti Booking
+ * e crea i task delle prenotazioni che NON sono mai arrivate come "Nuova prenotazione"
+ * (es. caso Petra: Booking non manda la conferma a Kross). I doppioni sono evitati da
+ * _esistePerCodice, quindi è sicuro rieseguirla quanto si vuole. NON tocca le email.
+ */
+function riconciliaPrenotazioni() {
+  var discussioni = GmailApp.search('from:guest.booking.com newer_than:120d', 0, 100);
+  var creati = 0, viste = {};
+  for (var i = 0; i < discussioni.length; i++) {
+    var messaggi = discussioni[i].getMessages();
+    for (var j = 0; j < messaggi.length; j++) {
+      var msg = messaggi[j];
+      var corpo = msg.getPlainBody();
+      if (!/dati della prenotazione/i.test(corpo)) continue;
+      var d = _analizzaEmail(msg.getSubject(), corpo, 'booking', msg.getDate());
+      if (!d || d.tipo !== 'prenotazione' || !d.codice || !d.checkin) continue;
+      if (viste[d.codice]) continue;
+      viste[d.codice] = true;
+      creati += _creaTask(d, true); // storico=true → salta se la prenotazione esiste già
+    }
+  }
+  if (creati > 0) {
+    _notifica('🔎 ' + creati + (creati === 1 ? ' prenotazione recuperata' : ' prenotazioni recuperate'),
+              'Una prenotazione che mancava è stata aggiunta in automatico — apri l\'app.');
+  }
+  Logger.log('Riconciliazione: ' + creati + ' task creati');
 }
 
 // ═══ ELABORAZIONE EMAIL ═══════════════════════════════════════════════════════
@@ -196,8 +226,12 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     codice: null,
     importo: null,
     compenso: null,
-    mese_fattura: null
+    mese_fattura: null,
+    prenotato: null
   };
+
+  // Data prenotazione ≈ data di arrivo dell'email OTA (Kross/Airbnb/Booking notificano alla conferma)
+  try { if (data) dati.prenotato = Utilities.formatDate(new Date(data), 'Europe/Rome', 'yyyy-MM-dd'); } catch (e) {}
 
   // Capisce di che tipo di email si tratta
   if (ogg.match(/cancell/)) {
@@ -304,6 +338,20 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
   }
   if (importi.length > 0) dati.compenso = Math.max.apply(null, importi);
 
+  // PAYOUT co-host Airbnb ("Abbiamo inviato un compenso"): l'importo da fatturare al
+  // proprietario è il COMPENSO CO-HOST, non un importo qualsiasi della mail. Nelle
+  // email di payout il "Totale pagato" coincide col compenso co-host → usiamo quello,
+  // così la cifra è precisa anche se nel testo compaiono altri numeri.
+  if (dati.tipo === 'pagamento' && /co.?host/i.test(testo)) {
+    dati.canale = dati.canale || 'Airbnb';
+    var mTotPag = testo.match(/totale pagato:[^0-9]*([0-9.,]+)/i)
+               || testo.match(/compenso del co.?host[\s\S]{0,200}?(?:EUR|€)\s*([0-9.,]+)/i);
+    if (mTotPag) {
+      var nTotPag = parseFloat(mTotPag[1].replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(nTotPag) && nTotPag > 0) dati.compenso = nTotPag;
+    }
+  }
+
   // Mese per autofattura (es. "commissioni maggio 2026")
   if (dati.tipo === 'autofattura') {
     var regMeseAf = new RegExp('(?:di|del|per il mese di)\\s+(' + MESI_IT.join('|') + ')\\s+(\\d{4})', 'i');
@@ -351,6 +399,28 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
              || corpo.match(/prenotazione per:\s*\d*\s*x?\s*([^\n\r-]+)/i);
       if (mCam) dati.casa = _trovaCasa(mCam[1]);
     }
+  }
+
+  // ── BOOKING — email "messaggio da un ospite": contiene i "Dati della prenotazione".
+  // A volte Booking NON manda la conferma a Kross: questa email è l'unica fonte, quindi
+  // la usiamo per non perdere la prenotazione (i doppioni sono evitati da _esistePerCodice).
+  if (piattaforma === 'booking' && /dati della prenotazione/i.test(cor)) {
+    dati.tipo = 'prenotazione';
+    dati.canale = 'Booking';
+    var mNomeB = corpo.match(/nome dell['’]ospite:\s*([^\n\r]+)/i);
+    if (mNomeB && mNomeB[1].trim()) dati.ospite = mNomeB[1].trim();
+    var mNumB = corpo.match(/numero di prenotazione:\s*([0-9]{6,})/i);
+    if (mNumB) dati.codice = mNumB[1];
+    var _dataBk = function(lab) {
+      var re = new RegExp(lab + ':\\s*(?:(?:lun|mar|mer|gio|ven|sab|dom)\\.?\\s+)?(\\d{1,2})\\s+(' + MESI_IT_SHORT.join('|') + ')\\s+(\\d{4})', 'i');
+      var m = corpo.match(re);
+      if (!m) return null;
+      var mi = MESI_IT_SHORT.indexOf(m[2].toLowerCase()) + 1;
+      return mi > 0 ? m[3] + '-' + String(mi).padStart(2, '0') + '-' + m[1].padStart(2, '0') : null;
+    };
+    var ciB = _dataBk('check-in'), coB = _dataBk('check-out');
+    if (ciB) dati.checkin = ciB;
+    if (coB) dati.checkout = coB;
   }
 
   return dati;
@@ -426,11 +496,12 @@ function _creaTask(d, storico) {
     return creati;
   }
 
-  // PAGAMENTO: aggiorna l'importo sulla fattura esistente
+  // PAGAMENTO (payout co-host Airbnb): scrive il compenso co-host sulla fattura PM
+  // di quella prenotazione, così la card mostra l'importo reale (non più la stima).
+  // Match per CODICE (robusto, indipendente dall'id) e SOLO se il cohost è ancora
+  // vuoto, per non sovrascrivere eventuali correzioni manuali.
   if (d.tipo === 'pagamento') {
-    if (d.codice && d.compenso) {
-      _aggiornaCampo(_idTask(d.codice, 'fp'), { cohost: d.compenso });
-    }
+    if (d.codice && d.compenso) _impostaCohostFattura(d.codice, d.compenso);
     return 0;
   }
 
@@ -468,10 +539,13 @@ function _creaTask(d, storico) {
                   || ((d.piattaforma === 'booking' || d.piattaforma === 'kross') ? 'Booking' : 'Airbnb');
   var isBooking = canale === 'Booking';
   var cod       = d.codice || '';
-  var nota      = d.checkin && d.checkout
-    ? 'Check-in ' + _ggmm(d.checkin) + ', check-out ' + _ggmm(d.checkout)
-      + (d.notti ? ' (' + d.notti + ' notti).' : '.')
+  var notaPren  = d.prenotato ? 'Prenotato il ' + _ggmm(d.prenotato) + '. ' : '';
+  var notaSogg  = d.checkin
+    ? 'Check-in ' + _ggmm(d.checkin)
+      + (d.checkout ? ', check-out ' + _ggmm(d.checkout) + (d.notti ? ' (' + d.notti + ' notti)' : '') : '')
+      + '.'
     : '';
+  var nota      = (notaPren + notaSogg).trim();
 
   if (isHost) {
     // SCONTRINO — il giorno del check-in
@@ -561,6 +635,20 @@ function _aggiornaCampo(id, campi) {
     metodo: 'patch',
     dati: campi,
   });
+}
+
+// Scrive il compenso co-host sulla fattura PM di una prenotazione, cercandola per
+// CODICE (non per id calcolato) e solo dove il cohost è ancora vuoto. Così funziona
+// a prescindere da come è stato creato il task e non sovrascrive correzioni manuali.
+function _impostaCohostFattura(codice, compenso) {
+  _db('tasks?codice=eq.' + encodeURIComponent(codice)
+      + '&tipo=eq.fattura-pm'
+      + '&user_id=eq.' + CFG.SUPABASE_USER_ID
+      + '&cohost=is.null', {
+    metodo: 'patch',
+    dati: { cohost: compenso },
+  });
+  Logger.log('💶 Compenso co-host ' + compenso + ' € → fattura PM ' + codice + ' (se mancante)');
 }
 
 function _esiste(id) {
