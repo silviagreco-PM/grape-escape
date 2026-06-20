@@ -54,7 +54,8 @@ function impostaTrigger() {
   ScriptApp.getProjectTriggers().forEach(function(t) { ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('controllaEmailNuove').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('inviaRecapGiornaliero').timeBased().everyDays(1).atHour(7).create();
-  Logger.log('✅ Fatto! Controllo email ogni 5 minuti + mail di recap ogni mattina alle 7.');
+  ScriptApp.newTrigger('riconciliaPrenotazioni').timeBased().everyDays(1).atHour(6).create();
+  Logger.log('✅ Fatto! Controllo email ogni 5 minuti + recap alle 7 + riconciliazione alle 6.');
 }
 
 /**
@@ -75,6 +76,35 @@ function controllaEmailNuove() {
     'from:(airbnb.com OR booking.com OR kross) -label:' + LABEL_OK + ' newer_than:3d',
     false
   );
+}
+
+/**
+ * RETE DI SICUREZZA — gira ogni giorno. Ricontrolla i messaggi degli ospiti Booking
+ * e crea i task delle prenotazioni che NON sono mai arrivate come "Nuova prenotazione"
+ * (es. caso Petra: Booking non manda la conferma a Kross). I doppioni sono evitati da
+ * _esistePerCodice, quindi è sicuro rieseguirla quanto si vuole. NON tocca le email.
+ */
+function riconciliaPrenotazioni() {
+  var discussioni = GmailApp.search('from:guest.booking.com newer_than:120d', 0, 100);
+  var creati = 0, viste = {};
+  for (var i = 0; i < discussioni.length; i++) {
+    var messaggi = discussioni[i].getMessages();
+    for (var j = 0; j < messaggi.length; j++) {
+      var msg = messaggi[j];
+      var corpo = msg.getPlainBody();
+      if (!/dati della prenotazione/i.test(corpo)) continue;
+      var d = _analizzaEmail(msg.getSubject(), corpo, 'booking', msg.getDate());
+      if (!d || d.tipo !== 'prenotazione' || !d.codice || !d.checkin) continue;
+      if (viste[d.codice]) continue;
+      viste[d.codice] = true;
+      creati += _creaTask(d, true); // storico=true → salta se la prenotazione esiste già
+    }
+  }
+  if (creati > 0) {
+    _notifica('🔎 ' + creati + (creati === 1 ? ' prenotazione recuperata' : ' prenotazioni recuperate'),
+              'Una prenotazione che mancava è stata aggiunta in automatico — apri l\'app.');
+  }
+  Logger.log('Riconciliazione: ' + creati + ' task creati');
 }
 
 // ═══ ELABORAZIONE EMAIL ═══════════════════════════════════════════════════════
