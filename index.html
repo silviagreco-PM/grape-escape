@@ -204,6 +204,15 @@
   .gruppo-line { flex: 1; height: 1px; background: var(--border); }
   .gruppo-count { font-size: 10px; background: var(--grigio-light); color: var(--grigio); padding: 2px 7px; border-radius: 10px; font-weight: 700; border: 1px solid var(--border); }
 
+  /* Raggruppamento dei task della stessa prenotazione */
+  .pren-group { border: 1px solid var(--border); border-radius: 14px; padding: 6px; margin-bottom: 12px; background: rgba(0,0,0,0.015); }
+  .pren-group .nc-card { margin-bottom: 6px; }
+  .pren-group .nc-card:last-child { margin-bottom: 2px; }
+  .pren-group-h { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 4px 6px 8px; font-size: 13px; font-weight: 700; color: var(--nero); }
+  .pren-group-who { white-space: nowrap; }
+  .pren-group-d { font-size: 11px; font-weight: 600; color: var(--grigio); }
+  .pren-group-n { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--grigio); background: var(--grigio-light); border: 1px solid var(--border); border-radius: 10px; padding: 2px 7px; }
+
   .view { display: none; }
   .view.active { display: block; }
 
@@ -1182,6 +1191,72 @@ function filterTasks(tasks) {
 
 function filterByRole(tasks) { return filterTasks(tasks); }
 
+// Un task è "disponibile" (= ha già tutti i dati per essere fatto adesso) quando:
+//  - Fattura PM: dalla data di pagamento (= scadenza − 12 gg; per Airbnb il compenso
+//    cohost è già nella mail di prenotazione, quindi spesso disponibile subito).
+//  - Autofattura: solo dal 1° del mese di scadenza, perché per il TD17 serve la
+//    fattura commissioni OTA, che arriva dopo (non si può anticipare prima).
+//  - Promemoria: sempre.
+// Scontrino/Alloggiati NON sono qui: dipendono dal check-in, non si fanno in anticipo.
+function isTaskDisponibile(x) {
+  if (x.tipo === 'fattura-pm') return new Date() >= isoToDate(addDays(x.scadenza, -12));
+  if (x.tipo === 'autofattura') {
+    const s = isoToDate(x.scadenza);
+    return new Date() >= new Date(s.getFullYear(), s.getMonth(), 1);
+  }
+  return true;
+}
+
+// Sezione "Portati avanti": tutto ciò che NON scade oggi ma che potresti già fare
+// (dati pronti). Risponde alla domanda "ho mezz'ora, cosa posso togliermi?".
+function portatiAvantiHTML(tasks) {
+  const t = today();
+  const pronti = tasks.filter(x =>
+    !x.completato && x.scadenza && x.scadenza > t &&
+    TIPO_CONFIG[x.tipo] && TIPO_CONFIG[x.tipo].accorpabile && isTaskDisponibile(x)
+  ).sort((a, b) => a.scadenza.localeCompare(b.scadenza));
+  if (!pronti.length) return '';
+  // Suggerimento "giorno migliore" per accorpare i check-in (se utile)
+  const { presenza, bestDay } = calcolaFinestra(tasks);
+  const bd = isoToDate(bestDay);
+  const bestLabel = bestDay===t?'oggi':bestDay===inDays(1)?'domani':`${GIORNI_L[bd.getDay()]} ${bd.getDate()}`;
+  const hint = presenza[bestDay] === 0
+    ? `Giornata libera da check-in consigliata: <b>${bestLabel}</b>.`
+    : '';
+  let html = `<div class="oggi-header" id="sec-avanti" style="margin-top:16px">✅ Hai mezz'ora? Portati avanti<span class="cnt">${pronti.length}</span></div>`;
+  if (hint) html += `<div style="font-size:12px;color:var(--grigio);margin:-4px 0 8px">${hint} Queste pratiche hanno già tutti i dati: puoi prepararle e inviarle quando vuoi.</div>`;
+  pronti.forEach(task => { html += taskCardHTML(task, false, false, false, false); });
+  return html;
+}
+
+// Chiave di prenotazione: stessa casa + stesso ospite = stessa prenotazione
+// (i codici dei singoli task hanno suffissi diversi _sc/_al, quindi uso casa+ospite).
+function bookingKey(t) { return (t.ospite && t.ospite !== '—') ? (t.casa||'')+'|'+t.ospite : '#'+t.id; }
+
+// Disegna una lista di card raggruppando i task della STESSA prenotazione sotto
+// un'unica intestazione (casa · ospite · arrivo→partenza). I task singoli restano
+// card normali. Mantiene l'ordine d'ingresso.
+function renderCardsGrouped(list, urgent, hideScad, isBatch) {
+  const order = [], groups = {};
+  list.forEach(t => { const k = bookingKey(t); if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(t); });
+  let html = '';
+  order.forEach(k => {
+    const g = groups[k];
+    if (g.length > 1) {
+      const info = soggiornoInfoDi(g[0]);
+      const date = [info.ci?'↘ '+info.ci:'', info.co?'↗ '+info.co:''].filter(Boolean).join('<span style="opacity:.3;margin:0 5px">·</span>');
+      html += `<div class="pren-group"><div class="pren-group-h"><span class="pren-group-who">${escapeHtml(g[0].casa||'—')} · ${escapeHtml(g[0].ospite)}</span>`
+        + (date?`<span class="pren-group-d">${date}</span>`:'')
+        + `<span class="pren-group-n">${g.length} task</span></div>`;
+      g.forEach(t => { html += taskCardHTML(t, urgent, false, !!isBatch, hideScad); });
+      html += `</div>`;
+    } else {
+      html += taskCardHTML(g[0], urgent, false, !!isBatch, hideScad);
+    }
+  });
+  return html;
+}
+
 function renderOggi() {
   const allTasks = loadTasks();
   buildSoggMap();
@@ -1225,7 +1300,7 @@ function renderOggi() {
   const daFare = [...urgenti];
   if (daFare.length > 0) {
     html += `<div class="oggi-header" id="sec-urgenti">🚨 Da fare oggi<span class="cnt">${daFare.length}</span></div>`;
-    daFare.forEach(task => { html += taskCardHTML(task, true, false, false, true); });
+    html += renderCardsGrouped(daFare, true, true, false);
   }
 
   // In ritardo RECENTI (≤7 giorni): in evidenza, rossi, aperti
@@ -1235,12 +1310,12 @@ function renderOggi() {
       <div class="scaduti-toggle" style="cursor:default">
         <span class="scaduti-toggle-label">⚠ ${scOrd.length} in ritardo · ultimi 7 giorni</span>
       </div>
-      <div class="scaduti-list">${scOrd.map(task => taskCardHTML(task, true)).join('')}</div>
+      <div class="scaduti-list">${renderCardsGrouped(scOrd, true, false, false)}</div>
     </div>`;
   }
 
-  // BUROCRAZIA ACCORPABILE — subito sotto le cose di oggi (ordine scelto da Silvia)
-  html += finestraBannerHTML(tasks);
+  // PORTATI AVANTI — cose già pronte da fare, anche se non scadono oggi (sopra a tutto il resto)
+  html += portatiAvantiHTML(tasks);
 
   // Novità di oggi (nuove prenotazioni / modifiche / cancellazioni) — sotto le cose da fare
   html += novitaOggiHTML(allTasks);
@@ -1256,7 +1331,7 @@ function renderOggi() {
       const dataStyle  = col ? ` style="color:${col}"` : '';
       const countStyle = col ? ` style="background:${col};color:#fff;border-color:${col}"` : '';
       html += `<div class="gruppo-header"><div class="gruppo-data"${dataStyle}>${gruppoLabel(data)}</div><div class="gruppo-line"></div><div class="gruppo-count"${countStyle}>${g.length}</div></div>`;
-      g.forEach(task => { html += taskCardHTML(task, false, false, false, true); });
+      html += renderCardsGrouped(g, false, true, false);
     });
   }
 
@@ -1267,7 +1342,7 @@ function renderOggi() {
     Object.keys(perData).sort().forEach(data => {
       const g = perData[data];
       html += `<div class="gruppo-header"><div class="gruppo-data">${gruppoLabel(data)}</div><div class="gruppo-line"></div><div class="gruppo-count">${g.length}</div></div>`;
-      g.forEach(task => { html += taskCardHTML(task, false, false, false, true); });
+      html += renderCardsGrouped(g, false, true, false);
     });
   }
 
@@ -1284,7 +1359,7 @@ function renderOggi() {
       <div class="recupera-subtitle">Queste pratiche sono in ritardo da più di una settimana — falle tutte insieme quando hai una finestra. Nessuna urgenza aggiuntiva.</div>
     </div>
     <div class="recupera-body">`;
-    daRecuperare.forEach(task => { html += taskCardHTML(task, false, false, true); });
+    html += renderCardsGrouped(daRecuperare, false, false, true);
     html += `</div>`;
   }
 
