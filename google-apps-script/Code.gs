@@ -353,6 +353,28 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     }
   }
 
+  // ── BOOKING — email "messaggio da un ospite": contiene i "Dati della prenotazione".
+  // A volte Booking NON manda la conferma a Kross: questa email è l'unica fonte, quindi
+  // la usiamo per non perdere la prenotazione (i doppioni sono evitati da _esistePerCodice).
+  if (piattaforma === 'booking' && /dati della prenotazione/i.test(cor)) {
+    dati.tipo = 'prenotazione';
+    dati.canale = 'Booking';
+    var mNomeB = corpo.match(/nome dell['’]ospite:\s*([^\n\r]+)/i);
+    if (mNomeB && mNomeB[1].trim()) dati.ospite = mNomeB[1].trim();
+    var mNumB = corpo.match(/numero di prenotazione:\s*([0-9]{6,})/i);
+    if (mNumB) dati.codice = mNumB[1];
+    var _dataBk = function(lab) {
+      var re = new RegExp(lab + ':\\s*(?:(?:lun|mar|mer|gio|ven|sab|dom)\\.?\\s+)?(\\d{1,2})\\s+(' + MESI_IT_SHORT.join('|') + ')\\s+(\\d{4})', 'i');
+      var m = corpo.match(re);
+      if (!m) return null;
+      var mi = MESI_IT_SHORT.indexOf(m[2].toLowerCase()) + 1;
+      return mi > 0 ? m[3] + '-' + String(mi).padStart(2, '0') + '-' + m[1].padStart(2, '0') : null;
+    };
+    var ciB = _dataBk('check-in'), coB = _dataBk('check-out');
+    if (ciB) dati.checkin = ciB;
+    if (coB) dati.checkout = coB;
+  }
+
   return dati;
 }
 
