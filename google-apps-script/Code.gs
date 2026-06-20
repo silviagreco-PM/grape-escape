@@ -112,6 +112,7 @@ function riconciliaPrenotazioni() {
 function _elabora(ricerca, storico) {
   var discussioni = GmailApp.search(ricerca, 0, 100);
   var taskNuovi = 0;
+  var novita = [];   // descrizioni leggibili di cosa è arrivato (per la notifica)
 
   for (var i = 0; i < discussioni.length; i++) {
     var messaggi = discussioni[i].getMessages();
@@ -119,7 +120,9 @@ function _elabora(ricerca, storico) {
       var msg = messaggi[j];
       if (_haLabel(msg, LABEL_OK)) continue;
       try {
-        taskNuovi += _leggiEmail(msg, storico);
+        var r = _leggiEmail(msg, storico);
+        taskNuovi += r.creati;
+        if (r.desc) novita.push(r.desc);
         _mettiLabel(msg, LABEL_OK);
       } catch(e) {
         Logger.log('❌ Errore: ' + msg.getSubject() + ' — ' + e);
@@ -128,13 +131,17 @@ function _elabora(ricerca, storico) {
     }
   }
 
-  if (taskNuovi > 0) {
-    _notifica(
-      '📋 ' + taskNuovi + (taskNuovi === 1 ? ' nuovo task aggiunto' : ' nuovi task aggiunti'),
-      'Aggiornamento da Airbnb/Booking/Kross — apri l\'app per vedere.'
-    );
-    Logger.log('✅ Creati ' + taskNuovi + ' task nuovi');
+  // Notifica push IMMEDIATA a ogni cambio (non solo il riepilogo del mattino):
+  // dice COSA è arrivato, così sai subito che c'è una fattura/scontrino da fare.
+  // Saltata durante il recupero storico (storico=true) per non mandare un blocco enorme.
+  if (taskNuovi > 0 && !storico) {
+    var titolo = novita.length === 1 ? '🆕 Nuova prenotazione' : '🆕 ' + novita.length + ' novità';
+    var corpo = novita.length
+      ? novita.slice(0, 4).join(' · ') + ' — apri l\'app per scontrino/fattura.'
+      : taskNuovi + ' nuovi task — apri l\'app.';
+    _notifica(titolo, corpo);
   }
+  if (taskNuovi > 0) Logger.log('✅ Creati ' + taskNuovi + ' task nuovi');
 }
 
 function _leggiEmail(msg, storico) {
@@ -143,18 +150,24 @@ function _leggiEmail(msg, storico) {
                   : mittente.indexOf('booking') >= 0 ? 'booking'
                   : mittente.indexOf('kross') >= 0   ? 'kross'
                   : null;
-  if (!piattaforma) return 0;
+  if (!piattaforma) return { creati: 0, desc: null };
 
   var dati = _analizzaEmail(msg.getSubject(), msg.getPlainBody(), piattaforma, msg.getDate());
   if (!dati || dati.tipo === 'altro') {
     Logger.log('⏭ Tipo non riconosciuto — oggetto: ' + msg.getSubject().slice(0, 80));
-    return 0;
+    return { creati: 0, desc: null };
   }
 
   Logger.log('📨 ' + piattaforma + ' · ' + dati.tipo
     + ' · ' + (dati.casa || '—') + ' · ' + (dati.ospite || '—'));
 
-  return _creaTask(dati, storico);
+  var creati = _creaTask(dati, storico);
+  // Descrizione per la notifica: solo per prenotazioni/modifiche (le cose che richiedono
+  // una tua azione fiscale), es. "Casa Amalia · Carlotta Barbolla".
+  var desc = (creati > 0 && (dati.tipo === 'prenotazione' || dati.tipo === 'modifica'))
+    ? (dati.casa || '—') + (dati.ospite ? ' · ' + dati.ospite : '')
+    : null;
+  return { creati: creati, desc: desc };
 }
 
 /**
