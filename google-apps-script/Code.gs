@@ -632,10 +632,42 @@ function _taskInScadenza(date) {
   } catch (e) { Logger.log('Errore lettura task recap: ' + e); return []; }
 }
 
-function _rigaTask(t) {
-  var et = RECAP_TIPI[t.tipo] || t.tipo;
-  var imp = t.importo ? ' — ' + Number(t.importo).toFixed(2).replace('.', ',') + ' €' : '';
-  return et + ': ' + (t.casa || '—') + (t.ospite ? ' · ' + t.ospite : '') + imp;
+var RECAP_COLORI = {
+  scontrino:'#E11D48', autofattura:'#2563EB', 'fattura-pm':'#15803D',
+  alloggiati:'#0E7490', ross:'#475569', manuale:'#6D28D9'
+};
+var RECAP_LABEL = {
+  scontrino:'Scontrino', autofattura:'Autofattura', 'fattura-pm':'Fattura PM',
+  alloggiati:'Alloggiati', ross:'ROSS/ISTAT', manuale:'Promemoria'
+};
+
+// Data ISO → "venerdì 20 giugno" (niente formato 2026-06-20 nelle mail)
+function _dataLeggibile(iso) {
+  var G = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+  var M = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+  var p = String(iso).split('-');
+  if (p.length !== 3) return iso;
+  var d = new Date(Date.UTC(+p[0], +p[1]-1, +p[2], 12));
+  return G[d.getUTCDay()] + ' ' + (+p[2]) + ' ' + M[+p[1]-1];
+}
+
+// Riga task in HTML (etichetta colorata + casa/ospite + importo). Niente emoji:
+// nelle email le emoji si corrompono, le lettere accentate e € no.
+function _rigaTaskHTML(t) {
+  var col = RECAP_COLORI[t.tipo] || '#475569';
+  var lab = RECAP_LABEL[t.tipo] || t.tipo;
+  var imp = t.importo ? '<span style="font-weight:700"> · ' + Number(t.importo).toFixed(2).replace('.', ',') + ' €</span>' : '';
+  var chi = (t.casa || '—') + (t.ospite ? ' · ' + t.ospite : '');
+  return '<tr><td style="padding:11px 0;border-bottom:1px solid #EFEFF2">'
+    + '<span style="font-size:11px;font-weight:700;color:#ffffff;background:' + col + ';border-radius:6px;padding:3px 9px;text-transform:uppercase;letter-spacing:.03em">' + lab + '</span>'
+    + '<div style="margin-top:6px;font-size:15px;color:#16181D">' + chi + imp + '</div>'
+    + '</td></tr>';
+}
+
+function _rigaTaskPlain(t) {
+  var lab = RECAP_LABEL[t.tipo] || t.tipo;
+  var imp = t.importo ? ' - ' + Number(t.importo).toFixed(2).replace('.', ',') + ' EUR' : '';
+  return '- ' + lab + ': ' + (t.casa || '-') + (t.ospite ? ' / ' + t.ospite : '') + imp;
 }
 
 /**
@@ -648,28 +680,38 @@ function inviaRecapGiornaliero() {
   var tDomani = tasks.filter(function(t) { return t.scadenza === domani; });
 
   var dest = CFG.RECAP_EMAIL || 'silvia.greco@gmail.com';
-  var oggetto = tOggi.length
-    ? '📋 The Grape Escape — ' + tOggi.length + ' cosa/e da fare oggi'
-    : (tDomani.length ? '📋 The Grape Escape — scadenze di domani' : '✅ The Grape Escape — nessuna scadenza');
+  var nOggi = tOggi.length;
+  var oggetto = nOggi
+    ? 'The Grape Escape - ' + nOggi + (nOggi === 1 ? ' cosa' : ' cose') + ' da fare oggi'
+    : (tDomani.length ? 'The Grape Escape - scadenze di domani' : 'The Grape Escape - nessuna scadenza oggi');
 
-  function blocco(titolo, arr) {
-    if (!arr.length) return '<p style="color:#888">' + titolo + ': nulla.</p>';
-    var li = arr.map(function(t) { return '<li>' + _rigaTask(t) + '</li>'; }).join('');
-    return '<p><b>' + titolo + '</b></p><ul>' + li + '</ul>';
+  function sezione(arr, vuoto) {
+    if (!arr.length) return '<p style="color:#9aa3af;font-size:14px;margin:4px 0 18px">' + vuoto + '</p>';
+    return '<table width="100%" cellpadding="0" cellspacing="0" style="margin:2px 0 18px">' + arr.map(_rigaTaskHTML).join('') + '</table>';
+  }
+  function titoletto(txt) {
+    return '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#9aa3af;margin:18px 0 4px">' + txt + '</div>';
   }
 
-  var html = '<div style="font-family:system-ui,Arial,sans-serif;font-size:15px;color:#222">'
-    + '<h2>🍇 Buongiorno Silvia</h2>'
-    + blocco('Oggi (' + oggi + ')', tOggi)
-    + blocco('Domani (' + domani + ')', tDomani)
-    + '<p><a href="' + (CFG.APP_URL || 'https://thegrapeescape.netlify.app') + '">Apri l\'app →</a></p>'
-    + '</div>';
+  var url = CFG.APP_URL || 'https://grape-escape.vercel.app';
+  var html =
+    '<div style="background:#F4F5F7;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">'
+    + '<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;padding:26px 24px">'
+    + '<div style="font-size:22px;font-weight:800;color:#16181D">Buongiorno Silvia</div>'
+    + '<div style="font-size:14px;color:#5B6470;margin-top:3px">' + _dataLeggibile(oggi)
+      + ' · ' + (nOggi ? (nOggi + (nOggi === 1 ? ' cosa da fare' : ' cose da fare')) : 'nessuna scadenza oggi') + '</div>'
+    + titoletto('Oggi') + sezione(tOggi, 'Niente in scadenza oggi.')
+    + titoletto('Domani') + sezione(tDomani, 'Niente in scadenza domani.')
+    + '<a href="' + url + '" style="display:inline-block;margin-top:8px;background:#FF385C;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 22px;border-radius:10px">Apri l\'app</a>'
+    + '</div></div>';
 
-  var plain = 'Oggi:\n' + (tOggi.map(_rigaTask).join('\n') || 'nulla')
-    + '\n\nDomani:\n' + (tDomani.map(_rigaTask).join('\n') || 'nulla');
+  var plain = 'Buongiorno Silvia - ' + _dataLeggibile(oggi) + '\n\nOggi:\n'
+    + (tOggi.map(_rigaTaskPlain).join('\n') || 'nulla')
+    + '\n\nDomani:\n' + (tDomani.map(_rigaTaskPlain).join('\n') || 'nulla')
+    + '\n\n' + url;
 
   GmailApp.sendEmail(dest, oggetto, plain, { htmlBody: html, name: 'The Grape Escape' });
-  Logger.log('✅ Recap inviato a ' + dest + ' (' + tOggi.length + ' oggi, ' + tDomani.length + ' domani)');
+  Logger.log('Recap inviato a ' + dest + ' (' + nOggi + ' oggi, ' + tDomani.length + ' domani)');
 }
 
 // ═══ ETICHETTE GMAIL ══════════════════════════════════════════════════════════

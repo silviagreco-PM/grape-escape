@@ -2,6 +2,9 @@
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
+const VAPID_PUBLIC = 'BG5OAo4FCzOjlEXg5SCRI82AuY5rixGpGZBU5f_1ydR8-qbGRmhvUtkx1MumDe4e_wPGGxVccODnQEpYklagpUA';
+const toUrlSafe = (k) => (k || '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').trim();
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method not allowed');
 
@@ -15,8 +18,8 @@ export default async function handler(req, res) {
 
   webpush.setVapidDetails(
     'mailto:silvia.greco@gmail.com',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY,
+    VAPID_PUBLIC,
+    toUrlSafe(process.env.VAPID_PRIVATE_KEY),
   );
 
   const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);

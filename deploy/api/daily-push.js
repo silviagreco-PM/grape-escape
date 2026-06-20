@@ -12,16 +12,20 @@ const TIPO_LABEL = {
   manuale:      '✏️ Promemoria',
 };
 
+// Chiave VAPID pubblica: è pubblica per definizione (sta già nell'app), la mettiamo
+// qui per evitare problemi di formato della variabile d'ambiente su Vercel.
+const VAPID_PUBLIC = 'BG5OAo4FCzOjlEXg5SCRI82AuY5rixGpGZBU5f_1ydR8-qbGRmhvUtkx1MumDe4e_wPGGxVccODnQEpYklagpUA';
+// web-push vuole le chiavi in base64url: normalizza eventuali +, /, = di troppo.
+const toUrlSafe = (k) => (k || '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').trim();
+
 export default async function handler(req, res) {
   const SUPA_URL      = process.env.SUPABASE_URL;
   const SUPA_SRV_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
-  const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
+  const VAPID_PRIVATE = toUrlSafe(process.env.VAPID_PRIVATE_KEY);
 
   const missing = [];
   if (!SUPA_URL) missing.push('SUPABASE_URL');
   if (!SUPA_SRV_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
-  if (!VAPID_PUBLIC) missing.push('VAPID_PUBLIC_KEY');
   if (!VAPID_PRIVATE) missing.push('VAPID_PRIVATE_KEY');
   if (missing.length) {
     return res.status(500).send('Variabili mancanti su Vercel: ' + missing.join(', '));
