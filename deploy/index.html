@@ -51,6 +51,7 @@
   .pill-todo { background: var(--grigio-light); color: var(--grigio); border: 1px solid var(--border); }
   .pill-done { background: var(--verde-light); color: var(--verde); }
   .pill-recupera { background: #FBF1E4; color: #9A6B17; border: 1px solid #F0DFC2; }
+  .pill-incasa { background: #EAF6F0; color: #157A39; border: 1px solid #CDEBD9; }
   .pill-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
   .main { padding: 0 14px 110px; }
@@ -1215,8 +1216,10 @@ function renderOggi() {
 
   let html = '';
 
-  // OSPITI IN CASA ADESSO — in cima a tutto
-  html += ospitiInCasaHTML(tasks);
+  // Ospiti in casa: pannello nascosto, apribile dalla pillola 🏠 (non occupa spazio)
+  const inCasa = ospitiInCasaHTML(tasks);
+  if (inCasa.n > 0) pillsEl.innerHTML += `<div class="pill pill-incasa" style="cursor:pointer" onclick="toggleInCasa()"><div class="pill-dot"></div>🏠 ${inCasa.n} in casa</div>`;
+  html += inCasa.html;
 
   // DA FARE OGGI — in cima a tutto (scadenza = oggi)
   const daFare = [...urgenti];
@@ -1236,22 +1239,26 @@ function renderOggi() {
     </div>`;
   }
 
+  // BUROCRAZIA ACCORPABILE — subito sotto le cose di oggi (ordine scelto da Silvia)
+  html += finestraBannerHTML(tasks);
+
   // Novità di oggi (nuove prenotazioni / modifiche / cancellazioni) — sotto le cose da fare
   html += novitaOggiHTML(allTasks);
 
   if (settimana.length > 0) {
-    html += sectionLabelHTML('In scadenza questa settimana', settimana.length, 'sec-scadenza');
+    html += sectionLabelHTML('Prossimi giorni', settimana.length, 'sec-scadenza');
     const perData = {};
     settimana.forEach(task => { if (!perData[task.scadenza]) perData[task.scadenza]=[]; perData[task.scadenza].push(task); });
     Object.keys(perData).sort().forEach(data => {
       const g = perData[data];
-      html += `<div class="gruppo-header"><div class="gruppo-data">${gruppoLabel(data)}</div><div class="gruppo-line"></div><div class="gruppo-count">${g.length}</div></div>`;
+      const diff = daysDiff(data);
+      const col = diff===1 ? '#E8730A' : diff===2 ? '#C99A00' : '';   // domani arancione · dopodomani giallo
+      const dataStyle  = col ? ` style="color:${col}"` : '';
+      const countStyle = col ? ` style="background:${col};color:#fff;border-color:${col}"` : '';
+      html += `<div class="gruppo-header"><div class="gruppo-data"${dataStyle}>${gruppoLabel(data)}</div><div class="gruppo-line"></div><div class="gruppo-count"${countStyle}>${g.length}</div></div>`;
       g.forEach(task => { html += taskCardHTML(task, false, false, false, true); });
     });
   }
-
-  // Banner intelligente: il giorno migliore per sbrigare la burocrazia accorpabile
-  html += finestraBannerHTML(tasks);
 
   if (prossimamente.length > 0) {
     html += sectionLabelHTML('Prossimamente', prossimamente.length);
@@ -1463,8 +1470,13 @@ function ospitiInCasaHTML(tasks){
       <div class="incasa-badges">${badges}</div>
     </div>`);
   });
-  if (!righe.length) return '';
-  return `<div class="incasa-box"><div class="incasa-h">🏠 Ospiti in casa adesso</div>${righe.join('')}</div>`;
+  if (!righe.length) return { n:0, html:'' };
+  return { n: righe.length, html:`<div class="incasa-box" id="incasa-box" style="display:none"><div class="incasa-h">🏠 Ospiti in casa adesso</div>${righe.join('')}</div>` };
+}
+
+function toggleInCasa(){
+  const b = document.getElementById('incasa-box');
+  if (b) b.style.display = (b.style.display === 'none' ? 'block' : 'none');
 }
 
 function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura PM','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
