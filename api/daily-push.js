@@ -16,7 +16,7 @@ const TIPO_LABEL = {
 // qui per evitare problemi di formato della variabile d'ambiente su Vercel.
 const VAPID_PUBLIC = 'BG5OAo4FCzOjlEXg5SCRI82AuY5rixGpGZBU5f_1ydR8-qbGRmhvUtkx1MumDe4e_wPGGxVccODnQEpYklagpUA';
 // web-push vuole le chiavi in base64url: normalizza eventuali +, /, = di troppo.
-const toUrlSafe = (k) => (k || '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').trim();
+const toUrlSafe = (k) => (k || '').replace(/\s/g, '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
 export default async function handler(req, res) {
   const SUPA_URL      = process.env.SUPABASE_URL;
