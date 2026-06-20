@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Grape Escape — vista Oggi & accorpabili</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{--ink:#222;--ink2:#717171;--ink3:#B0B0B0;--page:#F7F7F7;--line:#EBEBEB;
+    --t-scontrino:#E11D48;--t-autofattura:#2563EB;--t-fattura:#15803D;--t-alloggiati:#0E8AA0;
+    --air:#FF385C;--book:#003B95;--red:#D40F46;--amber:#B8460A;--oro:#A9760B}
+  body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:40px}
+  .wrap{max-width:480px;margin:0 auto;padding:14px 13px}
+  .intro{background:#fff;border-radius:16px;padding:15px 16px;margin-bottom:14px;border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.04)}
+  .intro h1{font-size:15px;font-weight:800}
+  .intro p{font-size:13px;color:var(--ink2);margin-top:5px;line-height:1.5}
+
+  .hello{font-size:28px;font-weight:800;letter-spacing:-.6px}
+  .date{font-size:14px;color:var(--ink2);font-weight:600;margin:2px 0 12px}
+  .pills{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .pill{font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px}
+  .p-oggi{background:#FFDFE4;color:var(--red)} .p-week{background:#E7EDF5;color:#3F5A7D} .p-done{background:#E6F4EA;color:#15803D}
+
+  .sec{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;margin:22px 4px 9px}
+  .sec.red{color:var(--red)} .sec .n{background:currentColor;color:#fff;border-radius:999px;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;margin-bottom:12px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.05)}
+  .card.urg{border-color:#FBC9D2;box-shadow:0 0 0 3px rgba(225,29,72,.10),0 8px 22px rgba(225,29,72,.14)}
+  .common{padding:14px 16px 15px}
+  .scad{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:800;padding:7px 13px;border-radius:999px;margin-bottom:12px;background:#FFDFE4;color:var(--red);box-shadow:inset 0 0 0 1.5px #F4A9B6}
+  .card.urg .scad{animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{box-shadow:inset 0 0 0 1.5px #F4A9B6}50%{box-shadow:inset 0 0 0 1.5px #F4A9B6,0 0 0 5px rgba(225,29,72,.16)}}
+  .tags{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:7px}
+  .t-sco{background:var(--t-scontrino)} .t-all{background:var(--t-alloggiati)}
+  .r{background:#fff;color:var(--ink2);border:1.5px solid #E0E0E0}
+  .cn{font-size:11px;font-weight:800;color:#fff;padding:4px 10px;border-radius:7px}
+  .c-air{background:var(--air)} .c-book{background:var(--book)}
+  .who{font-size:18px;font-weight:800;letter-spacing:-.4px}
+  .who span{color:var(--ink2);font-weight:600}
+  .stay{font-size:13px;color:var(--ink2);font-weight:600;margin-top:5px}
+  .copy{padding:13px 16px 15px;border-top:1px solid #F2F2F2}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .f{background:#F7F8FA;border:1px solid #ECEEF1;border-radius:12px;padding:9px 11px}
+  .fl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3)}
+  .fv{font-size:14px;font-weight:800;margin-top:3px;word-break:break-all}
+  .cb{margin-top:8px;display:inline-flex;gap:5px;font-size:11px;font-weight:800;background:#fff;border:1.5px solid #E3E5E8;border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--ink)}
+  .action{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;background:#484848;color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:12px;border-radius:12px}
+
+  /* banner accorpabili */
+  .batch{background:#FFFBEF;border:1px solid #F1E2B8;border-radius:18px;padding:15px 16px;box-shadow:0 6px 20px rgba(0,0,0,.04)}
+  .batch h3{font-size:14px;font-weight:800;color:#8A6207}
+  .batch .sub{font-size:12.5px;color:#9A7414;font-weight:600;margin:3px 0 11px}
+  .row{display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid #F0E6C8;cursor:pointer}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .row .txt{flex:1;min-width:0}
+  .row .t1{font-size:14px;font-weight:700;color:var(--ink)}
+  .row .t2{font-size:12px;color:var(--ink2);font-weight:600;margin-top:1px}
+  .row .due{font-size:11px;font-weight:800;color:#3F5A7D;background:#E7EDF5;border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .note{text-align:center;font-size:12px;color:var(--ink2);padding:18px 18px 0;line-height:1.55}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Vista Oggi — l'ordine giusto</h1>
+    <p>Prima sempre <b>cosa scade oggi</b>. Solo dopo il consiglio di <b>accorpare</b>, anche se il giorno migliore per farle insieme è domani.</p>
+  </div>
+
+  <div class="hello">2 da fare oggi</div>
+  <div class="date">venerdì 20 giugno 2026</div>
+  <div class="pills"><span class="pill p-oggi">2 oggi</span><span class="pill p-week">6 questa settimana</span><span class="pill p-done">4 fatte</span></div>
+
+  <div class="sec red">Da fare oggi <span class="n">2</span></div>
+
+  <div class="card urg">
+    <div class="common">
+      <div class="scad">🚨 SCADE OGGI · entro stasera</div>
+      <div class="tags"><span class="tag t-sco">Scontrino</span><span class="tag r">Host</span><span class="cn c-air">Airbnb</span></div>
+      <div class="who">Ca' Balenga · <span>Lauren Kennedy</span></div>
+      <div class="stay">Soggiorno 25 giu → 28 giu</div>
+    </div>
+    <div class="copy">
+      <div class="grid">
+        <div class="f"><div class="fl">Descrizione</div><div class="fv">PRENOTAZIONE Airbnb HMWDJRNNYA</div><button class="cb">⎘ Copia</button></div>
+        <div class="f"><div class="fl">Importo</div><div class="fv">385,00 €</div><button class="cb">⎘ Copia</button></div>
+      </div>
+      <a class="action">Apri ADE ↗</a>
+    </div>
+  </div>
+
+  <div class="card urg">
+    <div class="common">
+      <div class="scad">🚨 SCADE OGGI · entro stasera</div>
+      <div class="tags"><span class="tag t-all">Alloggiati</span><span class="tag r">PM</span><span class="cn c-book">Booking</span></div>
+      <div class="who">App. del Palio · <span>Dmitry Alymov</span></div>
+      <div class="stay">Soggiorno 19 giu → 23 giu</div>
+    </div>
+    <div class="copy"><a class="action">Apri Kross ↗</a></div>
+  </div>
+
+  <div class="sec" style="color:var(--oro)">Conviene accorpare</div>
+  <div class="batch">
+    <h3>💡 Fai 3 pratiche in un colpo solo</h3>
+    <div class="sub">Giorno migliore: domani · sono tutte già pronte</div>
+    <div class="row"><span class="dot" style="background:var(--t-fattura)"></span><div class="txt"><div class="t1">Fattura PM · La Tana del Tasso</div><div class="t2">Pasovski Metin · Booking</div></div><span class="due">entro 15 lug</span></div>
+    <div class="row"><span class="dot" style="background:var(--t-autofattura)"></span><div class="txt"><div class="t1">Autofattura · La Ciucarina</div><div class="t2">Yuen Seng So · Airbnb</div></div><span class="due">entro 15 lug</span></div>
+    <div class="row"><span class="dot" style="background:var(--t-fattura)"></span><div class="txt"><div class="t1">Fattura PM · Tenuta del Mulino</div><div class="t2">Marit Askbo · Airbnb</div></div><span class="due">entro 9 lug</span></div>
+  </div>
+
+  <div class="note">Le scadenze di oggi sono sempre la prima cosa.<br>L'accorpamento è solo un consiglio, sotto.</div>
+</div>
+<script>
+  document.addEventListener('click',e=>{const b=e.target.closest('.cb');if(!b)return;const t=b.textContent;b.textContent='✓ Copiato';setTimeout(()=>b.textContent=t,1000);});
+  document.querySelectorAll('.action').forEach(a=>a.addEventListener('click',e=>e.preventDefault()));
+</script>
+</body>
+</html>
