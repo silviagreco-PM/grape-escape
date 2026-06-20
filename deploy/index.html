@@ -285,6 +285,53 @@
     15%  { box-shadow: 0 0 0 3px rgba(255,56,92,0.6); transform: scale(1.015); }
     100% { box-shadow: 0 0 0 0 rgba(255,56,92,0.0); transform: scale(1); }
   }
+
+  /* ═══ NUOVA CARD (struttura coerente) ═══ */
+  .nc-meta{font-size:11px;color:#B0B0B0;font-weight:600;margin:0 4px 5px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .nc-meta .ora{background:#EFEFEF;color:#717171;border-radius:5px;padding:1px 6px;font-weight:700}
+  .nc-card{background:#fff;border:1px solid #EBEBEB;border-radius:18px;margin-bottom:14px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.05)}
+  .nc-card.urg{border-color:#FBC9D2;box-shadow:0 0 0 3px rgba(225,29,72,.10),0 8px 22px rgba(225,29,72,.14)}
+  .nc-top{padding:14px 16px 15px}
+  .nc-scad{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:800;padding:7px 13px;border-radius:999px;margin-bottom:12px}
+  .nc-s-today{background:#FFDFE4;color:#D40F46;box-shadow:inset 0 0 0 1.5px #F4A9B6}
+  .nc-s-tom{background:#FFE6CC;color:#B8460A;box-shadow:inset 0 0 0 1.5px #F3C79B}
+  .nc-s-week{background:#E7EDF5;color:#3F5A7D}
+  .nc-s-far{background:#F2F3F4;color:#A2A8B0}
+  .nc-card.urg .nc-s-today{animation:ncpulse 1.5s infinite}
+  @keyframes ncpulse{0%,100%{box-shadow:inset 0 0 0 1.5px #F4A9B6}50%{box-shadow:inset 0 0 0 1.5px #F4A9B6,0 0 0 5px rgba(225,29,72,.16)}}
+  .oggi-header{display:flex;align-items:center;gap:9px;background:#FFE2E6;color:#D40F46;font-weight:800;font-size:16px;padding:13px 16px;border-radius:14px;margin:8px 2px 13px;box-shadow:inset 0 0 0 1.5px #F4A9B6;animation:ncpulse 1.3s infinite}
+  .oggi-header .cnt{margin-left:auto;background:#D40F46;color:#fff;border-radius:999px;min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+  .nc-tags{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .nc-tag{font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:7px}
+  .nc-r{background:#fff;color:#717171;border:1.5px solid #E0E0E0}
+  .nc-r-host{background:#FFE0E6;color:#D40F46} .nc-r-pm{background:#E0F2E7;color:#157A39} .nc-r-tutte{background:#ECECEC;color:#717171}
+  .nc-card.bg-scontrino{background:var(--bg-scontrino);border-left:6px solid var(--br-scontrino)}
+  .nc-card.bg-autofattura{background:var(--bg-autofattura);border-left:6px solid var(--br-autofattura)}
+  .nc-card.bg-fattura-pm{background:var(--bg-fattura-pm);border-left:6px solid var(--br-fattura-pm)}
+  .nc-card.bg-alloggiati{background:var(--bg-alloggiati);border-left:6px solid var(--br-alloggiati)}
+  .nc-card.bg-ross{background:var(--bg-ross);border-left:6px solid var(--br-ross)}
+  .nc-card.bg-manuale{background:var(--bg-manuale);border-left:6px solid var(--br-manuale)}
+  .nc-cn{font-size:11px;font-weight:800;color:#fff;padding:4px 10px;border-radius:7px}
+  .nc-tag-sco{background:#E11D48} .nc-tag-aut{background:#2563EB} .nc-tag-fat{background:#15803D} .nc-tag-all{background:#0E8AA0} .nc-tag-pro{background:#7C3AED} .nc-tag-ross{background:#475569}
+  .nc-ch-air{background:#FF385C} .nc-ch-book{background:#003B95} .nc-ch-vrbo{background:#4338CA} .nc-ch-diretta{background:#16A34A} .nc-ch-bb{background:#0E8AA0}
+  .nc-who{font-size:18px;font-weight:800;letter-spacing:-.4px;color:#222}
+  .nc-who span{color:#717171;font-weight:600}
+  .nc-stay{font-size:13px;color:#717171;font-weight:600;margin-top:5px}
+  .nc-copy{padding:13px 16px 15px;border-top:1px solid #F2F2F2}
+  .nc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .nc-grid.one{grid-template-columns:1fr}
+  .nc-f{background:rgba(255,255,255,0.74);border:1px solid rgba(0,0,0,0.07);border-radius:12px;padding:9px 11px}
+  .nc-fl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#B0B0B0}
+  .nc-fv{font-size:14px;font-weight:800;color:#222;margin-top:3px;word-break:break-all}
+  .nc-est{display:block;font-size:10px;font-weight:800;color:#B8460A;margin-top:3px;text-transform:none;letter-spacing:0}
+  .nc-cb{margin-top:8px;display:inline-flex;gap:5px;font-size:11px;font-weight:800;background:#fff;border:1.5px solid #E3E5E8;border-radius:8px;padding:6px 11px;cursor:pointer;color:#222}
+  .nc-cb.copied{background:#E6F4EA;border-color:#A9D9B8;color:#15803D}
+  .nc-info{background:#FBF8FF;border:1px solid #ECE2FB;border-radius:12px;padding:11px 13px;font-size:13px;color:#5B4080;line-height:1.45}
+  .nc-action{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;background:#484848;color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:12px;border-radius:12px}
+  .nc-done{display:block;width:100%;margin-top:9px;background:#fff;border:1.5px solid #E3E5E8;color:#717171;font-weight:800;font-size:13px;padding:11px;border-radius:11px;cursor:pointer}
+  .nc-inline{display:flex;gap:7px;margin-top:4px}
+  .nc-inline input{flex:1;min-width:0;border:1.5px solid #DDE0E5;border-radius:9px;padding:9px 11px;font-size:15px;font-weight:700}
+  .nc-inline button{background:#15803D;color:#fff;border:none;border-radius:9px;padding:0 15px;font-weight:800;font-size:13px;cursor:pointer}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#FF385C">
@@ -1125,6 +1172,7 @@ function filterByRole(tasks) { return filterTasks(tasks); }
 
 function renderOggi() {
   const allTasks = loadTasks();
+  buildSoggMap();
   const tasks = filterByRole(allTasks);
   const t = today(), w = inDays(7);
 
@@ -1156,8 +1204,8 @@ function renderOggi() {
   // DA FARE OGGI — in cima a tutto (scadenza = oggi)
   const daFare = [...urgenti];
   if (daFare.length > 0) {
-    html += sectionLabelHTML('Da fare oggi', daFare.length, 'sec-urgenti');
-    daFare.forEach(task => { html += taskCardHTML(task, true); });
+    html += `<div class="oggi-header" id="sec-urgenti">🚨 Da fare oggi<span class="cnt">${daFare.length}</span></div>`;
+    daFare.forEach(task => { html += taskCardHTML(task, true, false, false, true); });
   }
 
   // In ritardo RECENTI (≤7 giorni): in evidenza, rossi, aperti
@@ -1181,7 +1229,7 @@ function renderOggi() {
     Object.keys(perData).sort().forEach(data => {
       const g = perData[data];
       html += `<div class="gruppo-header"><div class="gruppo-data">${gruppoLabel(data)}</div><div class="gruppo-line"></div><div class="gruppo-count">${g.length}</div></div>`;
-      g.forEach(task => { html += taskCardHTML(task, false); });
+      g.forEach(task => { html += taskCardHTML(task, false, false, false, true); });
     });
   }
 
@@ -1195,14 +1243,11 @@ function renderOggi() {
     Object.keys(perData).sort().forEach(data => {
       const g = perData[data];
       html += `<div class="gruppo-header"><div class="gruppo-data">${gruppoLabel(data)}</div><div class="gruppo-line"></div><div class="gruppo-count">${g.length}</div></div>`;
-      g.forEach(task => { html += taskCardHTML(task, false); });
+      g.forEach(task => { html += taskCardHTML(task, false, false, false, true); });
     });
   }
 
-  if (fatti.length > 0) {
-    html += sectionLabelHTML('Completate oggi', fatti.length, 'sec-fatte');
-    fatti.forEach(task => { html += taskCardHTML(task, false, true); });
-  }
+  // I task completati vanno solo in archivio, non in home.
 
   // SEZIONE DA RECUPERARE
   if (daRecuperare.length > 0) {
@@ -1341,178 +1386,134 @@ function canaleBadge(canale) {
   return `<span style="display:inline-flex;align-items:center;background:${bg};color:${fg};font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:0.02em;white-space:nowrap;vertical-align:middle">${label}</span>`;
 }
 
-function taskCardHTML(task, urgent, done, isBatch) {
-  const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
-  const checkCls  = done ? 'done' : (urgent ? 'urgent' : '');
-  const cardCls   = done ? 'done-card' : isBatch ? `recupera tipo-${task.tipo}` : `tipo-${task.tipo}`;
-  const titoloCls = done ? 'done' : '';
-  const isPM = task.tipo === 'fattura-pm';
-  const isAirbnb = task.canale === 'Airbnb';
-  const isBooking = task.canale === 'Booking';
+const KROSS_URL = 'https://cabalenga.krossbooking.com/login/v2';
 
-  // meta: canale + codice
-  let metaParts = [];
-  if (task.canale && task.canale !== '—') metaParts.push(canaleBadge(task.canale));
-  if (task.codice) metaParts.push(`cod. ${escapeHtml(task.codice)}`);
-  const meta = metaParts.join(' <span class="task-meta-sep">·</span> ');
+// Soggiorno (check-in→check-out) è un dato della PRENOTAZIONE, comune a tutti i suoi
+// task: lo raccolgo una volta per codice, così compare identico in ogni card.
+let SOGG_COD = {}, SOGG_NAME = {};
+function buildSoggMap(){
+  SOGG_COD = {}; SOGG_NAME = {};
+  (TASKS || []).forEach(t => {
+    const s = _ncSoggiorno(t.note); if (!s) return;
+    if (t.codice && !SOGG_COD[t.codice]) SOGG_COD[t.codice] = s;
+    if (t.ospite && t.ospite !== '—') { const k = (t.casa||'')+'|'+t.ospite; if (!SOGG_NAME[k]) SOGG_NAME[k] = s; }
+  });
+}
+// Soggiorno comune alla prenotazione: stesso codice O stessa casa+ospite → stesso valore
+function soggiornoDi(task){
+  return (task.codice && SOGG_COD[task.codice])
+      || (task.ospite && task.ospite !== '—' && SOGG_NAME[(task.casa||'')+'|'+task.ospite])
+      || _ncSoggiorno(task.note) || '';
+}
 
-  let extra = '';
+function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura PM','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
+function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
+function _ncCanale(c){return {Airbnb:['Airbnb','nc-ch-air'],Booking:['Booking','nc-ch-book'],VRBO:['VRBO','nc-ch-vrbo'],Dirette:['Diretta','nc-ch-diretta'],Diretta:['Diretta','nc-ch-diretta'],'B&B':['b&b.it','nc-ch-bb']}[c]||null;}
+function _ncScad(iso){
+  if(!iso)return ['nc-s-far','—',false];
+  const d=daysDiff(iso);
+  if(d<0)return ['nc-s-today','🚨 IN RITARDO · scad. '+formatShort(iso),true];
+  if(d===0)return ['nc-s-today','🚨 SCADE OGGI · entro stasera',true];
+  if(d===1)return ['nc-s-tom','⏰ Domani',false];
+  if(d<=7)return ['nc-s-week','Entro '+formatShort(iso)+' · '+d+' giorni',false];
+  return ['nc-s-far','Entro '+formatShort(iso),false];
+}
+function _ncSoggiorno(note){
+  if(!note)return '';
+  const fmt=(d,mo)=>String(parseInt(d,10)).padStart(2,'0')+'/'+mo;
+  let m=note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})[^c\d]*[Cc]heck-?out\s+(\d{1,2})\/(\d{2})/);
+  if(m)return 'Soggiorno '+fmt(m[1],m[2])+' → '+fmt(m[3],m[4]);
+  m=note.match(/[Cc]heck-?in\s+(\d{1,2})\/(\d{2})/);
+  if(m)return 'Arrivo '+fmt(m[1],m[2]);
+  return '';
+}
+function _ncField(label,value,copyText){
+  return '<div class="nc-f"><div class="nc-fl">'+label+'</div><div class="nc-fv">'+value+'</div>'+
+    (copyText!=null?'<button class="nc-cb" onclick="copyVal('+jsAttr(copyText)+',this)"><span class="copy-icon">⎘</span> Copia</button>':'')+'</div>';
+}
 
-  if (!done) {
-    // Scadenza + countdown
-    extra += scadenzaHTML(task.scadenza);
+function taskCardHTML(task, urgent, done, isBatch, hideScad) {
+  const tt=_ncTipo(task.tipo), tlab=tt[0], tcls=tt[1];
+  const ruolo=_ncRuolo(task.casa);
+  const roleCls = ruolo==='Host'?'nc-r-host':ruolo==='PM'?'nc-r-pm':'nc-r-tutte';
+  const ch=_ncCanale(task.canale);
+  const casaH=escapeHtml(task.casa||'—');
+  const ospiteH=(task.ospite&&task.ospite!=='—')?' · <span>'+escapeHtml(task.ospite)+'</span>':'';
+  const chBadge=ch?'<span class="nc-cn '+ch[1]+'">'+ch[0]+'</span>':'';
 
-    if (meta) extra += `<div class="task-meta">${meta}</div>`;
-
-    // --- FATTURA PM AIRBNB ---
-    if (isPM && isAirbnb) {
-      if (task.cohost) {
-        // Compenso cohost noto: mostralo copiabile — questo è l'importo da fatturare
-        extra += `<div class="cohost-box">
-          <div class="cohost-label">Compenso cohost Airbnb (importo da fatturare)</div>
-          <div class="cohost-importo">${fmtEuro(task.cohost)} €</div>
-          <button class="copy-btn" onclick="copyVal('${task.cohost}',this)" style="margin-top:6px"><span class="copy-icon">⎘</span> Copia importo</button>
-        </div>`;
-      } else {
-        // Compenso cohost ancora sconosciuto: istruzioni per trovarlo
-        extra += `<div class="cohost-box" style="border-color:#B8973A;background:#FDFAF0">
-          <div class="cohost-label" style="color:#B8973A">⏳ Compenso cohost — in arrivo da Airbnb</div>
-          <div style="font-size:12px;color:var(--grigio);margin-top:4px">Airbnb paga il giorno dopo il check-in: trovi l'importo nell'<strong>email di pagamento Airbnb</strong> oppure nel CSV movimenti (riga "Compenso co-host"${task.codice ? ` per cod. <strong>${task.codice}</strong>` : ''}). Inserisci l'importo e fattura entro 12 gg dal check-in.</div>
-        </div>`;
-      }
-    }
-    // --- FATTURA PM BOOKING: calcolo manuale dal rendiconto ---
-    else if (isPM && isBooking) {
-      const pct = FEE_PM[task.casa];
-      const aliq = pct ? (pct.Booking*100) : null;
-      if (task.importo) {
-        // Lordo inserito: calcola la fee
-        const calcolato = pct ? fmtEuro(task.importo * pct.Booking) : null;
-        extra += `<div class="calcolo-box">
-          <div style="margin-bottom:4px">Lordo da rendiconto Booking: <strong>${fmtEuro(task.importo)} €</strong></div>
-          ${aliq && calcolato ? `<div>Fattura <strong>${aliq}%</strong> → <strong style="color:var(--verde)">${calcolato} €</strong> — importo da fatturare al proprietario</div>` : '<div>Inserisci il lordo dal rendiconto Booking per calcolare il compenso.</div>'}
-        </div>`;
-        extra += `<button class="copy-btn" onclick="copyVal('${task.importo}',this)"><span class="copy-icon">⎘</span> Copia lordo</button>`;
-        if (pct && task.importo) extra += `<button class="copy-btn" onclick="copyVal('${(task.importo*pct.Booking).toFixed(2)}',this)"><span class="copy-icon">⎘</span> Copia importo fattura</button>`;
-      } else {
-        // Lordo non ancora inserito
-        extra += `<div class="calcolo-box" style="border-color:#B8973A;background:#FDFAF0">
-          <div style="font-size:12px;color:var(--grigio);margin-bottom:10px">Scarica il rendiconto Booking${task.codice ? ` (nr. <strong>${task.codice}</strong>)` : ''}, trova il payout per questa casa e inserisci il lordo${aliq ? ` (fee ${aliq}%)` : ''}</div>
-          <div class="importo-inline-wrap">
-            <input type="number" id="importo-card-${task.id}" class="importo-inline-inp" inputmode="decimal" step="0.01" placeholder="es. 850.00">
-            <button class="importo-inline-btn" onclick="salvaImportoCard('${task.id}')">✓ Salva</button>
-          </div>
-        </div>`;
-      }
-    }
-    // --- TUTTI GLI ALTRI con importo (esclusi scontrino e autofattura che hanno griglia dedicata) ---
-    else if (task.importo && task.tipo !== 'scontrino' && task.tipo !== 'autofattura') {
-      extra += `<div class="task-importo">${fmtEuro(task.importo)} €</div>`;
-      extra += `<button class="copy-btn" onclick="copyVal('${task.importo}',this)"><span class="copy-icon">⎘</span> Copia importo</button>`;
-    }
-
-    // "Copia cod." standalone solo per tipi che non hanno già la griglia dedicata
-    if (task.codice && task.tipo !== 'scontrino' && task.tipo !== 'autofattura' && task.tipo !== 'alloggiati')
-      extra += `<button class="copy-btn" onclick="copyVal('${task.codice}',this)"><span class="copy-icon">⎘</span> Copia cod.</button>`;
-
-    // --- SCONTRINO: solo importo copiabile + dicitura ADE ---
-    if (task.tipo === 'scontrino') {
-      if (task.codice) {
-        const canaleTxt = task.canale === 'Booking' ? 'Booking.com' : task.canale;
-        const descADE = `PRENOTAZIONE ${canaleTxt} ${task.codice}`;
-        extra += `<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">`;
-        if (task.importo) {
-          extra += `<div style="background:rgba(255,255,255,0.7);border:1px solid var(--border);border-radius:8px;padding:7px 10px">
-            <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">Importo</div>
-            <div style="font-family:'Inter',monospace;font-size:14px;font-weight:600">${fmtEuro(task.importo)} €</div>
-            <button class="copy-btn" onclick="copyVal('${task.importo.toFixed(2)}',this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
-          </div>`;
-        }
-        extra += `<div style="background:rgba(255,255,255,0.7);border:1px solid var(--border);border-radius:8px;padding:7px 10px">
-          <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">Descrizione ADE</div>
-          <div style="font-family:'Inter',monospace;font-size:11px;font-weight:600">${descADE}</div>
-          <button class="copy-btn" onclick="copyVal(${jsAttr(descADE)},this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
-        </div>`;
-        extra += `</div>`;
-      } else {
-        extra += `<div style="font-size:11px;color:var(--grigio);margin-top:6px">⚠ Recupera codice prenotazione da Airbnb/Booking per generare la descrizione ADE.</div>`;
-      }
-    }
-
-    // --- AUTOFATTURA TD17: griglia campi copiabili per Passgo (sempre 4 campi fissi) ---
-    if (task.tipo === 'autofattura') {
-      const iva    = task.importo ? task.importo * 0.22 : null;
-      const totale = task.importo ? task.importo * 1.22 : null;
-      const missingStyle = `background:rgba(255,255,255,0.4);border:1px dashed var(--border);border-radius:8px;padding:7px 10px`;
-      const presentStyle = `background:rgba(255,255,255,0.7);border:1px solid var(--border);border-radius:8px;padding:7px 10px`;
-      const doveData = task.canale === 'Booking'
-        ? 'Booking → Fatture → PDF allegato'
-        : 'Airbnb → Conto → Fatture host';
-      const doveImponibile = task.canale === 'Booking'
-        ? 'Booking → Fatture → PDF → riga commissioni'
-        : 'Airbnb → Conto → Fatture host → importo commissione';
-
-      const fieldBox = (label, value, copyVal_, placeholder) => value != null
-        ? `<div style="${presentStyle}">
-            <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">${label}</div>
-            <div style="font-family:'Inter',monospace;font-size:12px;font-weight:600">${value}</div>
-            <button class="copy-btn" onclick="copyVal(${jsAttr(copyVal_)},this)" style="margin-top:4px;font-size:11px"><span class="copy-icon">⎘</span> Copia</button>
-           </div>`
-        : `<div style="${missingStyle}">
-            <div style="font-size:10px;color:var(--grigio);margin-bottom:3px">${label}</div>
-            <div style="font-size:11px;color:var(--grigio);font-style:italic">${placeholder}</div>
-           </div>`;
-
-      extra += `<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">`;
-      extra += fieldBox('Data documento', task.dataDoc, task.dataDoc, doveData);
-      extra += fieldBox('Commissione €', task.importo ? fmtEuro(task.importo)+' €' : null, task.importo ? task.importo.toFixed(2) : null, doveImponibile);
-      extra += `</div>`;
-    }
-
-    const linkKey = task.link || cfg.defaultLink;
-    const li = linkKey ? LINK_MAP[linkKey] : null;
-    if (li) extra += `<br><a class="task-link" href="${li.url}" target="_blank">${li.label}</a>`;
-    if (task.note) {
-      const isWarn = task.note.startsWith('⚠') || task.note.startsWith('⏸');
-      if (task.tipo === 'manuale' || isWarn) {
-        extra += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--nero);line-height:1.45">${escapeHtml(task.note)}</div>`;
-      }
-    }
-    if (isBatch)
-      extra += `<button class="riporta-btn" onclick="riportaInLista('${task.id}')">↑ Riporta in lista urgente</button>`;
-    else if (!done && !urgent && daysDiff(task.scadenza) < 0)
-      extra += `<button class="riporta-btn" onclick="spostaInBatch('${task.id}')" style="color:#999;border-color:#ddd">→ Sposta in batch</button>`;
-
-  } else {
-    // card completata (archivio / oggi fatte)
-    if (meta) extra += `<div class="task-meta">${meta}</div>`;
-    let doneMeta = [];
-    if (task.completatoAlle) doneMeta.push(`Fatto alle ${task.completatoAlle}`);
-    const val = task.cohost || task.importo;
-    if (val) doneMeta.push(`${fmtEuro(val)} €`);
-    if (task.note) doneMeta.push(task.note);
-    if (doneMeta.length) extra += `<div class="task-meta">${doneMeta.join(' · ')}</div>`;
-    extra += `<button class="riporta-btn" onclick="toggleTask('${task.id}')" style="color:var(--grigio);border-color:#ddd;margin-top:6px">↩ Annulla — rimetti in lista</button>`;
+  if (done) {
+    return '<div class="nc-card bg-'+task.tipo+'" data-id="'+task.id+'" style="opacity:.8">'
+      +'<div class="nc-top">'
+      +'<div class="nc-tags"><span class="nc-tag '+tcls+'">'+tlab+'</span><span class="nc-tag '+roleCls+'">'+ruolo+'</span>'+chBadge+'</div>'
+      +'<div class="nc-who">'+casaH+ospiteH+'</div>'
+      +'<div class="nc-stay">✓ Fatto'+(task.completatoAlle?' alle '+task.completatoAlle:'')+'</div>'
+      +'<button class="nc-done" onclick="toggleTask(\''+task.id+'\')">↩ Rimetti in lista</button>'
+      +'</div></div>';
   }
 
-  const badgeBase = 'font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border-radius:4px;padding:2px 6px;margin-left:8px;vertical-align:middle';
-  const ruoloBadge = CASE_HOST.includes(task.casa)
-    ? `<span style="${badgeBase};background:#FFE9EC;color:var(--accent)">HOST</span>`
-    : CASE_PM.includes(task.casa)
-    ? `<span style="${badgeBase};background:var(--verde-light);color:var(--verde)">PM</span>`
-    : `<span style="${badgeBase};background:var(--grigio-light);color:var(--grigio)">TUTTE</span>`;
+  const sc=_ncScad(task.scadenza), scls=sc[0], slab=sc[1], isUrg=sc[2];
+  // soggiorno: comune a tutta la prenotazione → identico in ogni task
+  const sogg=soggiornoDi(task);
+  const isPM=task.tipo==='fattura-pm', isAirbnb=task.canale==='Airbnb', isBooking=task.canale==='Booking';
+  const canaleTxt=isBooking?'Booking.com':(task.canale||'');
+  const fee=(FEE_PM[task.casa]||{}).default||null;
 
-  const aggiuntoTs = task.creatoIl ? fmtTimestamp(task.creatoIl) : '';
-  return `<div class="task-card ${cardCls}" data-id="${task.id}">
-    <div class="task-check ${checkCls}" onclick="toggleTask('${task.id}')"></div>
-    <div class="task-body">
-      <div class="task-tipo-row"><span class="task-tipo ${cfg.cls}">${cfg.label}</span>${ruoloBadge}</div>
-      ${aggiuntoTs ? `<div class="task-aggiunto">Aggiunto il ${aggiuntoTs}</div>` : ''}
-      <div class="task-titolo ${titoloCls}">${casaLink(task.casa)}${task.ospite && task.ospite !== '—' ? ' · '+ospiteLink(task.ospite) : ''}</div>
-      ${!done ? checkinOutHTML(task.note) : ''}
-      ${extra}
-    </div>
-  </div>`;
+  let copy='';
+  if (task.tipo==='scontrino') {
+    const desc='PRENOTAZIONE '+canaleTxt+' '+(task.codice||'');
+    copy+='<div class="nc-grid">';
+    copy+=_ncField('Descrizione',escapeHtml(desc),task.codice?desc:null);
+    copy+=_ncField('Importo (lordo ospite)',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2):null);
+    copy+='</div>';
+  } else if (task.tipo==='autofattura') {
+    const caus='PRENOTAZIONE '+canaleTxt+' '+(task.codice||'');
+    copy+='<div class="nc-grid">';
+    copy+=_ncField('Causale',escapeHtml(caus),task.codice?caus:null);
+    copy+=_ncField('Imponibile',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2):null);
+    copy+='</div>';
+  } else if (isPM) {
+    const caus='gestione '+(task.casa||'')+' - '+(task.canale||'')+' - '+(task.codice||'');
+    copy+='<div class="nc-grid one">';
+    copy+=_ncField('Causale',escapeHtml(caus),caus);
+    if (isBooking && task.importo!=null && fee) {
+      const f=task.importo*fee;
+      copy+=_ncField('Importo da fatturare ('+Math.round(fee*100)+'% di '+fmtEuro(task.importo)+' €)',fmtEuro(f)+' €',f.toFixed(2));
+    } else if (isAirbnb && task.cohost!=null) {
+      copy+=_ncField('Importo da fatturare',fmtEuro(task.cohost)+' €',Number(task.cohost).toFixed(2));
+    } else if (isAirbnb && task.importo!=null && fee) {
+      const f=task.importo*fee;
+      copy+=_ncField('Importo da fatturare','≈ '+fmtEuro(f)+' €<span class="nc-est">stima (lordo × '+Math.round(fee*100)+'%) — in attesa fattura ufficiale</span>',f.toFixed(2));
+    } else if (isBooking) {
+      copy+='<div class="nc-f"><div class="nc-fl">Lordo da rendiconto Booking</div><div class="nc-inline"><input type="number" id="importo-card-'+task.id+'" inputmode="decimal" step="0.01" placeholder="es. 850.00"><button onclick="salvaImportoCard(\''+task.id+'\')">Salva</button></div></div>';
+    } else {
+      copy+='<div class="nc-f"><div class="nc-fl">Importo da fatturare</div><div class="nc-fv" style="color:#B0B0B0;font-weight:600">in attesa del compenso Airbnb</div></div>';
+    }
+    copy+='</div>';
+  } else if (task.tipo==='manuale') {
+    if (task.note) copy+='<div class="nc-info">'+escapeHtml(task.note)+'</div>';
+  }
+
+  let action='';
+  if (task.tipo==='scontrino') action='<a class="nc-action" href="'+LINK_MAP.ade.url+'" target="_blank" rel="noopener">Apri ADE ↗</a>';
+  else if (task.tipo==='autofattura'||task.tipo==='fattura-pm') action='<a class="nc-action" href="'+LINK_MAP.passgo.url+'" target="_blank" rel="noopener">Apri Passgo ↗</a>';
+  else if (task.tipo==='alloggiati'||task.tipo==='ross') action='<a class="nc-action" href="'+KROSS_URL+'" target="_blank" rel="noopener">Apri Kross ↗</a>';
+
+  const hasCopy = copy.length>0 || action.length>0;
+  const aggiunto = task.creatoIl ? fmtTimestamp(task.creatoIl) : '';
+
+  return '<div class="nc-meta">'+(aggiunto?'Aggiunto il '+aggiunto:'')+'</div>'
+    +'<div class="nc-card bg-'+task.tipo+(isUrg?' urg':'')+'" data-id="'+task.id+'">'
+    +'<div class="nc-top" style="display:flex;gap:12px;align-items:flex-start">'
+    +'<div class="task-check'+(isUrg?' urgent':'')+'" title="Segna come fatto" onclick="toggleTask(\''+task.id+'\')"></div>'
+    +'<div style="flex:1;min-width:0">'
+    +(hideScad?'':'<div class="nc-scad '+scls+'">'+slab+'</div>')
+    +'<div class="nc-tags"><span class="nc-tag '+tcls+'">'+tlab+'</span><span class="nc-tag '+roleCls+'">'+ruolo+'</span>'+chBadge+'</div>'
+    +'<div class="nc-who">'+casaH+ospiteH+'</div>'
+    +(sogg?'<div class="nc-stay">'+sogg+'</div>':'')
+    +'</div>'
+    +'</div>'
+    +(hasCopy?'<div class="nc-copy">'+copy+action+'</div>':'')
+    +'</div>';
 }
 
 // ─── ARCHIVIO HOST / PM ────────────────────────────────────────────────────────
@@ -1564,6 +1565,7 @@ function riepilogoMensileHTML(tasks) {
 
 function renderArchivio() {
   const tasks = loadTasks();
+  buildSoggMap();
   const tuttiFatti = tasks.filter(x => x.completato);
   const main = document.getElementById('main-archivio');
 
