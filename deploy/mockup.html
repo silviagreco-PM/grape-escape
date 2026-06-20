@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Grape Escape — struttura task coerente</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{
+    --ink:#16181D; --ink2:#5B6470; --ink3:#9aa3af; --page:#F1F2F4; --line:#ECECEF;
+    --scontrino:#E11D48; --autofattura:#2563EB; --fattura:#15803D; --alloggiati:#0E7490; --promemoria:#6D28D9;
+    --host:#B4123B; --pm:#15803D;
+    --red:#E11D48; --amber:#C2410C; --gray:#64748B;
+  }
+  body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:40px}
+  .wrap{max-width:480px;margin:0 auto;padding:14px 13px}
+  .intro{background:#fff;border-radius:14px;padding:15px 16px;margin-bottom:8px;border:1px solid var(--line)}
+  .intro h1{font-size:16px;font-weight:800}
+  .intro p{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.5}
+  .intro b{color:var(--ink)}
+
+  .group{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin:22px 4px 6px}
+
+  /* meta fuori dal bordo */
+  .meta{font-size:11px;color:var(--ink3);font-weight:600;margin:0 4px 5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .meta .ora{background:#E9EBEF;color:var(--ink2);border-radius:5px;padding:1px 6px;font-weight:700}
+
+  /* card */
+  .card{background:#fff;border:1px solid #E7E8EC;border-radius:16px;padding:14px 15px 15px;margin-bottom:16px;box-shadow:0 2px 10px rgba(20,24,40,.05)}
+
+  /* 1. scadenza in evidenza */
+  .scad{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:-.2px;margin-bottom:11px;padding:7px 11px;border-radius:10px}
+  .scad small{font-weight:700;font-size:12px;opacity:.85}
+  .scad-today{background:#FFEAEC;color:var(--red);border:1.5px solid #F7B6BF}
+  .scad-tom{background:#FFF1E5;color:var(--amber);border:1.5px solid #F8C99B}
+  .scad-week{background:#EEF1F4;color:var(--gray)}
+  .scad-far{background:#F1F3F5;color:var(--ink3)}
+  /* allarme nucleare per oggi/scaduto */
+  .card.urg{border:2px solid var(--red);box-shadow:0 0 0 4px rgba(225,29,72,.10),0 6px 18px rgba(225,29,72,.16)}
+  .card.urg .scad-today{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(225,29,72,.0)}50%{box-shadow:0 0 0 5px rgba(225,29,72,.18)}}
+
+  /* 2. tipo + ruolo (font bianco) */
+  .tags{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:7px}
+  .t-scontrino{background:var(--scontrino)} .t-autofattura{background:var(--autofattura)}
+  .t-fattura{background:var(--fattura)} .t-alloggiati{background:var(--alloggiati)} .t-promemoria{background:var(--promemoria)}
+  .r-host{background:var(--host)} .r-pm{background:var(--pm)} .r-tutte{background:var(--gray)}
+
+  /* 3. casa · ospite · soggiorno */
+  .who{font-size:17px;font-weight:700;letter-spacing:-.3px}
+  .who b{font-weight:800}
+  .stay{font-size:13px;color:var(--ink2);font-weight:600;margin-top:3px}
+
+  /* 4. zona campi copiabili */
+  .copyzone{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
+  .copyzone.one{grid-template-columns:1fr}
+  .field{background:#F7F8FA;border:1px solid #EAECEF;border-radius:10px;padding:9px 11px}
+  .flabel{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}
+  .fval{font-size:15px;font-weight:800;margin-top:3px;color:var(--ink)}
+  .fval.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700}
+  .cbtn{margin-top:7px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;background:#fff;border:1px solid #DDE0E5;border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--ink)}
+  .infobox{margin-top:13px;background:#FBF7FF;border:1px solid #E7D9FB;border-radius:10px;padding:10px 12px;font-size:13px;color:#4B2E83;line-height:1.45}
+
+  /* 5. azione (link esterno) */
+  .action{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:13px;background:var(--ink);color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:12px;border-radius:11px}
+  .ext{font-size:11px;color:var(--ink3);font-weight:700;text-align:center;margin-top:6px}
+
+  .note{text-align:center;font-size:12px;color:var(--ink2);padding:18px 18px 0;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="intro">
+    <h1>Struttura coerente — uguale per tutti i task</h1>
+    <p>Ogni card segue <b>sempre lo stesso ordine</b>: meta fuori dal bordo → <b>scadenza in evidenza</b> → tipo + ruolo → casa · ospite · soggiorno → campi copiabili → bottone che apre in una <b>scheda esterna</b>. Cambia solo <i>cosa</i> c'è da copiare. I task fatti vanno <b>solo in archivio</b>.</p>
+  </div>
+
+  <!-- ───────────── AIRBNB ───────────── -->
+  <div class="group">3 esempi · Airbnb</div>
+
+  <!-- 1. Scontrino — OGGI (allarme nucleare) -->
+  <div class="meta">Aggiunto il 23 giu · Prenotazione arrivata il 17 giu <span class="ora">17:27</span></div>
+  <div class="card urg">
+    <div class="scad scad-today">🚨 SCADE OGGI <small>· entro stasera</small></div>
+    <div class="tags"><span class="tag t-scontrino">Scontrino</span><span class="tag r-host">Host</span></div>
+    <div class="who">Ca' Balenga · <b>Lauren Kennedy</b></div>
+    <div class="stay">Soggiorno 25 giu → 28 giu · Airbnb</div>
+    <div class="copyzone">
+      <div class="field"><div class="flabel">Importo</div><div class="fval">385,00 €</div><button class="cbtn">⎘ Copia</button></div>
+      <div class="field"><div class="flabel">Descrizione ADE</div><div class="fval mono">PRENOTAZIONE Airbnb HMWDJRNNYA</div><button class="cbtn">⎘ Copia</button></div>
+    </div>
+    <a class="action">Apri ADE ↗</a>
+    <div class="ext">si apre nel browser, fuori dall'app</div>
+  </div>
+
+  <!-- 2. Autofattura — questa settimana -->
+  <div class="meta">Aggiunto il 13 giu · Prenotazione arrivata il 13 giu <span class="ora">14:20</span></div>
+  <div class="card">
+    <div class="scad scad-week">📄 Entro 15 lug <small>· hai 25 giorni</small></div>
+    <div class="tags"><span class="tag t-autofattura">Autofattura</span><span class="tag r-host">Host</span></div>
+    <div class="who">La Ciucarina · <b>Yuen Seng So</b></div>
+    <div class="stay">Soggiorno 26 ott → 28 ott · Airbnb · cod. HM2ANAEW4H</div>
+    <div class="copyzone">
+      <div class="field"><div class="flabel">Commissione</div><div class="fval">60,45 €</div><button class="cbtn">⎘ Copia</button></div>
+      <div class="field"><div class="flabel">Data documento</div><div class="fval mono">07/06/2026</div><button class="cbtn">⎘ Copia</button></div>
+    </div>
+    <a class="action">Apri Passgo ↗</a>
+    <div class="ext">si apre nel browser, fuori dall'app</div>
+  </div>
+
+  <!-- 3. Fattura PM Airbnb — cohost in arrivo -->
+  <div class="meta">Aggiunto il 13 giu · Prenotazione arrivata il 13 giu <span class="ora">20:48</span></div>
+  <div class="card">
+    <div class="scad scad-week">💶 Entro 9 lug <small>· hai 19 giorni</small></div>
+    <div class="tags"><span class="tag t-fattura">Fattura PM</span><span class="tag r-pm">PM</span></div>
+    <div class="who">Tenuta del Mulino · <b>Marit Askbo</b></div>
+    <div class="stay">Soggiorno 27 giu → 04 lug · Airbnb · cod. HMBNJHZDKW</div>
+    <div class="infobox">⏳ <b>Compenso cohost in arrivo da Airbnb</b><br>Airbnb paga il giorno dopo il check-in. Trovi l'importo nell'email di pagamento o nel CSV movimenti, poi fattura il 30%.</div>
+    <a class="action">Apri Passgo ↗</a>
+    <div class="ext">si apre nel browser, fuori dall'app</div>
+  </div>
+
+  <!-- ───────────── BOOKING ───────────── -->
+  <div class="group">3 esempi · Booking</div>
+
+  <!-- 4. Fattura PM Booking — lordo + calcolo -->
+  <div class="meta">Aggiunto il 17 giu · Prenotazione arrivata il 17 giu <span class="ora">12:13</span></div>
+  <div class="card">
+    <div class="scad scad-week">💶 Entro 15 lug <small>· hai 25 giorni</small></div>
+    <div class="tags"><span class="tag t-fattura">Fattura PM</span><span class="tag r-pm">PM</span></div>
+    <div class="who">La Tana del Tasso · <b>Pasovski Metin</b></div>
+    <div class="stay">Soggiorno 18 giu → 21 giu · Booking · cod. 5113508343</div>
+    <div class="copyzone">
+      <div class="field"><div class="flabel">Lordo Booking</div><div class="fval">412,43 €</div><button class="cbtn">⎘ Copia</button></div>
+      <div class="field"><div class="flabel">Da fatturare (26%)</div><div class="fval">107,23 €</div><button class="cbtn">⎘ Copia</button></div>
+    </div>
+    <a class="action">Apri Passgo ↗</a>
+    <div class="ext">si apre nel browser, fuori dall'app</div>
+  </div>
+
+  <!-- 5. Alloggiati Booking — DOMANI (amber) -->
+  <div class="meta">Aggiunto il 19 giu · Prenotazione arrivata il 19 giu <span class="ora">11:23</span></div>
+  <div class="card">
+    <div class="scad scad-tom">⏰ Domani <small>· entro le 24h dall'arrivo</small></div>
+    <div class="tags"><span class="tag t-alloggiati">Alloggiati</span><span class="tag r-pm">PM</span></div>
+    <div class="who">Casa Amalia · <b>Elliņš Ervīns</b></div>
+    <div class="stay">Soggiorno 03 lug → 08 lug · Booking · cod. 6567942106</div>
+    <div class="copyzone one">
+      <div class="field"><div class="flabel">Codice prenotazione</div><div class="fval mono">6567942106</div><button class="cbtn">⎘ Copia</button></div>
+    </div>
+    <a class="action">Apri Alloggiati Web ↗</a>
+    <div class="ext">si apre nel browser, fuori dall'app</div>
+  </div>
+
+  <!-- 6. Scontrino Booking — lontano (grigio) -->
+  <div class="meta">Aggiunto il 17 giu · Prenotazione arrivata il 17 giu <span class="ora">15:57</span></div>
+  <div class="card">
+    <div class="scad scad-far">🧾 Entro 14 set <small>· tra qualche mese</small></div>
+    <div class="tags"><span class="tag t-scontrino">Scontrino</span><span class="tag r-host">Host</span></div>
+    <div class="who">Ca' Balenga · <b>krauchthaler kathy et Urs</b></div>
+    <div class="stay">Soggiorno 14 set → 21 set · Booking · cod. 5288275855</div>
+    <div class="copyzone">
+      <div class="field"><div class="flabel">Importo</div><div class="fval">770,95 €</div><button class="cbtn">⎘ Copia</button></div>
+      <div class="field"><div class="flabel">Descrizione ADE</div><div class="fval mono">PRENOTAZIONE Booking.com 5288275855</div><button class="cbtn">⎘ Copia</button></div>
+    </div>
+    <a class="action">Apri ADE ↗</a>
+    <div class="ext">si apre nel browser, fuori dall'app</div>
+  </div>
+
+  <!-- ───────────── PROMEMORIA ───────────── -->
+  <div class="group">2 esempi · Promemoria</div>
+
+  <!-- 7. Contratto in scadenza -->
+  <div class="meta">Aggiunto il 13 giu <span class="ora">14:20</span></div>
+  <div class="card">
+    <div class="scad scad-tom">⚠️ Decidi entro 22 giu <small>· preavviso 15 giorni</small></div>
+    <div class="tags"><span class="tag t-promemoria">Promemoria</span><span class="tag r-pm">PM</span></div>
+    <div class="who">Appartamento del Palio</div>
+    <div class="infobox">Contratto in rinnovo automatico il 07/07 per 1 anno. Per disdire serve preavviso entro il <b>22/06</b>. Penale recesso: gestione PM o 50% commissioni.</div>
+  </div>
+
+  <!-- 8. Tassa di soggiorno -->
+  <div class="meta">Aggiunto il 13 giu <span class="ora">14:20</span></div>
+  <div class="card">
+    <div class="scad scad-week">🏛 Entro 30 giu <small>· hai 10 giorni</small></div>
+    <div class="tags"><span class="tag t-promemoria">Promemoria</span><span class="tag r-tutte">Tutte</span></div>
+    <div class="who">Dichiarazione annuale tassa di soggiorno</div>
+    <div class="infobox">Presentazione al Comune di Asti. Verifica modalità e moduli sul sito comunale.</div>
+  </div>
+
+  <div class="note">Stesso scheletro per tutti, cambia solo la zona copiabile.<br>Ti torna così? Dimmi cosa aggiusto (ordine, colori, cosa mostrare) e poi lo applico all'app vera.</div>
+
+</div>
+<script>
+  document.addEventListener('click',e=>{const b=e.target.closest('.cbtn');if(!b)return;const t=b.textContent;b.textContent='✓ Copiato';setTimeout(()=>b.textContent=t,1100);});
+  document.querySelectorAll('.action').forEach(a=>a.addEventListener('click',e=>e.preventDefault()));
+</script>
+</body>
+</html>

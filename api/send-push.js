@@ -3,7 +3,7 @@ import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
 const VAPID_PUBLIC = 'BG5OAo4FCzOjlEXg5SCRI82AuY5rixGpGZBU5f_1ydR8-qbGRmhvUtkx1MumDe4e_wPGGxVccODnQEpYklagpUA';
-const toUrlSafe = (k) => (k || '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').trim();
+const toUrlSafe = (k) => (k || '').replace(/\s/g, '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method not allowed');
