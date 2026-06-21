@@ -2965,12 +2965,19 @@ async function attivaNotifiche() {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
       });
     }
-    if (CURRENT_USER) {
-      const subJson = sub.toJSON();
-      await sb.from('push_subscriptions').upsert(
-        { user_id: CURRENT_USER.id, endpoint: subJson.endpoint, subscription: subJson },
-        { onConflict: 'user_id,endpoint' }
-      );
+    if (!CURRENT_USER) {
+      showToast('⚠ Non risulti loggata: riapri l\'app, rifai il login e riattiva la 🔔');
+      return;
+    }
+    const subJson = sub.toJSON();
+    const { error: subErr } = await sb.from('push_subscriptions').upsert(
+      { user_id: CURRENT_USER.id, endpoint: subJson.endpoint, subscription: subJson },
+      { onConflict: 'user_id,endpoint' }
+    );
+    if (subErr) {
+      console.error('push upsert', subErr);
+      showToast('⚠ Iscrizione non salvata: ' + (subErr.message || subErr));
+      return;
     }
     localStorage.setItem('notifiche_attive', '1');
     setNotificheAttive(btn);
