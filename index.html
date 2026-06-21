@@ -329,6 +329,27 @@
   .salute-sub{font-size:12px;color:#9A6A2E;margin-top:4px;line-height:1.4}
   .salute-list{font-size:12px;color:#6B4A1E;margin-top:8px;display:none;line-height:1.7}
   .salute-box.open .salute-list{display:block}
+  .car-intro{padding:4px 4px 0} .car-intro h2{font-size:18px;font-weight:800;letter-spacing:-.3px} .car-intro p{font-size:13px;color:var(--grigio);margin-top:3px}
+  .ferie-box{background:#F0FAF4;border:1px solid #CDEBD9;border-radius:14px;padding:13px 14px;margin:12px 2px}
+  .ferie-h{font-size:14px;font-weight:800;color:#157A39;margin-bottom:9px}
+  .ferie-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:#444}
+  .ferie-row input{border:1.5px solid #CDE7D6;border-radius:8px;padding:6px 8px;font-size:13px}
+  .ferie-row button{background:#157A39;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-weight:800;font-size:13px;cursor:pointer}
+  .ferie-res{margin-top:11px;font-size:13px;line-height:1.65;color:#2A3F30}
+  .ferie-im{font-weight:800;color:#C2410C} .ferie-mo{font-weight:800;color:#15803D}
+  .ferie-list{margin-top:9px;font-size:12px;color:#555;line-height:1.8}
+  .ferie-warn{margin-top:9px;font-size:12px;color:#C2410C;font-weight:600}
+  .car-sum{display:flex;gap:6px;flex-wrap:wrap;margin:10px 2px 2px}
+  .car-sum-i{background:#F2F3F4;border-radius:8px;padding:5px 10px;font-size:12px;color:#555}
+  .car-month{margin:18px 2px 0} .car-month-h{font-size:14px;font-weight:800;margin-bottom:8px} .car-month-h span{color:var(--grigio);font-weight:600}
+  .car-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .car-dow{text-align:center;font-size:10px;font-weight:800;color:#B0B0B0;padding-bottom:2px}
+  .car-cell{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border-radius:8px;color:#555;background:#fff;border:1px solid #EEE}
+  .car-cell.empty{background:transparent;border:none}
+  .car-cell.lvl0{color:#CBCBCB} .car-cell.lvl1{background:#FFF1DC;border-color:#FFE6C2} .car-cell.lvl2{background:#FFD9A8;border-color:#FFCB8C} .car-cell.lvl3{background:#FFB877;border-color:#F7A85F;color:#7A3A00} .car-cell.lvl4{background:#F4865B;border-color:#EC6F40;color:#fff}
+  .car-cell[onclick]{cursor:pointer} .car-cell.today{box-shadow:inset 0 0 0 2px #D40F46}
+  .car-n{position:absolute;top:1px;right:3px;font-size:9px;font-weight:800;opacity:.85}
+  .car-day{margin:14px 2px 0} .car-day-h{font-size:14px;font-weight:800;margin:10px 2px 10px}
   .nc-tags{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
   .nc-tag{font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:7px}
   .nc-r{background:#fff;color:#717171;border:1.5px solid #E0E0E0}
@@ -442,6 +463,10 @@
   <div class="main" id="main-conti" style="padding-top:4px"></div>
 </div>
 
+<div id="view-carico" class="view">
+  <div class="main" id="main-carico" style="padding-top:4px"></div>
+</div>
+
 <button class="fab" onclick="openModal()" title="Aggiungi task">+</button>
 <button class="btn-torna-su" id="btn-torna-su" onclick="scrollToTop()" title="Torna su">↑</button>
 
@@ -461,6 +486,9 @@
 <div class="nav-bottom">
   <div class="nav-item active" onclick="switchView('oggi',this)">
     <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div>Oggi
+  </div>
+  <div class="nav-item" onclick="switchView('carico',this)">
+    <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>Carico
   </div>
   <div class="nav-item" onclick="switchView('regole',this)">
     <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4a2 2 0 0 1 2-2h11v18H7a2 2 0 0 0-2 2V4z"/><path d="M9 6h6M9 9.5h6"/></svg></div>Regole
@@ -1760,6 +1788,98 @@ function riepilogoMensileHTML(tasks) {
   return html;
 }
 
+// ─── CARICO: calendario-heatmap dei mesi + Modalità ferie ──────────────────────
+function renderCarico() {
+  const main = document.getElementById('main-carico');
+  if (!main) return;
+  const tasks = filterByRole(loadTasks()).filter(x => !x.completato && x.scadenza);
+  const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const GG = ['L','M','M','G','V','S','D'];
+  const t = today();
+  const curMonth = t.slice(0,7);
+
+  const perDay = {};
+  tasks.forEach(x => { perDay[x.scadenza] = (perDay[x.scadenza]||0) + 1; });
+
+  let mesi = [...new Set(tasks.map(x => x.scadenza.slice(0,7)))].filter(m => m >= curMonth);
+  if (!mesi.includes(curMonth)) mesi.push(curMonth);
+  mesi = [...new Set(mesi)].sort();
+
+  let html = '<div class="car-intro"><h2>Carico dei prossimi mesi</h2><p>Quanto è pieno ogni giorno. Tocca un giorno con scadenze per vederle.</p></div>';
+
+  html += '<div class="ferie-box">'
+    + '<div class="ferie-h">🏖 Modalità ferie — quanto mi tocca fare?</div>'
+    + '<div class="ferie-row"><label>Dal <input type="date" id="ferie-da" value="' + t + '"></label>'
+    + '<label>al <input type="date" id="ferie-a"></label>'
+    + '<button onclick="calcolaFerie()">Calcola</button></div>'
+    + '<div id="ferie-out"></div></div>';
+
+  html += '<div class="car-sum">';
+  mesi.forEach(m => {
+    const n = tasks.filter(x => x.scadenza.slice(0,7)===m).length;
+    const mm = +m.split('-')[1];
+    html += '<span class="car-sum-i"><b>' + MESI[mm-1].slice(0,3) + '</b> ' + n + '</span>';
+  });
+  html += '</div>';
+
+  mesi.forEach(m => {
+    const parts = m.split('-').map(Number), yy = parts[0], mm = parts[1];
+    const nTot = tasks.filter(x => x.scadenza.slice(0,7)===m).length;
+    html += '<div class="car-month"><div class="car-month-h">' + MESI[mm-1] + ' ' + yy + ' · <span>' + nTot + (nTot===1?' scadenza':' scadenze') + '</span></div><div class="car-grid">';
+    GG.forEach(g => html += '<div class="car-dow">' + g + '</div>');
+    const lead = (new Date(Date.UTC(yy, mm-1, 1)).getUTCDay()+6)%7;
+    for (let i=0;i<lead;i++) html += '<div class="car-cell empty"></div>';
+    const days = new Date(Date.UTC(yy, mm, 0)).getUTCDate();
+    for (let d=1; d<=days; d++) {
+      const iso = yy + '-' + String(mm).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const n = perDay[iso]||0;
+      const lvl = n===0?0 : n<=1?1 : n<=2?2 : n<=4?3 : 4;
+      const click = n ? ' onclick="mostraGiorno(\'' + iso + '\')"' : '';
+      html += '<div class="car-cell lvl' + lvl + (iso===t?' today':'') + '"' + click + '>' + d + (n?'<span class="car-n">'+n+'</span>':'') + '</div>';
+    }
+    html += '</div></div>';
+  });
+
+  html += '<div id="car-giorno"></div>';
+  main.innerHTML = html;
+}
+
+function mostraGiorno(iso) {
+  const box = document.getElementById('car-giorno');
+  if (!box) return;
+  const tasks = filterByRole(loadTasks()).filter(x => !x.completato && x.scadenza===iso)
+    .sort((a,b)=> (a.tipo<b.tipo?-1:1));
+  let h = '<div class="car-day-h">' + formatLong(iso) + ' · ' + tasks.length + (tasks.length===1?' scadenza':' scadenze') + '</div>';
+  tasks.forEach(x => { h += taskCardHTML(x, false, false, false, true); });
+  box.innerHTML = '<div class="car-day">' + h + '</div>';
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function calcolaFerie() {
+  const da = (document.getElementById('ferie-da')||{}).value;
+  const a  = (document.getElementById('ferie-a')||{}).value;
+  const out = document.getElementById('ferie-out');
+  if (!out) return;
+  if (!da || !a || a < da) { out.innerHTML = '<div class="ferie-warn">Scegli una data di inizio e una di fine (la fine dopo l\'inizio).</div>'; return; }
+  const tasks = filterByRole(loadTasks()).filter(x => !x.completato && x.scadenza && x.scadenza>=da && x.scadenza<=a);
+  const immov = tasks.filter(x => x.tipo==='scontrino' || x.tipo==='alloggiati');
+  const spost = tasks.filter(x => x.tipo!=='scontrino' && x.tipo!=='alloggiati');
+  let h = '<div class="ferie-res"><b>' + tasks.length + (tasks.length===1?' scadenza':' scadenze') + '</b> tra il ' + _carGgmm(da) + ' e il ' + _carGgmm(a) + '.<br>'
+    + '<span class="ferie-im">⛔ ' + immov.length + ' immovibili</span> — scontrini/alloggiati legati ai check-in di quei giorni: vanno fatti lì.<br>'
+    + '<span class="ferie-mo">↔ ' + spost.length + ' spostabili</span> — fatture/autofatture: puoi anticiparle prima o rimandarle dopo.';
+  if (immov.length===0) h += '<br>🍖 <b>Niente di immovibile in quel periodo: puoi staccare!</b>';
+  h += '</div>';
+  if (immov.length) {
+    h += '<div class="ferie-list">';
+    immov.sort((x,y)=>x.scadenza.localeCompare(y.scadenza)).forEach(x => {
+      h += '<div>⛔ ' + _carGgmm(x.scadenza) + ' · ' + escapeHtml(x.casa||'—') + ' · ' + _ncTipo(x.tipo)[0] + (x.ospite&&x.ospite!=='—'?' · '+escapeHtml(x.ospite):'') + '</div>';
+    });
+    h += '</div>';
+  }
+  out.innerHTML = h;
+}
+function _carGgmm(iso){ const p=String(iso).split('-'); return p.length===3 ? p[2]+'/'+p[1] : iso; }
+
 function renderArchivio() {
   const tasks = loadTasks();
   buildSoggMap();
@@ -2347,6 +2467,7 @@ function switchView(name, navEl) {
   if (name === 'regole') renderRegole();
   if (name === 'case') renderCase();
   if (name === 'conti') renderConti();
+  if (name === 'carico') renderCarico();
 }
 
 // Salta alla card del task dentro l'app (dalla finestra burocrazia) e la evidenzia
