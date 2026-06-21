@@ -378,9 +378,13 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
   // ── KROSS: formato strutturato e affidabile (override preciso dei campi) ──
   // Le email di krossbooking hanno campi fissi: usiamoli invece di indovinare.
   if (piattaforma === 'kross') {
-    // Canale OTA reale dal soggetto ("Nuova Prenotazione Airbnb / Booking.com")
-    if (/booking\.com/i.test(oggetto))   dati.canale = 'Booking';
+    // Canale reale dal soggetto. Le DIRETTE (inserite a mano in Kross) arrivano come
+    // "FrontOffice" o "Booking Engine" → canale 'Diretta'. Le OTA come "Booking.com"/
+    // "Booking"/"Airbnb". Ordine importante: prima le dirette, poi le OTA.
+    if (/frontoffice|booking engine/i.test(oggetto)) dati.canale = 'Diretta';
+    else if (/booking/i.test(oggetto))   dati.canale = 'Booking';
     else if (/airbnb/i.test(oggetto))    dati.canale = 'Airbnb';
+    else dati.canale = 'Diretta';
 
     // Codice: "Prenotazione n. HMXXXX" oppure numero Booking
     var mCod = corpo.match(/prenotazione\s+n\.?\s*([A-Z0-9]+)/i);
@@ -539,9 +543,14 @@ function _creaTask(d, storico) {
 
   // PRENOTAZIONE o MODIFICA
   if (d.tipo !== 'prenotazione' && d.tipo !== 'modifica') return 0;
-  if (!d.checkin) { Logger.log('⚠ Nessuna data check-in trovata'); return 0; }
+  if (!d.checkin) {
+    Logger.log('⚠ Nessuna data check-in trovata');
+    if (!storico) _notifica('⚠ Prenotazione da controllare', 'Arrivata una prenotazione (' + (d.codice||'senza codice') + ') senza data di arrivo leggibile: controllala a mano nell\'app.');
+    return 0;
+  }
   if (!casa) {
-    Logger.log('⚠ Nome annuncio non riconosciuto: ' + (d.casa || '—'));
+    Logger.log('⚠ Nome annuncio non riconosciuto: ' + (d.casa || '—') + ' cod ' + (d.codice||'—'));
+    if (!storico) _notifica('⚠ Prenotazione da controllare', 'Arrivata una prenotazione (' + (d.codice||'senza codice') + ') ma non ho riconosciuto la casa: aprila e aggiungila a mano.');
     return 0;
   }
 
@@ -710,7 +719,7 @@ function _notifica(titolo, testo) {
 var RECAP_TIPI = {
   scontrino:    '🧾 Scontrino',
   autofattura:  '📄 Autofattura',
-  'fattura-pm': '💶 Fattura PM',
+  'fattura-pm': '💶 Fattura',
   alloggiati:   '🏛 Alloggiati',
   ross:         '📊 ROSS/ISTAT',
   manuale:      '✏️ Promemoria',
@@ -738,7 +747,7 @@ var RECAP_COLORI = {
   alloggiati:'#0E7490', ross:'#475569', manuale:'#6D28D9'
 };
 var RECAP_LABEL = {
-  scontrino:'Scontrino', autofattura:'Autofattura', 'fattura-pm':'Fattura PM',
+  scontrino:'Scontrino', autofattura:'Autofattura', 'fattura-pm':'Fattura',
   alloggiati:'Alloggiati', ross:'ROSS/ISTAT', manuale:'Promemoria'
 };
 
