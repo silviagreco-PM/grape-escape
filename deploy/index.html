@@ -2557,6 +2557,40 @@ function pmCompenso(x) {
   return 0;
 }
 
+// "Da fatturare ai proprietari": parte azionabile dei soldi — quanto resta da
+// fatturare (compensi PM aperti), per proprietario (cliccabile) e per mese.
+function daIncassareHTML(){
+  const aperte = filterByRole(loadTasks()).filter(x => x.tipo==='fattura-pm' && !x.completato && !/cancellat|annullat|❌/i.test(x.note||''));
+  if(!aperte.length) return '<div class="task-card" style="border-top:3px solid var(--verde)"><span style="font-size:13px;font-weight:700;color:var(--verde)">✓ Nessuna fattura in sospeso ai proprietari</span></div>';
+  const tot = aperte.reduce((s,x)=>s+pmCompenso(x),0);
+  const inAttesa = aperte.filter(x=>pmCompenso(x)===0).length;
+  const perProp={}, perMese={};
+  aperte.forEach(x=>{
+    const p=_proprietario(x.casa)||x.casa||'—';
+    (perProp[p]=perProp[p]||{n:0,tot:0,casa:x.casa}); perProp[p].n++; perProp[p].tot+=pmCompenso(x);
+    const m=(x.scadenza||'').slice(0,7);
+    if(m){ (perMese[m]=perMese[m]||{tot:0}); perMese[m].tot+=pmCompenso(x); }
+  });
+  const MESI=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  let h='<div class="task-card" style="flex-direction:column;align-items:stretch;gap:10px;border-top:3px solid var(--verde)">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;font-weight:700">💰 Da fatturare ai proprietari</span><span style="font-size:18px;font-weight:700;color:var(--verde)">'+fmtEuro(tot)+' €</span></div>';
+  h+='<div style="font-size:11px;color:var(--grigio)">'+aperte.length+(aperte.length===1?' fattura in sospeso':' fatture in sospeso')+(inAttesa?' · '+inAttesa+' in attesa dell\'importo':'')+'</div>';
+  h+='<div style="border-top:1px solid #eee;padding-top:6px">';
+  Object.keys(perProp).sort((a,b)=>perProp[b].tot-perProp[a].tot).forEach(p=>{
+    const d=perProp[p];
+    h+='<div onclick="vediFatture(\''+String(d.casa||'').replace(/\x27/g,"")+'\')" style="display:flex;justify-content:space-between;padding:6px 0;cursor:pointer;font-size:13px"><span>'+escapeHtml(p)+' <span style="color:var(--grigio)">· '+d.n+'</span></span><span style="font-weight:700">'+fmtEuro(d.tot)+' €</span></div>';
+  });
+  h+='</div>';
+  const mesiK=Object.keys(perMese).sort();
+  if(mesiK.length>1){
+    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #eee;padding-top:8px">';
+    mesiK.forEach(m=>{ const mm=+m.split('-')[1]; h+='<span style="font-size:11px;background:#F2F3F4;border-radius:7px;padding:4px 9px">'+MESI[mm-1]+' <b>'+fmtEuro(perMese[m].tot)+'</b></span>'; });
+    h+='</div>';
+  }
+  h+='</div>';
+  return h;
+}
+
 function renderConti() {
   const tasks = loadTasks();
 
@@ -2597,6 +2631,8 @@ function renderConti() {
     <div style="font-size:34px;font-weight:700;letter-spacing:-0.02em;line-height:1">${fmtEuro(nettoStimato)} €</div>
     <div class="oggi-sub" style="margin-top:6px">dopo tasse, INPS e IVA autofatture · su tutti i task ${mancanti>0?`· ${mancanti} importi ancora mancanti`:''}</div>
   </div>`;
+
+  html += daIncassareHTML();   // soldi azionabili: da fatturare ai proprietari
 
   // SOGLIA 85K
   html += `<div class="task-card" style="flex-direction:column;align-items:stretch;gap:8px;border-top:3px solid ${soglieColor}">
