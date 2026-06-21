@@ -324,6 +324,11 @@
   .incasa-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
   .incasa-todo{font-size:11px;font-weight:800;background:#FFE2E6;color:#D40F46;border-radius:7px;padding:4px 10px}
   .incasa-done{font-size:11px;font-weight:800;background:#E6F4EA;color:#157A39;border-radius:7px;padding:4px 10px}
+  .salute-box{background:#FFF4E5;border:1px solid #FFD9A8;border-radius:14px;padding:12px 14px;margin:8px 2px 13px;cursor:pointer}
+  .salute-h{font-size:14px;font-weight:800;color:#B8460A;display:flex;align-items:center;gap:7px}
+  .salute-sub{font-size:12px;color:#9A6A2E;margin-top:4px;line-height:1.4}
+  .salute-list{font-size:12px;color:#6B4A1E;margin-top:8px;display:none;line-height:1.7}
+  .salute-box.open .salute-list{display:block}
   .nc-tags{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
   .nc-tag{font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:7px}
   .nc-r{background:#fff;color:#717171;border:1.5px solid #E0E0E0}
@@ -1211,6 +1216,23 @@ function isTaskDisponibile(x) {
   return true;
 }
 
+// "Salute dati": segnala le pratiche entrate senza nome ospite (parse incompleto),
+// così una prenotazione monca non passa inosservata e non rischi di perdere una scadenza.
+function saluteDatiHTML(tasks) {
+  const incompleti = tasks.filter(x => !x.completato &&
+    ['scontrino','alloggiati','fattura-pm'].includes(x.tipo) &&
+    (!x.ospite || String(x.ospite).trim() === '' || x.ospite === '—'));
+  if (!incompleti.length) return '';
+  const n = incompleti.length;
+  const righe = incompleti.slice(0, 8).map(x =>
+    `${escapeHtml(x.casa||'—')} · ${_ncTipo(x.tipo)[0]} · cod. ${escapeHtml(x.codice||'—')}`).join('<br>');
+  return '<div class="salute-box" onclick="this.classList.toggle(\'open\')">'
+    + '<div class="salute-h">⚠ ' + n + (n===1?' pratica da controllare':' pratiche da controllare') + ' · dati incompleti</div>'
+    + '<div class="salute-sub">Prenotazioni senza nome ospite: aprile e completa i dati, così non rischi una scadenza. (Tocca per vedere quali)</div>'
+    + '<div class="salute-list">' + righe + '</div>'
+    + '</div>';
+}
+
 // Sezione "Portati avanti": tutto ciò che NON scade oggi ma che potresti già fare
 // (dati pronti). Risponde alla domanda "ho mezz'ora, cosa posso togliermi?".
 function portatiAvantiHTML(tasks) {
@@ -1294,6 +1316,7 @@ function renderOggi() {
   if (_bell) { _bell.dataset.alert = nUrgenti>0 ? '1' : '0'; renderBell(); }
 
   let html = '';
+  html += saluteDatiHTML(tasks);   // avviso prenotazioni con dati incompleti (in cima)
 
   // Ospiti in casa: pannello nascosto, apribile dalla pillola 🏠 (non occupa spazio)
   const inCasa = ospitiInCasaHTML(tasks);
