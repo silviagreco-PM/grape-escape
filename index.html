@@ -2069,6 +2069,7 @@ function renderArchivio() {
       <span class="archivio-month-title">${meseLabel}</span>
       <div style="display:flex;align-items:center;gap:8px">
         <span class="archivio-month-totale">${listaFiltrata.length} task${totale > 0 ? ' · ' + fmtEuro(totale) + ' €' : ''}</span>
+        <button class="archivio-csv-btn" onclick="reportMese('${mese}')">📄 Report</button>
         <button class="archivio-csv-btn" onclick="exportMeseCSV('${mese}')">↓ CSV</button>
       </div>
     </div>
@@ -2155,6 +2156,52 @@ function exportMeseCSV(mese) {
     download: `archivio_${meseLabel}.csv`,
   });
   a.click(); URL.revokeObjectURL(a.href);
+}
+
+// Report mensile pulito per il commercialista (apre una pagina stampabile -> PDF).
+function reportMese(mese){
+  const MESI_L = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const items = loadTasks().filter(x => x.completato && (x.completatoIl||'0000-00').slice(0,7)===mese && !/cancellat|annullat|❌/i.test(x.note||''));
+  if(!items.length){ showToast('Nessun documento completato in questo mese'); return; }
+  const p = mese.split('-').map(Number), y=p[0], m=p[1];
+  const titolo = (mese==='0000-00'?'Data sconosciuta':(MESI_L[m-1]+' '+y));
+  const gruppi = [['scontrino','Scontrini — incassi case proprie'],['fattura-pm','Fatture — compensi PM ai proprietari'],['autofattura','Autofatture TD17 — commissioni OTA (costi)']];
+  const esc = escapeHtml;
+  let ricavi=0, costi=0, body='';
+  gruppi.forEach(function(g){
+    const t=g[0], label=g[1];
+    const its = items.filter(x=>x.tipo===t).sort((a,b)=>(a.completatoIl||'').localeCompare(b.completatoIl||''));
+    if(!its.length) return;
+    let sub=0, rows='';
+    its.forEach(x=>{
+      const v = (t==='fattura-pm') ? pmCompenso(x) : (x.importo||0);
+      sub+=v;
+      rows += '<tr><td>'+_carGgmm(x.completatoIl)+'</td><td>'+esc(x.casa||'')+'</td><td>'+esc(x.ospite||'')+'</td><td>'+esc(x.canale&&x.canale!=='—'?x.canale:'')+'</td><td>'+esc(x.codice||'')+'</td><td class="r">'+(v?fmtEuro(v)+' €':'—')+'</td></tr>';
+    });
+    if(t==='autofattura') costi+=sub; else ricavi+=sub;
+    body += '<h2>'+label+' <span class="n">('+its.length+')</span></h2>'
+      + '<table><thead><tr><th>Data</th><th>Casa</th><th>Ospite</th><th>Canale</th><th>Codice</th><th class="r">Importo</th></tr></thead><tbody>'
+      + rows + '</tbody><tfoot><tr><td colspan="5">Totale</td><td class="r">'+fmtEuro(sub)+' €</td></tr></tfoot></table>';
+  });
+  const css = 'body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a1a;max-width:820px;margin:24px auto;padding:0 18px}'
+    +'h1{font-size:22px;margin:0 0 2px}.sub{color:#666;font-size:13px;margin-bottom:18px}'
+    +'h2{font-size:15px;margin:22px 0 6px}.n{color:#888;font-weight:400}'
+    +'table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}'
+    +'th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #eee}th{background:#f6f6f6;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#555}'
+    +'.r{text-align:right;white-space:nowrap}tfoot td{font-weight:700;border-top:2px solid #ccc;border-bottom:none}'
+    +'.tot{margin-top:20px;padding:14px;background:#f6faf7;border:1px solid #cfe6d6;border-radius:10px;font-size:14px;line-height:1.7}.tot b{font-size:16px}'
+    +'.noprint{margin:18px 0}button{font-size:14px;padding:9px 16px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer}'
+    +'@media print{.noprint{display:none}body{margin:0}}';
+  const html = '<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Report '+titolo+'</title><style>'+css+'</style></head><body>'
+    + '<h1>The Grape Escape — Report '+titolo+'</h1>'
+    + '<div class="sub">Documenti completati nel mese · generato il '+_carGgmm(new Date().toISOString().slice(0,10))+'</div>'
+    + '<div class="noprint"><button onclick="window.print()">🖨️ Stampa / Salva PDF</button></div>'
+    + body
+    + '<div class="tot">Ricavi (scontrini + fatture): <b>'+fmtEuro(ricavi)+' €</b><br>Costi (autofatture commissioni): <b>'+fmtEuro(costi)+' €</b></div>'
+    + '</body></html>';
+  const w = window.open('', '_blank');
+  if(!w){ showToast('Consenti i popup per aprire il report'); return; }
+  w.document.write(html); w.document.close();
 }
 
 function fmtEuro(n) {
