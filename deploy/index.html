@@ -331,6 +331,9 @@
   .salute-box.open .salute-list{display:block}
   .nc-prop{font-size:11px;color:#9A6A2E;font-weight:700;margin-top:3px;cursor:pointer;display:inline-block}
   .nc-prop b{font-weight:800;border-bottom:1px dotted #C99A6A}
+  .contr-box{background:#FFE9EC;border:1px solid #F7B8C4;border-radius:14px;padding:12px 14px;margin:8px 2px 13px}
+  .contr-h{font-size:14px;font-weight:800;color:#C2113F}
+  .contr-list{font-size:12.5px;color:#7A2030;margin-top:6px;line-height:1.7}
   .car-intro{padding:4px 4px 0} .car-intro h2{font-size:18px;font-weight:800;letter-spacing:-.3px} .car-intro p{font-size:13px;color:var(--grigio);margin-top:3px}
   .ferie-box{background:#F0FAF4;border:1px solid #CDEBD9;border-radius:14px;padding:13px 14px;margin:12px 2px}
   .ferie-h{font-size:14px;font-weight:800;color:#157A39;margin-bottom:9px}
@@ -1248,6 +1251,17 @@ function isTaskDisponibile(x) {
 
 // "Salute dati": segnala le pratiche entrate senza nome ospite (parse incompleto),
 // così una prenotazione monca non passa inosservata e non rischi di perdere una scadenza.
+// Avviso scadenze di contratto: mostra le disdette in arrivo (entro 60 gg) così non
+// scatta un rinnovo automatico indesiderato e non rischi penali. Dati in CONTRATTI.
+function contrattiAlertHTML(){
+  const items=[];
+  Object.keys(CONTRATTI).forEach(casa=>{ const d=_prossimaDisdetta(casa); if(d && d.giorni<=60) items.push(Object.assign({casa:casa},d)); });
+  if(!items.length) return '';
+  items.sort((a,b)=>a.disdetta.localeCompare(b.disdetta));
+  const righe=items.map(i=>'<div>'+(i.auto?'🔁 ':'📅 ')+'<b>'+escapeHtml(i.casa)+'</b> — '+(i.auto?'disdetta entro il ':'scade il ')+'<b>'+_carGgmm(i.disdetta)+'</b>'+(i.giorni>=0?' ('+i.giorni+' gg)':' (scaduta!)')+'</div>').join('');
+  return '<div class="contr-box"><div class="contr-h">⚠️ Contratti — decidi per tempo (occhio alle penali)</div><div class="contr-list">'+righe+'</div></div>';
+}
+
 function saluteDatiHTML(tasks) {
   const incompleti = tasks.filter(x => !x.completato &&
     ['scontrino','alloggiati','fattura-pm'].includes(x.tipo) &&
@@ -1346,6 +1360,7 @@ function renderOggi() {
   if (_bell) { _bell.dataset.alert = nUrgenti>0 ? '1' : '0'; renderBell(); }
 
   let html = '';
+  html += contrattiAlertHTML();    // scadenze contratto/disdetta in arrivo (in cima, penali)
   html += saluteDatiHTML(tasks);   // avviso prenotazioni con dati incompleti (in cima)
   html += novitaOggiHTML(allTasks);   // prenotazioni nuove/modificate/cancellate, in cima con gli alert
 
@@ -2825,6 +2840,23 @@ const SOGLIE_FISCALI = [
   { label: 'Soglia regime forfettario', val: '85.000 € / anno', desc: 'Ricavi totali — oltre si esce dal forfettario' },
 ];
 
+// Contratti di gestione: data di rinnovo + giorni di preavviso per la disdetta.
+// Da questi l'app calcola "disdetta entro" e avvisa per tempo (le penali sono pesanti).
+const CONTRATTI = {
+  'Appartamento del Palio': { rinnovo:'2026-07-07', preavviso:15, auto:true },
+  'Casa Amalia':            { rinnovo:'2027-02-28', preavviso:30, auto:true },
+  'La Tana del Tasso':      { rinnovo:'2027-04-01', preavviso:60, auto:true },
+  'Tenuta del Mulino':      { rinnovo:'2027-02-25', preavviso:90, auto:true },
+  'Villa Omedè':            { rinnovo:'2026-09-30', preavviso:15, auto:false },
+};
+function _prossimaDisdetta(casa){
+  const c=CONTRATTI[casa]; if(!c||!c.rinnovo) return null;
+  let rin=new Date(c.rinnovo+'T12:00:00Z'); const now=new Date();
+  if(c.auto){ while(rin<now){ rin.setUTCFullYear(rin.getUTCFullYear()+1); } }
+  else if(rin<now){ return null; }
+  const dis=new Date(rin); dis.setUTCDate(dis.getUTCDate()-(c.preavviso||0));
+  return { rinnovo:rin.toISOString().slice(0,10), disdetta:dis.toISOString().slice(0,10), giorni:Math.round((dis-now)/86400000), auto:c.auto };
+}
 const CASE_GESTIONE = [
   { casa:'Appartamento del Palio', luogo:'Palio', prop:'Ana Krapovickas (e Lucho Mariani)', feeOTA:'20%', feePropDir:'20%', feePMDir:'30%', extra:'PriceLabs €15/mese', avvio:'07/04/2025', scadenza:'07/07/2026, poi rinnovo annuale', recesso:'preavviso 15 giorni', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
   { casa:'Casa Amalia', luogo:'Viarigi', prop:'Paola Conti', feeOTA:'25%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'01/03/2026', scadenza:'28/02/2027, poi rinnovo automatico 12 mesi', recesso:'preavviso 30 giorni', penale:'Recesso anticipato della proprietaria: €500' },
