@@ -1654,7 +1654,7 @@ function vediFatture(casa){
   const el=document.getElementById('main-search'); if(!el) return;
   const back='<button onclick="clearSearch()" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;border:1px solid var(--border);background:white;color:var(--nero);border-radius:10px;padding:8px 12px;cursor:pointer;margin:4px 0 10px">← Indietro</button>';
   const aperte=results.filter(t=>!t.completato);
-  const tot=aperte.reduce((s,t)=>s+(t.cohost||t.importo||0),0);
+  const tot=aperte.reduce((s,t)=>s+pmCompenso(t),0);
   let html=back+'<div class="search-count">Fatture per <b>'+escapeHtml(prop)+'</b> — '+aperte.length+' da fare'+(tot>0?' · '+fmtEuro(tot)+' €':'')+'</div>';
   html+=aperte.map(t=>taskCardHTML(t,false,false)).join('');
   const done=results.filter(t=>t.completato);
@@ -1953,7 +1953,7 @@ function renderArchivio() {
 
   const renderItem = (task, hideDate) => {
     const cfg = TIPO_CONFIG[task.tipo] || TIPO_CONFIG.manuale;
-    const val = task.cohost || task.importo;
+    const val = _valArch(task);
     const canale = task.canale && task.canale !== '—' ? task.canale : '';
     const tipoMeta = [cfg.label, canale].filter(Boolean).join(' · ');
     const title = [task.casa, task.ospite].filter(Boolean).join(' · ');
@@ -1983,7 +1983,7 @@ function renderArchivio() {
     const counts = {}, totals = {};
     items.forEach(x => {
       counts[x.tipo] = (counts[x.tipo] || 0) + 1;
-      totals[x.tipo] = (totals[x.tipo] || 0) + (x.cohost || x.importo || 0);
+      totals[x.tipo] = (totals[x.tipo] || 0) + _valArch(x);
     });
     return Object.entries(counts).map(([t, n]) => {
       const tot = totals[t];
@@ -1994,7 +1994,7 @@ function renderArchivio() {
 
   const renderGruppo = (label, emoji, items, hideDate) => {
     if (!items.length) return '';
-    const tot = items.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
+    const tot = items.reduce((s,x) => s + _valArch(x), 0);
     const countLabel = `${items.length} task${tot > 0 ? ' · ' + fmtEuro(tot) + ' €' : ''}`;
     return `<div class="archivio-group-header"><span>${emoji} ${label}</span><span class="archivio-group-total">${countLabel}</span></div>` +
       items.map(t => renderItem(t, hideDate)).join('');
@@ -2056,7 +2056,7 @@ function renderArchivio() {
       });
     if (!listaFiltrata.length) return;
 
-    const totale = listaFiltrata.reduce((s,x) => s + (x.cohost || x.importo || 0), 0);
+    const totale = listaFiltrata.reduce((s,x) => s + _valArch(x), 0);
     const [y, m] = mese.split('-').map(Number);
     const meseLabel = mese === '0000-00' ? 'Data sconosciuta' : `${MESI_L[m-1]} ${y}`;
 
@@ -2596,13 +2596,16 @@ const RATE_ACCANT_HOST  = 0.07;          // imposta + INPS (stima)
 const RATE_ACCANT_PM    = 0.15;          // imposta + INPS (stima)
 
 function pmCompenso(x) {
-  if (x.cohost != null) return x.cohost;
+  // Solo Airbnb usa il compenso cohost. Booking/dirette: SEMPRE lordo × fee%
+  // (un eventuale cohost spurio su una Booking va ignorato, era roba sbagliata).
+  if (x.canale === 'Airbnb' && x.cohost != null) return x.cohost;
   if (x.importo != null && FEE_PM[x.casa]) {
-    const f = FEE_PM[x.casa][x.canale] || FEE_PM[x.casa].default;
-    return x.importo * f;
+    return x.importo * (FEE_PM[x.casa][x.canale] || FEE_PM[x.casa].default);
   }
   return 0;
 }
+// Valore di un task per i totali: per le fatture il compenso PM, altrimenti il lordo.
+function _valArch(x){ return x.tipo==='fattura-pm' ? pmCompenso(x) : (x.importo||0); }
 
 // "Da fatturare ai proprietari": parte azionabile dei soldi — quanto resta da
 // fatturare (compensi PM aperti), per proprietario (cliccabile) e per mese.
