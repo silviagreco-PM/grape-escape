@@ -331,6 +331,7 @@
   .salute-box.open .salute-list{display:block}
   .nc-prop{font-size:11px;color:#9A6A2E;font-weight:700;margin-top:3px;cursor:pointer;display:inline-block}
   .nc-prop b{font-weight:800;border-bottom:1px dotted #C99A6A}
+  .nc-leg{font-size:10px;font-weight:800;color:#fff;background:#D40F46;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.02em;display:inline-flex;align-items:center;gap:3px}
   .car-intro{padding:4px 4px 0} .car-intro h2{font-size:18px;font-weight:800;letter-spacing:-.3px} .car-intro p{font-size:13px;color:var(--grigio);margin-top:3px}
   .ferie-box{background:#F0FAF4;border:1px solid #CDEBD9;border-radius:14px;padding:13px 14px;margin:12px 2px}
   .ferie-h{font-size:14px;font-weight:800;color:#157A39;margin-bottom:9px}
@@ -1624,6 +1625,8 @@ function toggleInCasa(){
 }
 
 function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
+// Contrassegno "perentoria/legale": alloggiati (entro 24h, Polizia) e scontrino (giorno stesso).
+function _ncPerentoria(tipo){if(tipo==='alloggiati')return '<span class="nc-leg" title="Adempimento legale: Alloggiati Web entro 24h dall arrivo">⚖️ entro 24h</span>';if(tipo==='scontrino')return '<span class="nc-leg" title="Adempimento fiscale: scontrino il giorno stesso">⚖️ stesso giorno</span>';return '';}
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
 function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
 // Mostra tutte le fatture di uno stesso proprietario (per farle in un colpo solo).
@@ -1756,7 +1759,7 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     +'<div class="task-check'+(isUrg?' urgent':'')+'" title="Segna come fatto" onclick="toggleTask(\''+task.id+'\')"></div>'
     +'<div style="flex:1;min-width:0">'
     +(hideScad?'':'<div class="nc-scad '+scls+'">'+slab+'</div>')
-    +'<div class="nc-tags"><span class="nc-tag '+tcls+'">'+tlab+'</span><span class="nc-tag '+roleCls+'">'+ruolo+'</span>'+chBadge+'</div>'
+    +'<div class="nc-tags"><span class="nc-tag '+tcls+'">'+tlab+'</span><span class="nc-tag '+roleCls+'">'+ruolo+'</span>'+chBadge+_ncPerentoria(task.tipo)+'</div>'
     +'<div class="nc-who">'+casaH+ospiteH+'</div>'
     +(task.tipo==='fattura-pm' && _proprietario(task.casa) ? '<div class="nc-prop" onclick="event.stopPropagation();vediFatture(\''+task.casa+'\')">→ fattura a <b>'+escapeHtml(_proprietario(task.casa))+'</b></div>' : '')
     +soggBlocco
