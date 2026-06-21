@@ -2,7 +2,7 @@
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
-const VAPID_PUBLIC = 'BFg0U6thz9uvtoxx56UbnlxRIUq6c07tzTscZ7kYncpwMdxzN95ALGg4E_yMkhPLhrCdpQweSMmcErXgXTbWD7s';
+const VAPID_PUBLIC = 'BMwxJ7c-UxaeRDUhfHhOgCYCYz2FhHHm3fW8LHlEkX5s87QLh-k2LMtVBG9_sD6urSP1P0LquNGmzBuIybBO1l0';
 const toUrlSafe = (k) => (k || '').replace(/\s/g, '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
 export default async function handler(req, res) {
