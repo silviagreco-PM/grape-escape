@@ -475,7 +475,7 @@
   <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px"></div>
   <div style="font-size:16px;font-weight:700;margin-bottom:4px">Inserisci il lordo ricevuto</div>
   <div style="font-size:12px;color:var(--grigio);margin-bottom:14px" id="importo-modal-sub"></div>
-  <input type="number" inputmode="decimal" step="0.01" placeholder="es. 850.00" id="importo-modal-input"
+  <input type="number" inputmode="decimal" step="0.01" placeholder="es. 850,00" id="importo-modal-input"
     style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:18px;font-family:'Inter',sans-serif;outline:none;margin-bottom:14px;color:var(--nero)">
   <div style="display:flex;gap:8px">
     <button onclick="saltaImporto()" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--grigio-light);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;color:var(--grigio)">Salta</button>
@@ -582,7 +582,7 @@
       <select class="form-select" id="f-link">
         <option value="">Nessuno</option>
         <option value="ade">→ ADE (Scontrino / Autofattura)</option>
-        <option value="passgo">→ Passgo (Fattura PM)</option>
+        <option value="passgo">→ Passgo (Fattura)</option>
         <option value="ross">→ ROSS1000</option>
       </select>
     </div>
@@ -1345,6 +1345,7 @@ function renderOggi() {
 
   let html = '';
   html += saluteDatiHTML(tasks);   // avviso prenotazioni con dati incompleti (in cima)
+  html += novitaOggiHTML(allTasks);   // prenotazioni nuove/modificate/cancellate, in cima con gli alert
 
   // Ospiti in casa: pannello nascosto, apribile dalla pillola 🏠 (non occupa spazio)
   const inCasa = ospitiInCasaHTML(tasks);
@@ -1371,9 +1372,6 @@ function renderOggi() {
 
   // PORTATI AVANTI — cose già pronte da fare, anche se non scadono oggi (sopra a tutto il resto)
   html += portatiAvantiHTML(tasks);
-
-  // Novità di oggi (nuove prenotazioni / modifiche / cancellazioni) — sotto le cose da fare
-  html += novitaOggiHTML(allTasks);
 
   if (settimana.length > 0) {
     html += sectionLabelHTML('Prossimi giorni', settimana.length, 'sec-scadenza');
@@ -1623,17 +1621,18 @@ function toggleInCasa(){
   if (b) b.style.display = (b.style.display === 'none' ? 'block' : 'none');
 }
 
-function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura PM','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
+function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
+function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
 function _ncCanale(c){return {Airbnb:['Airbnb','nc-ch-air'],Booking:['Booking','nc-ch-book'],VRBO:['VRBO','nc-ch-vrbo'],Dirette:['Diretta','nc-ch-diretta'],Diretta:['Diretta','nc-ch-diretta'],'B&B':['b&b.it','nc-ch-bb']}[c]||null;}
 function _ncScad(iso){
   if(!iso)return ['nc-s-far','—',false];
   const d=daysDiff(iso);
   if(d<0)return ['nc-s-today','🚨 IN RITARDO · scad. '+formatShort(iso),true];
   if(d===0)return ['nc-s-today','🚨 SCADE OGGI · entro stasera',true];
-  if(d===1)return ['nc-s-tom','⏰ Domani',false];
-  if(d<=7)return ['nc-s-week','Entro '+formatShort(iso)+' · '+d+' giorni',false];
-  return ['nc-s-far','Entro '+formatShort(iso),false];
+  if(d===1)return ['nc-s-tom','⏰ Domani · hai 1 giorno',false];
+  if(d<=7)return ['nc-s-week','Entro '+formatShort(iso)+' · hai '+d+' giorni',false];
+  return ['nc-s-far','Entro '+formatShort(iso)+' · hai '+d+' giorni',false];
 }
 function _ggmmDaISO(iso){
   if(!iso) return '';
@@ -1688,28 +1687,32 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     const desc='PRENOTAZIONE '+canaleTxt+' '+(task.codice||'');
     copy+='<div class="nc-grid">';
     copy+=_ncField('Descrizione',escapeHtml(desc),task.codice?desc:null);
-    copy+=_ncField('Importo (lordo ospite)',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2):null);
+    copy+=_ncField('Importo (lordo ospite)',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2).replace('.',','):null);
     copy+='</div>';
   } else if (task.tipo==='autofattura') {
     const caus='PRENOTAZIONE '+canaleTxt+' '+(task.codice||'');
     copy+='<div class="nc-grid">';
     copy+=_ncField('Causale',escapeHtml(caus),task.codice?caus:null);
-    copy+=_ncField('Imponibile',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2):null);
+    copy+=_ncField('Imponibile',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2).replace('.',','):null);
     copy+='</div>';
   } else if (isPM) {
-    const caus='gestione '+(task.casa||'')+' - '+(task.canale||'')+' - '+(task.codice||'');
+    const prop=_proprietario(task.casa);
+    const caus=isAirbnb
+      ? 'Compenso co-host Airbnb prenotazione '+(task.codice||'')
+      : 'gestione '+(task.casa||'')+' - '+(task.canale||'')+' - '+(task.codice||'');
     copy+='<div class="nc-grid one">';
+    if (prop) copy+=_ncField('Intestatario (proprietario)',escapeHtml(prop),prop);
     copy+=_ncField('Causale',escapeHtml(caus),caus);
     if (isBooking && task.importo!=null && fee) {
       const f=task.importo*fee;
-      copy+=_ncField('Importo da fatturare ('+Math.round(fee*100)+'% di '+fmtEuro(task.importo)+' €)',fmtEuro(f)+' €',f.toFixed(2));
+      copy+=_ncField('Importo da fatturare ('+Math.round(fee*100)+'% di '+fmtEuro(task.importo)+' €)',fmtEuro(f)+' €',f.toFixed(2).replace('.',','));
     } else if (isAirbnb && task.cohost!=null) {
-      copy+=_ncField('Importo da fatturare',fmtEuro(task.cohost)+' €',Number(task.cohost).toFixed(2));
+      copy+=_ncField('Importo da fatturare',fmtEuro(task.cohost)+' €',Number(task.cohost).toFixed(2).replace('.',','));
     } else if (isAirbnb && task.importo!=null && fee) {
       const f=task.importo*fee;
-      copy+=_ncField('Importo da fatturare','≈ '+fmtEuro(f)+' €<span class="nc-est">stima (lordo × '+Math.round(fee*100)+'%) — in attesa fattura ufficiale</span>',f.toFixed(2));
+      copy+=_ncField('Importo da fatturare','≈ '+fmtEuro(f)+' €<span class="nc-est">stima (lordo × '+Math.round(fee*100)+'%) — in attesa fattura ufficiale</span>',f.toFixed(2).replace('.',','));
     } else if (isBooking) {
-      copy+='<div class="nc-f"><div class="nc-fl">Lordo da rendiconto Booking</div><div class="nc-inline"><input type="number" id="importo-card-'+task.id+'" inputmode="decimal" step="0.01" placeholder="es. 850.00"><button onclick="salvaImportoCard(\''+task.id+'\')">Salva</button></div></div>';
+      copy+='<div class="nc-f"><div class="nc-fl">Lordo da rendiconto Booking</div><div class="nc-inline"><input type="number" id="importo-card-'+task.id+'" inputmode="decimal" step="0.01" placeholder="es. 850,00"><button onclick="salvaImportoCard(\''+task.id+'\')">Salva</button></div></div>';
     } else {
       copy+='<div class="nc-f"><div class="nc-fl">Importo da fatturare</div><div class="nc-fv" style="color:#B0B0B0;font-weight:600">in attesa del compenso Airbnb</div></div>';
     }
@@ -2141,7 +2144,7 @@ function toggleTask(id) {
   if (idx < 0) return;
   const task = tasks[idx];
   // Se fattura-pm senza importo e non ancora completata → chiedi lordo
-  if (!task.completato && task.tipo === 'fattura-pm' && task.importo == null) {
+  if (!task.completato && task.tipo === 'fattura-pm' && task.importo == null && task.cohost == null) {
     _pendingImportoId = id;
     const sub = document.getElementById('importo-modal-sub');
     if (sub) sub.textContent = [task.canale, task.casa, task.ospite].filter(Boolean).join(' · ');
