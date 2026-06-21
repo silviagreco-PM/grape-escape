@@ -329,6 +329,8 @@
   .salute-sub{font-size:12px;color:#9A6A2E;margin-top:4px;line-height:1.4}
   .salute-list{font-size:12px;color:#6B4A1E;margin-top:8px;display:none;line-height:1.7}
   .salute-box.open .salute-list{display:block}
+  .nc-prop{font-size:11px;color:#9A6A2E;font-weight:700;margin-top:3px;cursor:pointer;display:inline-block}
+  .nc-prop b{font-weight:800;border-bottom:1px dotted #C99A6A}
   .car-intro{padding:4px 4px 0} .car-intro h2{font-size:18px;font-weight:800;letter-spacing:-.3px} .car-intro p{font-size:13px;color:var(--grigio);margin-top:3px}
   .ferie-box{background:#F0FAF4;border:1px solid #CDEBD9;border-radius:14px;padding:13px 14px;margin:12px 2px}
   .ferie-h{font-size:14px;font-weight:800;color:#157A39;margin-bottom:9px}
@@ -1624,6 +1626,27 @@ function toggleInCasa(){
 function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
 function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
+// Mostra tutte le fatture di uno stesso proprietario (per farle in un colpo solo).
+function vediFatture(casa){
+  const prop=_proprietario(casa);
+  if(!prop) return;
+  const results=loadTasks().filter(t=> t.tipo==='fattura-pm' && _proprietario(t.casa)===prop)
+    .sort((a,b)=>{ if(a.completato!==b.completato) return a.completato?1:-1; return (a.scadenza||'').localeCompare(b.scadenza||''); });
+  const active=document.querySelector('.view.active:not(#view-search)');
+  if(active) _searchPrevView=active.id.replace('view-','');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-search').classList.add('active');
+  const el=document.getElementById('main-search'); if(!el) return;
+  const back='<button onclick="clearSearch()" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;border:1px solid var(--border);background:white;color:var(--nero);border-radius:10px;padding:8px 12px;cursor:pointer;margin:4px 0 10px">← Indietro</button>';
+  const aperte=results.filter(t=>!t.completato);
+  const tot=aperte.reduce((s,t)=>s+(t.cohost||t.importo||0),0);
+  let html=back+'<div class="search-count">Fatture per <b>'+escapeHtml(prop)+'</b> — '+aperte.length+' da fare'+(tot>0?' · '+fmtEuro(tot)+' €':'')+'</div>';
+  html+=aperte.map(t=>taskCardHTML(t,false,false)).join('');
+  const done=results.filter(t=>t.completato);
+  if(done.length){ html+='<div class="search-count" style="margin-top:12px">Già fatte ('+done.length+')</div>'; html+=done.map(t=>taskCardHTML(t,false,true)).join(''); }
+  el.innerHTML=html;
+  window.scrollTo(0,0);
+}
 function _ncCanale(c){return {Airbnb:['Airbnb','nc-ch-air'],Booking:['Booking','nc-ch-book'],VRBO:['VRBO','nc-ch-vrbo'],Dirette:['Diretta','nc-ch-diretta'],Diretta:['Diretta','nc-ch-diretta'],'B&B':['b&b.it','nc-ch-bb']}[c]||null;}
 function _ncScad(iso){
   if(!iso)return ['nc-s-far','—',false];
@@ -1696,12 +1719,10 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     copy+=_ncField('Imponibile',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2).replace('.',','):null);
     copy+='</div>';
   } else if (isPM) {
-    const prop=_proprietario(task.casa);
     const caus=isAirbnb
       ? 'Compenso co-host Airbnb prenotazione '+(task.codice||'')
       : 'gestione '+(task.casa||'')+' - '+(task.canale||'')+' - '+(task.codice||'');
     copy+='<div class="nc-grid one">';
-    if (prop) copy+=_ncField('Intestatario (proprietario)',escapeHtml(prop),prop);
     copy+=_ncField('Causale',escapeHtml(caus),caus);
     if (isBooking && task.importo!=null && fee) {
       const f=task.importo*fee;
@@ -1737,6 +1758,7 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     +(hideScad?'':'<div class="nc-scad '+scls+'">'+slab+'</div>')
     +'<div class="nc-tags"><span class="nc-tag '+tcls+'">'+tlab+'</span><span class="nc-tag '+roleCls+'">'+ruolo+'</span>'+chBadge+'</div>'
     +'<div class="nc-who">'+casaH+ospiteH+'</div>'
+    +(task.tipo==='fattura-pm' && _proprietario(task.casa) ? '<div class="nc-prop" onclick="event.stopPropagation();vediFatture(\''+task.casa+'\')">→ fattura a <b>'+escapeHtml(_proprietario(task.casa))+'</b></div>' : '')
     +soggBlocco
     +'</div>'
     +'</div>'
@@ -1930,6 +1952,7 @@ function renderArchivio() {
       <div class="archivio-card-body">
         <div class="archivio-card-tipo">${tipoMeta}</div>
         <div class="archivio-card-title">${title}</div>
+        ${task.tipo==='fattura-pm' && _proprietario(task.casa) ? `<div class="nc-prop" onclick="event.stopPropagation();vediFatture('${task.casa}')">→ ${escapeHtml(_proprietario(task.casa))}</div>` : ''}
         ${fattoLabel ? `<div class="archivio-card-fatto">${fattoLabel}</div>` : ''}
         ${aggLabel ? `<div class="archivio-card-meta">${aggLabel}</div>` : ''}
       </div>
