@@ -1705,9 +1705,10 @@ function _fattibileDal(x){
 }
 function _finestraHTML(x){
   const dal=_fattibileDal(x); if(!dal) return '';
+  const al = x.scadenza ? ' · non oltre il '+formatShort(x.scadenza) : '';
   return dal<=today()
-    ? '<div class="nc-win ok">🟢 Fattibile ora</div>'
-    : '<div class="nc-win wait">⏳ Non prima del '+formatShort(dal)+'</div>';
+    ? '<div class="nc-win ok">🟢 Fattibile ora'+al+'</div>'
+    : '<div class="nc-win wait">⏳ Non prima del '+formatShort(dal)+al+'</div>';
 }
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
 function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
