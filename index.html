@@ -2989,11 +2989,16 @@ const CONTRATTI = {
 };
 function _prossimaDisdetta(casa){
   const c=CONTRATTI[casa]; if(!c||!c.rinnovo) return null;
-  let rin=new Date(c.rinnovo+'T12:00:00Z'); const now=new Date();
-  if(c.auto){ while(rin<now){ rin.setUTCFullYear(rin.getUTCFullYear()+1); } }
-  else if(rin<now){ return null; }
-  const dis=new Date(rin); dis.setUTCDate(dis.getUTCDate()-(c.preavviso||0));
-  return { rinnovo:rin.toISOString().slice(0,10), disdetta:dis.toISOString().slice(0,10), giorni:Math.round((dis-now)/86400000), auto:c.auto };
+  const todayStr=today();
+  let rin=new Date(c.rinnovo+'T12:00:00Z');
+  const disStrOf=r=>{ const d=new Date(r); d.setUTCDate(d.getUTCDate()-(c.preavviso||0)); return d.toISOString().slice(0,10); };
+  // Auto-rinnovo: se la disdetta di questo ciclo è già passata, avanza all'anno dopo
+  // (così dopo il 22/06 mostra il 2027, non "scaduta"). Confronto per DATA, non per ora.
+  if(c.auto){ while(disStrOf(rin) < todayStr){ rin.setUTCFullYear(rin.getUTCFullYear()+1); } }
+  else if(rin.toISOString().slice(0,10) < todayStr){ return null; }
+  const dis=disStrOf(rin), rinStr=rin.toISOString().slice(0,10);
+  const giorni=Math.round((Date.parse(dis+'T12:00:00Z') - Date.parse(todayStr+'T12:00:00Z'))/86400000);
+  return { rinnovo:rinStr, disdetta:dis, giorni:giorni, auto:c.auto };
 }
 const CASE_GESTIONE = [
   { casa:'Appartamento del Palio', luogo:'Palio', prop:'Ana Krapovickas', feeOTA:'20%', feePropDir:'20%', feePMDir:'30%', extra:'PriceLabs €15/mese', avvio:'07/04/2025', scadenza:'07/07/2026, poi rinnovo annuale', recesso:'preavviso 15 giorni', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
@@ -3065,9 +3070,15 @@ function renderCase() {
 
   const chip = (lbl, val) => `<span style="font-size:10px;font-weight:700;color:var(--verde);background:var(--verde-light);border:1px solid #B8E4B8;border-radius:6px;padding:3px 8px;white-space:nowrap">${lbl} ${val}</span>`;
   CASE_GESTIONE.forEach(c => {
+    const dis=_prossimaDisdetta(c.casa);
+    const fmtD=s=>String(s).split('-').reverse().join('/');
+    const disRow = dis ? `<div style="display:flex;gap:10px;align-items:baseline;background:#FFF4F6;border-radius:8px;padding:5px 8px;margin-top:2px">
+        <span style="font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#C2113F;min-width:88px;flex-shrink:0">${dis.auto?'Disdetta entro':'Scade il'}</span>
+        <span style="font-size:12px;color:#7A2030;font-weight:600;line-height:1.45">${fmtD(dis.disdetta)} (${dis.giorni} gg)${dis.auto?` · poi rinnovo ${fmtD(dis.rinnovo)}`:''}</span>
+      </div>` : '';
     html += `<div class="task-card" onclick="vaiACasa('${c.casa.replace(/'/g, "\\'")}')" style="flex-direction:column;align-items:stretch;gap:7px;border-top:3px solid var(--verde);cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-        <span style="font-size:15px;font-weight:700">${c.casa} ›</span>
+        <span style="font-size:15px;font-weight:700">${_casaBreve(c.casa)} ›</span>
         <span style="font-size:11px;color:var(--grigio)">${c.luogo}</span>
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--nero)">${c.prop}</div>
@@ -3077,6 +3088,7 @@ function renderCase() {
       ${c.extra && c.extra !== '—' ? regolaRow('Extra', c.extra) : ''}
       ${regolaRow('Avvio', c.avvio)}
       ${regolaRow('Scadenza', c.scadenza)}
+      ${disRow}
       ${regolaRow('Recesso', c.recesso)}
       ${regolaRow('Penale', c.penale)}
     </div>`;
