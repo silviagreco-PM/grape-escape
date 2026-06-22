@@ -2236,27 +2236,41 @@ function reportMese(mese){
   if(!items.length){ showToast('Nessun documento completato in questo mese'); return; }
   const p = mese.split('-').map(Number), y=p[0], m=p[1];
   const titolo = (mese==='0000-00'?'Data sconosciuta':(MESI_L[m-1]+' '+y));
-  const gruppi = [['scontrino','Scontrini — incassi case proprie'],['fattura-pm','Fatture — compensi PM ai proprietari'],['autofattura','Autofatture TD17 — commissioni OTA (costi)']];
   const esc = escapeHtml;
   let ricavi=0, costi=0, body='';
-  gruppi.forEach(function(g){
-    const t=g[0], label=g[1];
-    const its = items.filter(x=>x.tipo===t).sort((a,b)=>(a.completatoIl||'').localeCompare(b.completatoIl||''));
-    if(!its.length) return;
-    let sub=0, rows='';
-    its.forEach(x=>{
-      const v = (t==='fattura-pm') ? pmCompenso(x) : (x.importo||0);
-      sub+=v;
-      rows += '<tr><td>'+_carGgmm(x.completatoIl)+'</td><td>'+esc(x.casa||'')+'</td><td>'+esc(x.ospite||'')+'</td><td>'+esc(x.canale&&x.canale!=='—'?x.canale:'')+'</td><td>'+esc(x.codice||'')+'</td><td class="r">'+(v?fmtEuro(v)+' €':'—')+'</td></tr>';
-    });
-    if(t==='autofattura') costi+=sub; else ricavi+=sub;
-    body += '<h2>'+label+' <span class="n">('+its.length+')</span></h2>'
-      + '<table><thead><tr><th>Data</th><th>Casa</th><th>Ospite</th><th>Canale</th><th>Codice</th><th class="r">Importo</th></tr></thead><tbody>'
-      + rows + '</tbody><tfoot><tr><td colspan="5">Totale</td><td class="r">'+fmtEuro(sub)+' €</td></tr></tfoot></table>';
-  });
+  const head='<table><thead><tr><th>Data</th><th>Casa</th><th>Ospite</th><th>Canale</th><th>Codice</th><th class="r">Importo</th></tr></thead><tbody>';
+  const riga=(x,v)=>'<tr><td>'+_carGgmm(x.completatoIl)+'</td><td>'+esc(_casaBreve(x.casa)||'')+'</td><td>'+esc(x.ospite||'')+'</td><td>'+esc(x.canale&&x.canale!=='—'?x.canale:'')+'</td><td>'+esc(x.codice||'')+'</td><td class="r">'+(v?fmtEuro(v)+' €':'—')+'</td></tr>';
+  const foot=(sub)=>'</tbody><tfoot><tr><td colspan="5">Totale</td><td class="r">'+fmtEuro(sub)+' €</td></tr></tfoot></table>';
+  const byData=(a,b)=>(a.completatoIl||'').localeCompare(b.completatoIl||'');
+
+  // SCONTRINI
+  const sco = items.filter(x=>x.tipo==='scontrino').sort(byData);
+  if(sco.length){ let s=0,r=''; sco.forEach(x=>{const v=x.importo||0; s+=v; ricavi+=v; r+=riga(x,v);}); body += '<h2>Scontrini — incassi case proprie <span class="n">('+sco.length+')</span></h2>'+head+r+foot(s); }
+
+  // FATTURE PM — Airbnb singole; Booking/dirette accorpate per proprietario (una fattura mensile)
+  const fatt = items.filter(x=>x.tipo==='fattura-pm');
+  if(fatt.length){
+    body += '<h2>Fatture — compensi PM ai proprietari <span class="n">('+fatt.length+')</span></h2>';
+    const air = fatt.filter(x=>x.canale==='Airbnb').sort(byData);
+    if(air.length){ let s=0,r=''; air.forEach(x=>{const v=pmCompenso(x); s+=v; ricavi+=v; r+=riga(x,v);}); body += '<h3>Airbnb · una fattura per prenotazione</h3>'+head+r+foot(s); }
+    const book = fatt.filter(x=>x.canale!=='Airbnb');
+    if(book.length){
+      const perProp={};
+      book.forEach(x=>{ const pr=_proprietario(x.casa)||x.casa||'—'; (perProp[pr]=perProp[pr]||[]).push(x); });
+      Object.keys(perProp).sort().forEach(pr=>{
+        const its=perProp[pr].sort(byData); let s=0,r='';
+        its.forEach(x=>{const v=pmCompenso(x); s+=v; ricavi+=v; r+=riga(x,v);});
+        body += '<h3>📄 Fattura mensile a '+esc(pr)+' · '+its.length+(its.length===1?' prenotazione':' prenotazioni')+'</h3>'+head+r+foot(s);
+      });
+    }
+  }
+
+  // AUTOFATTURE TD17 (costi)
+  const auto = items.filter(x=>x.tipo==='autofattura').sort(byData);
+  if(auto.length){ let s=0,r=''; auto.forEach(x=>{const v=x.importo||0; s+=v; costi+=v; r+=riga(x,v);}); body += '<h2>Autofatture TD17 — commissioni OTA (costi) <span class="n">('+auto.length+')</span></h2>'+head+r+foot(s); }
   const css = 'body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a1a;max-width:820px;margin:24px auto;padding:0 18px}'
     +'h1{font-size:22px;margin:0 0 2px}.sub{color:#666;font-size:13px;margin-bottom:18px}'
-    +'h2{font-size:15px;margin:22px 0 6px}.n{color:#888;font-weight:400}'
+    +'h2{font-size:15px;margin:22px 0 6px}h3{font-size:13px;margin:16px 0 4px;color:#3a3a3a}.n{color:#888;font-weight:400}'
     +'table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}'
     +'th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #eee}th{background:#f6f6f6;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#555}'
     +'.r{text-align:right;white-space:nowrap}tfoot td{font-weight:700;border-top:2px solid #ccc;border-bottom:none}'
