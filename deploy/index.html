@@ -1362,7 +1362,7 @@ function renderCardsGrouped(list, urgent, hideScad, isBatch) {
     if (g.length > 1) {
       const info = soggiornoInfoDi(g[0]);
       const date = [info.ci?'↘ '+info.ci:'', info.co?'↗ '+info.co:''].filter(Boolean).join('<span style="opacity:.3;margin:0 5px">·</span>');
-      html += `<div class="pren-group"><div class="pren-group-h"><span class="pren-group-who">${escapeHtml(g[0].casa||'—')} · ${escapeHtml(g[0].ospite)}</span>`
+      html += `<div class="pren-group"><div class="pren-group-h"><span class="pren-group-who">${escapeHtml(_casaBreve(g[0].casa)||'—')} · ${escapeHtml(g[0].ospite)}</span>`
         + (date?`<span class="pren-group-d">${date}</span>`:'')
         + `<span class="pren-group-n">${g.length} task</span></div>`;
       g.forEach(t => { html += taskCardHTML(t, urgent, false, !!isBatch, hideScad); });
@@ -1674,7 +1674,7 @@ function ospitiInCasaHTML(tasks){
       : `<span class="incasa-done">${doneLabel}</span>`;
     const js = (g.ospite||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     righe.push(`<div class="incasa-row" onclick="vaiACasa('${js}')">
-      <div class="incasa-name"><b>${escapeHtml(g.casa)}</b> · ${escapeHtml(g.ospite)}</div>
+      <div class="incasa-name"><b>${escapeHtml(_casaBreve(g.casa))}</b> · ${escapeHtml(g.ospite)}</div>
       <div class="incasa-sub">in casa fino al ${formatShort(co)}</div>
       <div class="incasa-badges">${badges}</div>
     </div>`);
@@ -1689,6 +1689,8 @@ function toggleInCasa(){
 }
 
 function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
+// Nome casa accorciato per la visualizzazione (i dati restano col nome pieno).
+function _casaBreve(c){ return c==='Appartamento del Palio' ? 'App. del Palio' : (c||''); }
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
 function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
 // Mostra tutte le fatture di uno stesso proprietario (per farle in un colpo solo).
@@ -1749,7 +1751,7 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
   const ruolo=_ncRuolo(task.casa);
   const roleCls = ruolo==='Host'?'nc-r-host':ruolo==='PM'?'nc-r-pm':'nc-r-tutte';
   const ch=_ncCanale(task.canale);
-  const casaH=escapeHtml(task.casa||'—');
+  const casaH=escapeHtml(_casaBreve(task.casa)||'—');
   const ospiteH=(task.ospite&&task.ospite!=='—')?' · <span>'+escapeHtml(task.ospite)+'</span>':'';
   const chBadge=ch?'<span class="nc-cn '+ch[1]+'">'+ch[0]+'</span>':'';
 
@@ -2006,7 +2008,7 @@ function renderArchivio() {
     const val = _valArch(task);
     const canale = task.canale && task.canale !== '—' ? task.canale : '';
     const tipoMeta = [cfg.label, canale].filter(Boolean).join(' · ');
-    const title = [task.casa, task.ospite].filter(Boolean).join(' · ');
+    const title = [_casaBreve(task.casa), task.ospite].filter(Boolean).join(' · ');
     const fattoData  = !hideDate && task.completatoIl ? formatShort(task.completatoIl) : '';
     const fattoOre   = task.completatoAlle || '';
     const fattoLabel = fattoData
@@ -2994,9 +2996,9 @@ function _prossimaDisdetta(casa){
   return { rinnovo:rin.toISOString().slice(0,10), disdetta:dis.toISOString().slice(0,10), giorni:Math.round((dis-now)/86400000), auto:c.auto };
 }
 const CASE_GESTIONE = [
-  { casa:'Appartamento del Palio', luogo:'Palio', prop:'Ana Krapovickas (e Lucho Mariani)', feeOTA:'20%', feePropDir:'20%', feePMDir:'30%', extra:'PriceLabs €15/mese', avvio:'07/04/2025', scadenza:'07/07/2026, poi rinnovo annuale', recesso:'preavviso 15 giorni', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
+  { casa:'Appartamento del Palio', luogo:'Palio', prop:'Ana Krapovickas', feeOTA:'20%', feePropDir:'20%', feePMDir:'30%', extra:'PriceLabs €15/mese', avvio:'07/04/2025', scadenza:'07/07/2026, poi rinnovo annuale', recesso:'preavviso 15 giorni', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
   { casa:'Casa Amalia', luogo:'Viarigi', prop:'Paola Conti', feeOTA:'25%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'01/03/2026', scadenza:'28/02/2027, poi rinnovo automatico 12 mesi', recesso:'preavviso 30 giorni', penale:'Recesso anticipato della proprietaria: €500' },
-  { casa:'La Tana del Tasso', luogo:'Callianetto', prop:'Saba Sarfraz (contratto intestato a Erik Zoetmulder)', feeOTA:'26%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'~01/04/2026', scadenza:'~01/04/2027, rinnovo automatico annuale', recesso:'preavviso 60 giorni', penale:'Recesso solo se non ci sono prenotazioni future; compensi maturati sempre dovuti' },
+  { casa:'La Tana del Tasso', luogo:'Callianetto', prop:'Saba Sarfraz', feeOTA:'26%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'~01/04/2026', scadenza:'~01/04/2027, rinnovo automatico annuale', recesso:'preavviso 60 giorni', penale:'Recesso solo se non ci sono prenotazioni future; compensi maturati sempre dovuti' },
   { casa:'Tenuta del Mulino', luogo:'Montemagno', prop:'Umberto Di Capua', feeOTA:'20%', feePropDir:'20%', feePMDir:'25%', extra:'Check-in €15 per soggiorni sotto 7 notti', avvio:'25/02/2025', scadenza:'25/02/2027, rinnovo automatico', recesso:'preavviso 3 mesi', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
   { casa:'Villa Omedè', luogo:'Omedè', prop:'Andrea Grosso', feeOTA:'30%', feePropDir:'25%', feePMDir:'35%', extra:'Pulizie/lavanderia €300/soggiorno (le anticipi tu)', avvio:'15/05/2026', scadenza:'30/09/2026 (incarico stagionale)', recesso:'preavviso 15 giorni, solo se senza prenotazioni confermate', penale:'Recesso illegittimo: €1.000 + compensi prenotazioni attive + €300/soggiorno' },
 ];
