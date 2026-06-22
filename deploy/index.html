@@ -1722,13 +1722,24 @@ function _relGiorni(iso){
   if(d===0) return 'oggi'; if(d===1) return 'domani'; if(d===2) return 'dopodomani';
   if(d>2) return 'fra '+d+' gg'; if(d===-1) return 'ieri'; return Math.abs(d)+' gg fa';
 }
+// Scadenza "effettiva" per la finestra. Alloggiati: 24h dall'arrivo → check-in +1.
+function _scadenzaWin(x){
+  if(x.tipo==='alloggiati'){ const ci=_checkinISO(x); if(ci) return addDays(ci,1); }
+  return x.scadenza||null;
+}
 function _finestraHTML(x){
-  const dal=_fattibileDal(x); if(!dal) return '';
+  const dal=_fattibileDal(x), al=_scadenzaWin(x);
+  if(!dal && !al) return '';
   const rel=s=>{const r=_relGiorni(s);return r?' ('+r+')':'';};
-  const al = x.scadenza ? ' · non oltre il '+formatShort(x.scadenza)+rel(x.scadenza) : '';
-  return dal<=today()
-    ? '<div class="nc-win ok">🟢 Fattibile ora'+al+'</div>'
-    : '<div class="nc-win wait">⏳ Non prima del '+formatShort(dal)+rel(dal)+al+'</div>';
+  // Task da fare in un solo giorno: niente "non prima / non oltre", una sola data.
+  if(dal && al && dal===al){
+    const lbl = dal===today() ? '📅 Da fare oggi' : '📅 Solo il '+formatShort(dal)+rel(dal);
+    return '<div class="nc-win '+(dal>today()?'wait':'ok')+'">'+lbl+'</div>';
+  }
+  const alTxt = al ? ' · non oltre il '+formatShort(al)+rel(al) : '';
+  if(!dal || dal<=today())
+    return '<div class="nc-win ok">🟢 Fattibile ora'+alTxt+'</div>';
+  return '<div class="nc-win wait">⏳ Non prima del '+formatShort(dal)+rel(dal)+alTxt+'</div>';
 }
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
 function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
