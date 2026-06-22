@@ -1695,10 +1695,20 @@ function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['A
 // Nome casa accorciato per la visualizzazione (i dati restano col nome pieno).
 function _casaBreve(c){ return c==='Appartamento del Palio' ? 'App. del Palio' : (c||''); }
 // Finestra "fattibile dal → al": da quando un task si può iniziare (poi entro la scadenza).
+// Check-in ISO ricavato dalla nota (↘ gg/mm) + anno dalla scadenza (robusto al cambio anno).
+function _checkinISO(x){
+  const i=soggiornoInfoDi(x);
+  const m=i&&i.ci&&/^(\d{1,2})\/(\d{1,2})$/.exec(i.ci);
+  if(!m) return null;
+  const yr=(x.scadenza||today()).slice(0,4);
+  let iso=yr+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  if(x.scadenza && iso > x.scadenza) iso=(parseInt(yr,10)-1)+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  return iso;
+}
 function _fattibileDal(x){
   if(!x.scadenza) return null;
-  if(x.tipo==='scontrino') return x.scadenza;               // dal check-in
-  if(x.tipo==='alloggiati') return addDays(x.scadenza,-1);  // dal check-in (scad = +1)
+  if(x.tipo==='scontrino') return _checkinISO(x) || x.scadenza;               // dal check-in
+  if(x.tipo==='alloggiati') return _checkinISO(x) || addDays(x.scadenza,-1);  // dal check-in
   if(x.tipo==='fattura-pm') return addDays(x.scadenza,-12); // dalla data di pagamento
   if(x.tipo==='autofattura'){ const s=isoToDate(x.scadenza); return s.getFullYear()+'-'+String(s.getMonth()+1).padStart(2,'0')+'-01'; } // dal 1° del mese
   return null; // promemoria / ross: nessun vincolo d'inizio
