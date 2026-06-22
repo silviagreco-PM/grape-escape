@@ -348,6 +348,9 @@
   .salute-box.open .salute-list{display:block}
   .nc-prop{font-size:11px;color:#9A6A2E;font-weight:700;margin-top:3px;cursor:pointer;display:inline-block}
   .nc-prop b{font-weight:800;border-bottom:1px dotted #C99A6A}
+  .nc-win{font-size:11px;font-weight:700;margin-top:5px;display:inline-block;padding:2px 9px;border-radius:6px}
+  .nc-win.ok{background:#E6F4EA;color:#157A39}
+  .nc-win.wait{background:#FFF1DC;color:#B8460A}
   .contr-box{background:#FFE9EC;border:1px solid #F7B8C4;border-radius:14px;padding:12px 14px;margin:8px 2px 13px}
   .contr-h{font-size:14px;font-weight:800;color:#C2113F}
   .contr-list{font-size:12.5px;color:#7A2030;margin-top:6px;line-height:1.7}
@@ -1691,6 +1694,21 @@ function toggleInCasa(){
 function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
 // Nome casa accorciato per la visualizzazione (i dati restano col nome pieno).
 function _casaBreve(c){ return c==='Appartamento del Palio' ? 'App. del Palio' : (c||''); }
+// Finestra "fattibile dal → al": da quando un task si può iniziare (poi entro la scadenza).
+function _fattibileDal(x){
+  if(!x.scadenza) return null;
+  if(x.tipo==='scontrino') return x.scadenza;               // dal check-in
+  if(x.tipo==='alloggiati') return addDays(x.scadenza,-1);  // dal check-in (scad = +1)
+  if(x.tipo==='fattura-pm') return addDays(x.scadenza,-12); // dalla data di pagamento
+  if(x.tipo==='autofattura'){ const s=isoToDate(x.scadenza); return s.getFullYear()+'-'+String(s.getMonth()+1).padStart(2,'0')+'-01'; } // dal 1° del mese
+  return null; // promemoria / ross: nessun vincolo d'inizio
+}
+function _finestraHTML(x){
+  const dal=_fattibileDal(x); if(!dal) return '';
+  return dal<=today()
+    ? '<div class="nc-win ok">🟢 Fattibile ora</div>'
+    : '<div class="nc-win wait">⏳ Non prima del '+formatShort(dal)+'</div>';
+}
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
 function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
 // Mostra tutte le fatture di uno stesso proprietario (per farle in un colpo solo).
@@ -1827,6 +1845,7 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     +'<div class="nc-who">'+casaH+ospiteH+'</div>'
     +(task.tipo==='fattura-pm' && _proprietario(task.casa) ? '<div class="nc-prop" onclick="event.stopPropagation();vediFatture(\''+task.casa+'\')">→ fattura a <b>'+escapeHtml(_proprietario(task.casa))+'</b></div>' : '')
     +soggBlocco
+    +_finestraHTML(task)
     +'</div>'
     +'</div>'
     +(hasCopy?'<div class="nc-copy">'+copy+action+'</div>':'')
