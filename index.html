@@ -314,6 +314,9 @@
   @keyframes ncpulse{0%,100%{box-shadow:inset 0 0 0 1.5px #F4A9B6}50%{box-shadow:inset 0 0 0 1.5px #F4A9B6,0 0 0 5px rgba(225,29,72,.16)}}
   .oggi-header{display:flex;align-items:center;gap:9px;background:#FFE2E6;color:#D40F46;font-weight:800;font-size:16px;padding:13px 16px;border-radius:14px;margin:8px 2px 13px;box-shadow:inset 0 0 0 1.5px #F4A9B6;animation:ncpulse 1.3s infinite}
   .oggi-header .cnt{margin-left:auto;background:#D40F46;color:#fff;border-radius:999px;min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+  .oggi-header.bloc-buro{background:#FFF1DC;color:#B8460A;box-shadow:inset 0 0 0 1.5px #F3C79B;animation:none}
+  .oggi-header.bloc-buro .cnt{background:#B8460A}
+  .bloc-sub{font-size:11.5px;color:var(--grigio);margin:-7px 4px 10px;line-height:1.4}
   .incasa-box{background:#F0FAF4;border:1px solid #CDEBD9;border-radius:16px;padding:13px 15px;margin:6px 2px 16px;box-shadow:0 6px 20px rgba(0,0,0,.04)}
   .incasa-h{font-size:13px;font-weight:800;color:#157A39;margin-bottom:6px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.04em}
   .incasa-row{padding:10px 0;border-top:1px solid #DBEFE3;cursor:pointer}
@@ -1369,22 +1372,21 @@ function renderOggi() {
   if (inCasa.n > 0) pillsEl.innerHTML += `<div class="pill pill-incasa" style="cursor:pointer" onclick="toggleInCasa()"><div class="pill-dot"></div>🏠 ${inCasa.n} in casa</div>`;
   html += inCasa.html;
 
-  // DA FARE OGGI — in cima a tutto (scadenza = oggi)
-  const daFare = [...urgenti];
-  if (daFare.length > 0) {
-    html += `<div class="oggi-header" id="sec-urgenti">🚨 Da fare oggi<span class="cnt">${daFare.length}</span></div>`;
-    html += renderCardsGrouped(daFare, true, true, false);
-  }
+  // ── ADESSO, diviso per CONSEGUENZA (richiesta Silvia): prima il rischio, poi il resto ──
+  // Tutto ciò che è da fare ORA = scadenze di oggi + in ritardo recenti.
+  const adesso = [...scaduti, ...urgenti].sort((a,b) => (a.scadenza||'').localeCompare(b.scadenza||''));
+  const multa = adesso.filter(x => x.tipo === 'alloggiati' || x.tipo === 'scontrino');
+  const buro  = adesso.filter(x => x.tipo !== 'alloggiati' && x.tipo !== 'scontrino');
 
-  // In ritardo RECENTI (≤7 giorni): in evidenza, rossi, aperti
-  if (scaduti.length > 0) {
-    const scOrd = [...scaduti].sort((a,b) => a.scadenza.localeCompare(b.scadenza));
-    html += `<div class="scaduti-section" id="sec-ritardo">
-      <div class="scaduti-toggle" style="cursor:default">
-        <span class="scaduti-toggle-label">⚠ ${scOrd.length} in ritardo · ultimi 7 giorni</span>
-      </div>
-      <div class="scaduti-list">${renderCardsGrouped(scOrd, true, false, false)}</div>
-    </div>`;
+  if (multa.length > 0) {
+    html += `<div class="oggi-header bloc-multa" id="sec-urgenti">🔴 Adesso — o è multa<span class="cnt">${multa.length}</span></div>`;
+    html += `<div class="bloc-sub">Alloggiati (entro 24h, è Polizia) e scontrini (giorno stesso): se salti, paghi.</div>`;
+    html += renderCardsGrouped(multa, true, false, false);
+  }
+  if (buro.length > 0) {
+    html += `<div class="oggi-header bloc-buro" id="sec-buro">🟡 Con calma — burocrazia<span class="cnt">${buro.length}</span></div>`;
+    html += `<div class="bloc-sub">Fatture e autofatture: hanno margine, falle quando puoi.</div>`;
+    html += renderCardsGrouped(buro, false, false, false);
   }
 
   // PORTATI AVANTI — cose già pronte da fare, anche se non scadono oggi (sopra a tutto il resto)
@@ -1433,7 +1435,7 @@ function renderOggi() {
     html += `</div>`;
   }
 
-  if (daFare.length===0 && settimana.length===0 && prossimamente.length===0 && daRecuperare.length===0 && fatti.length===0) {
+  if (adesso.length===0 && settimana.length===0 && prossimamente.length===0 && daRecuperare.length===0 && fatti.length===0) {
     html += `<div class="empty"><div class="empty-icon">🍇</div><div class="empty-text">Nessun task per oggi.<br>Aggiungi qualcosa con il +</div></div>`;
   }
 
