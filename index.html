@@ -1678,7 +1678,7 @@ function ospitiInCasaHTML(tasks){
     const js = (g.ospite||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     righe.push(`<div class="incasa-row" onclick="vaiACasa('${js}')">
       <div class="incasa-name"><b>${escapeHtml(_casaBreve(g.casa))}</b> · ${escapeHtml(g.ospite)}</div>
-      <div class="incasa-sub">in casa fino al ${formatShort(co)}</div>
+      <div class="incasa-sub">in casa fino al ${formatShort(co)} <span style="color:var(--grigio)">(${_relGiorni(co)})</span></div>
       <div class="incasa-badges">${badges}</div>
     </div>`);
   });
@@ -1968,7 +1968,7 @@ function mostraGiorno(iso) {
   if (!box) return;
   const tasks = filterByRole(loadTasks()).filter(x => !x.completato && x.scadenza===iso)
     .sort((a,b)=> (a.tipo<b.tipo?-1:1));
-  let h = '<div class="car-day-h">' + formatLong(iso) + ' · ' + tasks.length + (tasks.length===1?' scadenza':' scadenze') + '</div>';
+  let h = '<div class="car-day-h">' + formatLong(iso) + ' (' + _relGiorni(iso) + ') · ' + tasks.length + (tasks.length===1?' scadenza':' scadenze') + '</div>';
   tasks.forEach(x => { h += taskCardHTML(x, false, false, false, true); });
   box.innerHTML = '<div class="car-day">' + h + '</div>';
   box.scrollIntoView({behavior:'smooth', block:'start'});
