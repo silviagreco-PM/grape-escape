@@ -348,6 +348,9 @@
   .salute-box.open .salute-list{display:block}
   .nc-prop{font-size:11px;color:#9A6A2E;font-weight:700;margin-top:3px;cursor:pointer;display:inline-block}
   .nc-prop b{font-weight:800;border-bottom:1px dotted #C99A6A}
+  .nc-win{font-size:11px;font-weight:700;margin-top:5px;display:inline-block;padding:2px 9px;border-radius:6px}
+  .nc-win.ok{background:#E6F4EA;color:#157A39}
+  .nc-win.wait{background:#FFF1DC;color:#B8460A}
   .contr-box{background:#FFE9EC;border:1px solid #F7B8C4;border-radius:14px;padding:12px 14px;margin:8px 2px 13px}
   .contr-h{font-size:14px;font-weight:800;color:#C2113F}
   .contr-list{font-size:12.5px;color:#7A2030;margin-top:6px;line-height:1.7}
@@ -1691,6 +1694,21 @@ function toggleInCasa(){
 function _ncTipo(t){return {scontrino:['Scontrino','nc-tag-sco'],autofattura:['Autofattura','nc-tag-aut'],'fattura-pm':['Fattura','nc-tag-fat'],alloggiati:['Alloggiati','nc-tag-all'],ross:['ROSS/ISTAT','nc-tag-ross'],manuale:['Promemoria','nc-tag-pro']}[t]||['Promemoria','nc-tag-pro'];}
 // Nome casa accorciato per la visualizzazione (i dati restano col nome pieno).
 function _casaBreve(c){ return c==='Appartamento del Palio' ? 'App. del Palio' : (c||''); }
+// Finestra "fattibile dal → al": da quando un task si può iniziare (poi entro la scadenza).
+function _fattibileDal(x){
+  if(!x.scadenza) return null;
+  if(x.tipo==='scontrino') return x.scadenza;               // dal check-in
+  if(x.tipo==='alloggiati') return addDays(x.scadenza,-1);  // dal check-in (scad = +1)
+  if(x.tipo==='fattura-pm') return addDays(x.scadenza,-12); // dalla data di pagamento
+  if(x.tipo==='autofattura'){ const s=isoToDate(x.scadenza); return s.getFullYear()+'-'+String(s.getMonth()+1).padStart(2,'0')+'-01'; } // dal 1° del mese
+  return null; // promemoria / ross: nessun vincolo d'inizio
+}
+function _finestraHTML(x){
+  const dal=_fattibileDal(x); if(!dal) return '';
+  return dal<=today()
+    ? '<div class="nc-win ok">🟢 Fattibile ora</div>'
+    : '<div class="nc-win wait">⏳ Non prima del '+formatShort(dal)+'</div>';
+}
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
 function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
 // Mostra tutte le fatture di uno stesso proprietario (per farle in un colpo solo).
@@ -1827,6 +1845,7 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     +'<div class="nc-who">'+casaH+ospiteH+'</div>'
     +(task.tipo==='fattura-pm' && _proprietario(task.casa) ? '<div class="nc-prop" onclick="event.stopPropagation();vediFatture(\''+task.casa+'\')">→ fattura a <b>'+escapeHtml(_proprietario(task.casa))+'</b></div>' : '')
     +soggBlocco
+    +_finestraHTML(task)
     +'</div>'
     +'</div>'
     +(hasCopy?'<div class="nc-copy">'+copy+action+'</div>':'')
@@ -2989,11 +3008,16 @@ const CONTRATTI = {
 };
 function _prossimaDisdetta(casa){
   const c=CONTRATTI[casa]; if(!c||!c.rinnovo) return null;
-  let rin=new Date(c.rinnovo+'T12:00:00Z'); const now=new Date();
-  if(c.auto){ while(rin<now){ rin.setUTCFullYear(rin.getUTCFullYear()+1); } }
-  else if(rin<now){ return null; }
-  const dis=new Date(rin); dis.setUTCDate(dis.getUTCDate()-(c.preavviso||0));
-  return { rinnovo:rin.toISOString().slice(0,10), disdetta:dis.toISOString().slice(0,10), giorni:Math.round((dis-now)/86400000), auto:c.auto };
+  const todayStr=today();
+  let rin=new Date(c.rinnovo+'T12:00:00Z');
+  const disStrOf=r=>{ const d=new Date(r); d.setUTCDate(d.getUTCDate()-(c.preavviso||0)); return d.toISOString().slice(0,10); };
+  // Auto-rinnovo: se la disdetta di questo ciclo è già passata, avanza all'anno dopo
+  // (così dopo il 22/06 mostra il 2027, non "scaduta"). Confronto per DATA, non per ora.
+  if(c.auto){ while(disStrOf(rin) < todayStr){ rin.setUTCFullYear(rin.getUTCFullYear()+1); } }
+  else if(rin.toISOString().slice(0,10) < todayStr){ return null; }
+  const dis=disStrOf(rin), rinStr=rin.toISOString().slice(0,10);
+  const giorni=Math.round((Date.parse(dis+'T12:00:00Z') - Date.parse(todayStr+'T12:00:00Z'))/86400000);
+  return { rinnovo:rinStr, disdetta:dis, giorni:giorni, auto:c.auto };
 }
 const CASE_GESTIONE = [
   { casa:'Appartamento del Palio', luogo:'Palio', prop:'Ana Krapovickas', feeOTA:'20%', feePropDir:'20%', feePMDir:'30%', extra:'PriceLabs €15/mese', avvio:'07/04/2025', scadenza:'07/07/2026, poi rinnovo annuale', recesso:'preavviso 15 giorni', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
@@ -3065,9 +3089,15 @@ function renderCase() {
 
   const chip = (lbl, val) => `<span style="font-size:10px;font-weight:700;color:var(--verde);background:var(--verde-light);border:1px solid #B8E4B8;border-radius:6px;padding:3px 8px;white-space:nowrap">${lbl} ${val}</span>`;
   CASE_GESTIONE.forEach(c => {
+    const dis=_prossimaDisdetta(c.casa);
+    const fmtD=s=>String(s).split('-').reverse().join('/');
+    const disRow = dis ? `<div style="display:flex;gap:10px;align-items:baseline;background:#FFF4F6;border-radius:8px;padding:5px 8px;margin-top:2px">
+        <span style="font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#C2113F;min-width:88px;flex-shrink:0">${dis.auto?'Disdetta entro':'Scade il'}</span>
+        <span style="font-size:12px;color:#7A2030;font-weight:600;line-height:1.45">${fmtD(dis.disdetta)} (${dis.giorni} gg)${dis.auto?` · poi rinnovo ${fmtD(dis.rinnovo)}`:''}</span>
+      </div>` : '';
     html += `<div class="task-card" onclick="vaiACasa('${c.casa.replace(/'/g, "\\'")}')" style="flex-direction:column;align-items:stretch;gap:7px;border-top:3px solid var(--verde);cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-        <span style="font-size:15px;font-weight:700">${c.casa} ›</span>
+        <span style="font-size:15px;font-weight:700">${_casaBreve(c.casa)} ›</span>
         <span style="font-size:11px;color:var(--grigio)">${c.luogo}</span>
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--nero)">${c.prop}</div>
@@ -3077,6 +3107,7 @@ function renderCase() {
       ${c.extra && c.extra !== '—' ? regolaRow('Extra', c.extra) : ''}
       ${regolaRow('Avvio', c.avvio)}
       ${regolaRow('Scadenza', c.scadenza)}
+      ${disRow}
       ${regolaRow('Recesso', c.recesso)}
       ${regolaRow('Penale', c.penale)}
     </div>`;
