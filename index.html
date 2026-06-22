@@ -1705,12 +1705,16 @@ function _checkinISO(x){
   if(x.scadenza && iso > x.scadenza) iso=(parseInt(yr,10)-1)+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
   return iso;
 }
+function _dataDocISO(x){
+  const m=x.dataDoc && /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(x.dataDoc);
+  return m ? m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : null;
+}
 function _fattibileDal(x){
   if(!x.scadenza) return null;
   if(x.tipo==='scontrino') return _checkinISO(x) || x.scadenza;               // dal check-in
   if(x.tipo==='alloggiati') return _checkinISO(x) || addDays(x.scadenza,-1);  // dal check-in
   if(x.tipo==='fattura-pm') return addDays(x.scadenza,-12); // dalla data di pagamento
-  if(x.tipo==='autofattura'){ const s=isoToDate(x.scadenza); return s.getFullYear()+'-'+String(s.getMonth()+1).padStart(2,'0')+'-01'; } // dal 1° del mese
+  if(x.tipo==='autofattura') return _dataDocISO(x);         // dalla data della prenotazione (poi entro il 15 del mese dopo)
   return null; // promemoria / ross: nessun vincolo d'inizio
 }
 function _relGiorni(iso){
