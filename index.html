@@ -1703,12 +1703,19 @@ function _fattibileDal(x){
   if(x.tipo==='autofattura'){ const s=isoToDate(x.scadenza); return s.getFullYear()+'-'+String(s.getMonth()+1).padStart(2,'0')+'-01'; } // dal 1° del mese
   return null; // promemoria / ross: nessun vincolo d'inizio
 }
+function _relGiorni(iso){
+  if(!iso) return '';
+  const d=Math.round((Date.parse(iso+'T12:00:00Z')-Date.parse(today()+'T12:00:00Z'))/86400000);
+  if(d===0) return 'oggi'; if(d===1) return 'domani'; if(d===2) return 'dopodomani';
+  if(d>2) return 'fra '+d+' gg'; if(d===-1) return 'ieri'; return Math.abs(d)+' gg fa';
+}
 function _finestraHTML(x){
   const dal=_fattibileDal(x); if(!dal) return '';
-  const al = x.scadenza ? ' · non oltre il '+formatShort(x.scadenza) : '';
+  const rel=s=>{const r=_relGiorni(s);return r?' ('+r+')':'';};
+  const al = x.scadenza ? ' · non oltre il '+formatShort(x.scadenza)+rel(x.scadenza) : '';
   return dal<=today()
     ? '<div class="nc-win ok">🟢 Fattibile ora'+al+'</div>'
-    : '<div class="nc-win wait">⏳ Non prima del '+formatShort(dal)+al+'</div>';
+    : '<div class="nc-win wait">⏳ Non prima del '+formatShort(dal)+rel(dal)+al+'</div>';
 }
 function _ncRuolo(casa){return CASE_HOST.includes(casa)?'Host':CASE_PM.includes(casa)?'PM':'Tutte';}
 function _proprietario(casa){var c=(typeof CASE_GESTIONE!=='undefined')?CASE_GESTIONE.find(function(x){return x.casa===casa;}):null;return c?c.prop:'';}
