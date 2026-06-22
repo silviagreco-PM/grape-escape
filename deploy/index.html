@@ -1619,9 +1619,10 @@ function ospitiInCasaHTML(tasks){
     }
     if (!(ci <= t0 && co && t0 < co)) return; // in casa solo se check-in passato e check-out futuro
     const aperti = g.tasks.filter(x => !x.completato && (x.tipo === 'alloggiati' || x.tipo === 'scontrino'));
+    const doneLabel = _ncRuolo(g.casa) === 'Host' ? 'alloggiati e scontrino ✓' : 'alloggiati ✓';
     const badges = aperti.length
       ? aperti.map(x => `<span class="incasa-todo" onclick="event.stopPropagation();goToTask('${x.id}')">${_ncTipo(x.tipo)[0]} da fare</span>`).join('')
-      : '<span class="incasa-done">alloggiati e scontrino ✓</span>';
+      : `<span class="incasa-done">${doneLabel}</span>`;
     const js = (g.ospite||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     righe.push(`<div class="incasa-row" onclick="vaiACasa('${js}')">
       <div class="incasa-name"><b>${escapeHtml(g.casa)}</b> · ${escapeHtml(g.ospite)}</div>
