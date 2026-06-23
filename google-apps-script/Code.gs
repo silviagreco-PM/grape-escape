@@ -405,18 +405,26 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
   // Data prenotazione ≈ data di arrivo dell'email OTA (Kross/Airbnb/Booking notificano alla conferma)
   try { if (data) dati.prenotato = Utilities.formatDate(new Date(data), 'Europe/Rome', 'yyyy-MM-dd'); } catch (e) {}
 
-  // Capisce di che tipo di email si tratta
+  // Capisce di che tipo di email si tratta. RESTRITTIVO: solo le CONFERME vere
+  // diventano "prenotazione". Le email Airbnb di richiesta/info ("Prenotazione per
+  // l'annuncio…"), i promemoria, le recensioni, i messaggi e i pagamenti NON lo sono.
+  var ogN = ogg.replace(/[’]/g, "'"); // apostrofo curvo → dritto
+  var isRumore = /per l'annuncio|richiesta|promemoria|recensione|com'è andato|com'e andato|nuovo messaggio|messaggio da|invia un messaggio|rispondi|controlla il tuo messaggio|valuta|scrivi una|guida|in arrivo questa settimana/.test(ogN);
+  var isConfermaOTA = /prenotazione confermata|confermata!|booking confirmed|reservation confirmed/.test(ogN);
+  var isNuovaKross  = (piattaforma === 'kross') && /nuova prenotazione/.test(ogN) && /riferimento/.test(cor) && /totale tariffa/.test(cor);
+
   if (ogg.match(/cancell/)) {
     dati.tipo = 'cancellazione';
-  } else if (ogg.match(/prenotaz|conferm|nuova prenot|new reserv|booking confirm|new booking|reservation|richiesta|ha prenotato|has booked|booked your/)) {
-    dati.tipo = 'prenotazione';
-  } else if (ogg.match(/modific|modif|alterat|changed/)) {
-    dati.tipo = 'modifica';
-  } else if (ogg.match(/pagamento|payout|compenso|guadagno|trasferimento|co.host|earning/)) {
+  } else if (ogg.match(/pagamento|payout|compenso del co|guadagno|trasferimento|co.?host|earning|è stato inviato|importo di/)) {
     dati.tipo = 'pagamento';
   } else if (ogg.match(/fattura|invoice|iva|td17|riepilogo commissioni/)) {
     dati.tipo = 'autofattura';
+  } else if (!isRumore && (isConfermaOTA || isNuovaKross)) {
+    dati.tipo = 'prenotazione';
+  } else if (ogg.match(/modific|alterat|changed/)) {
+    dati.tipo = 'modifica';
   }
+  // altrimenti resta 'altro' (e non crea nulla)
 
   // Trova la casa — cerca in oggetto + corpo (normalizza accenti e apostrofi)
   function _normalizza(s) {
@@ -780,6 +788,9 @@ function _creaTask(d, storico) {
 
   // PRENOTAZIONE o MODIFICA
   if (d.tipo !== 'prenotazione' && d.tipo !== 'modifica') return 0;
+  // Niente codice prenotazione = non è una conferma vera (es. richieste/promemoria
+  // Airbnb): non creare task fantasma.
+  if (!d.codice) { Logger.log('⏭ Prenotazione senza codice — ignorata (probabile richiesta/promemoria)'); return 0; }
   if (!d.checkin) {
     Logger.log('⚠ Nessuna data check-in trovata');
     if (!storico) _notifica('⚠ Prenotazione da controllare', 'Arrivata una prenotazione (' + (d.codice||'senza codice') + ') senza data di arrivo leggibile: controllala a mano nell\'app.');
