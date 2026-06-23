@@ -398,6 +398,9 @@
   .nc-fl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#B0B0B0}
   .nc-fv{font-size:14px;font-weight:800;color:#222;margin-top:3px;word-break:break-all}
   .nc-est{display:block;font-size:10px;font-weight:800;color:#B8460A;margin-top:3px;text-transform:none;letter-spacing:0}
+  .imp-badge{display:inline-block;font-size:10px;font-weight:800;border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:middle;text-transform:none;letter-spacing:0;white-space:nowrap}
+  .imp-badge.ok{background:#E6F4EA;color:#15803D}
+  .imp-badge.kross{background:#FFF3DC;color:#B8460A}
   .nc-cb{margin-top:8px;display:inline-flex;gap:5px;font-size:11px;font-weight:800;background:#fff;border:1.5px solid #E3E5E8;border-radius:8px;padding:6px 11px;cursor:pointer;color:#222}
   .nc-cb.copied{background:#E6F4EA;border-color:#A9D9B8;color:#15803D}
   .nc-info{background:#FBF8FF;border:1px solid #ECE2FB;border-radius:12px;padding:11px 13px;font-size:13px;color:#5B4080;line-height:1.45}
@@ -1792,6 +1795,16 @@ function _ncDateInfo(note){
   m=note.match(/[Cc]heck-?out\s+(\d{1,2})\/(\d{2})/); if(m) out.co=fmt(m[1],m[2]);
   return out;
 }
+// Provenienza dell'importo: Airbnb/manuale = ufficiale (✓ verificato); Kross = da
+// verificare (la sua tariffa non sempre coincide con quella ufficiale di Booking).
+function _impBadge(task){
+  if(task.importo==null) return '';
+  return /\[importo:\s*kross\]/i.test(task.note||'')
+    ? ' <span class="imp-badge kross" title="Importo dalla tariffa di Kross: può non coincidere con quella ufficiale. Controlla in extranet e ri-salva per confermare.">Kross · da verificare</span>'
+    : ' <span class="imp-badge ok" title="Importo ufficiale dal canale">✓ verificato</span>';
+}
+// Toglie il marcatore "[importo: Kross]" dalla nota: l'importo diventa verificato.
+function _impVerificato(note){ return (note||'').replace(/\s*\[importo:\s*kross\]/ig,'').trim(); }
 function _ncField(label,value,copyText){
   return '<div class="nc-f"><div class="nc-fl">'+label+'</div><div class="nc-fv">'+value+'</div>'+
     (copyText!=null?'<button class="nc-cb" onclick="copyVal('+jsAttr(copyText)+',this)"><span class="copy-icon">⎘</span> Copia</button>':'')+'</div>';
@@ -1828,13 +1841,13 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     const desc='PRENOTAZIONE '+canaleTxt+' '+(task.codice||'');
     copy+='<div class="nc-grid">';
     copy+=_ncField('Descrizione',escapeHtml(desc),task.codice?desc:null);
-    copy+=_ncField('Importo (lordo ospite)',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2).replace('.',','):null);
+    copy+=_ncField('Importo (lordo ospite)',task.importo!=null?fmtEuro(task.importo)+' €'+_impBadge(task):'—',task.importo!=null?Number(task.importo).toFixed(2).replace('.',','):null);
     copy+='</div>';
   } else if (task.tipo==='autofattura') {
     const caus='PRENOTAZIONE '+canaleTxt+' '+(task.codice||'');
     copy+='<div class="nc-grid">';
     copy+=_ncField('Causale',escapeHtml(caus),task.codice?caus:null);
-    copy+=_ncField('Imponibile',task.importo!=null?fmtEuro(task.importo)+' €':'—',task.importo!=null?Number(task.importo).toFixed(2).replace('.',','):null);
+    copy+=_ncField('Imponibile',task.importo!=null?fmtEuro(task.importo)+' €'+_impBadge(task):'—',task.importo!=null?Number(task.importo).toFixed(2).replace('.',','):null);
     copy+='</div>';
   } else if (isPM) {
     const caus=isAirbnb
@@ -1844,7 +1857,7 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     copy+=_ncField('Causale',escapeHtml(caus),caus);
     if (isBooking && task.importo!=null && fee) {
       const f=task.importo*fee;
-      copy+=_ncField('Importo da fatturare ('+Math.round(fee*100)+'% di '+fmtEuro(task.importo)+' €)',fmtEuro(f)+' €',f.toFixed(2).replace('.',','));
+      copy+=_ncField('Importo da fatturare ('+Math.round(fee*100)+'% di '+fmtEuro(task.importo)+' €)',fmtEuro(f)+' €'+_impBadge(task),f.toFixed(2).replace('.',','));
     } else if (isAirbnb && task.cohost!=null) {
       copy+=_ncField('Importo da fatturare',fmtEuro(task.cohost)+' €',Number(task.cohost).toFixed(2).replace('.',','));
     } else if (isAirbnb && task.importo!=null && fee) {
@@ -1857,7 +1870,7 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
     }
     copy+='</div>';
   } else if (task.tipo==='manuale') {
-    if (task.note) copy+='<div class="nc-info">'+escapeHtml(task.note)+'</div>';
+    { const _n=_impVerificato(task.note); if (_n) copy+='<div class="nc-info">'+escapeHtml(_n)+'</div>'; }
   }
 
   let action='';
@@ -2370,7 +2383,7 @@ function _completaTask(id, importo) {
   task.completato = !task.completato;
   task.completatoIl   = task.completato ? today() : null;
   task.completatoAlle = task.completato ? `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` : null;
-  if (importo != null) task.importo = importo;
+  if (importo != null) { task.importo = importo; task.note = _impVerificato(task.note); }
   tasks[idx] = task;
   saveTasks(tasks);
   renderOggi();
@@ -2404,6 +2417,7 @@ function salvaImportoCard(id) {
   const idx = tasks.findIndex(x => x.id === id);
   if (idx < 0) return;
   tasks[idx].importo = val;
+  tasks[idx].note = _impVerificato(tasks[idx].note); // importo inserito a mano = ufficiale
   saveTasks(tasks);
   renderOggi();
   showToast('✓ Importo salvato');
