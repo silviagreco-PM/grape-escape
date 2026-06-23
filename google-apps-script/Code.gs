@@ -113,9 +113,11 @@ function riconciliaPrenotazioni() {
 
 /**
  * AUTO-CORREZIONE — completa da sola i task con dati incompleti.
- * Trova scontrini/alloggiati/fatture senza nome ospite o senza importo e li
- * completa rileggendo le email Gmail della STESSA prenotazione, dando priorità a
- * Kross (che ha i campi precisi: Riferimento, Totale tariffa, Arrivo/Partenza).
+ * Trova scontrini/alloggiati/fatture senza nome ospite (o senza importo se è una
+ * DIRETTA) e li completa rileggendo le email Gmail della STESSA prenotazione, dando
+ * priorità a Kross per nome e date (Riferimento, Arrivo/Partenza). L'IMPORTO delle
+ * prenotazioni OTA NON viene preso da Kross (tariffa non affidabile): resta vuoto e
+ * lo confermi tu con la cifra esatta di Airbnb/Booking.
  * Serve perché spesso l'email Airbnb arriva per prima e crea il task con dati
  * incompleti; quando poi arriva l'email Kross (completa) viene saltata come
  * doppione, quindi i suoi dati non venivano mai scritti. Qui li recuperiamo.
@@ -138,7 +140,10 @@ function completaDatiMancanti() {
   var incompleti = tasks.filter(function(t) {
     if (!t.codice) return false;
     var noNome = manca(t.ospite);
-    var noImp  = (t.tipo !== 'alloggiati') && manca(t.importo);
+    // L'importo si può recuperare in automatico SOLO per le DIRETTE (da Kross). Per le
+    // OTA la tariffa esatta la confermi tu (Kross non è affidabile sull'importo): non
+    // rileggiamo Gmail all'infinito per un campo che non possiamo riempire.
+    var noImp  = (t.tipo !== 'alloggiati') && manca(t.importo) && t.canale === 'Diretta';
     return noNome || noImp;
   });
   if (!incompleti.length) { Logger.log('completaDati: niente da completare'); return 0; }
@@ -219,7 +224,9 @@ function _datiDaGmail(codice) {
     var d = _analizzaEmail(msg.getSubject(), corpo, piatt, msg.getDate());
     if (!d) continue;
     if (!best.ospite && d.ospite) best.ospite = d.ospite;
-    if (!best.importo && d.importo) best.importo = d.importo; // l'importo lo dà solo Kross
+    // L'importo arriva solo dalle DIRETTE (Kross); per le OTA d.importo è vuoto di
+    // proposito, perché la tariffa di Kross non è affidabile e quella esatta la metti tu.
+    if (!best.importo && d.importo) best.importo = d.importo;
     // Kross sovrascrive le date (precise); le altre fonti solo se mancano.
     if (piatt === 'kross' && d.checkin) { best.checkin = d.checkin; best.checkout = d.checkout; best.fonte = 'kross'; }
     else if (!best.checkin && d.checkin) { best.checkin = d.checkin; best.checkout = d.checkout; best.fonte = piatt; }
@@ -524,11 +531,17 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     if (mArr) dati.checkin  = mArr[3] + '-' + mArr[2].padStart(2,'0') + '-' + mArr[1].padStart(2,'0');
     if (mPar) dati.checkout = mPar[3] + '-' + mPar[2].padStart(2,'0') + '-' + mPar[1].padStart(2,'0');
 
-    // Importo ospite: "Totale tariffa: Euro 412,43"
-    var mTot = corpo.match(/totale tariffa:\s*(?:euro|eur|€)\s*([0-9.,]+)/i);
-    if (mTot) {
-      var nTot = parseFloat(mTot[1].replace(/\./g,'').replace(',','.'));
-      if (!isNaN(nTot) && nTot > 0) dati.importo = nTot;
+    // Importo ospite: "Totale tariffa: Euro 412,43".
+    // ⚠️ La tariffa di Kross NON sempre coincide con quella esatta di Airbnb/Booking.
+    // Per le prenotazioni OTA l'importo va preso dall'email del canale (esatta), MAI da
+    // Kross. Qui lo usiamo SOLO per le DIRETTE (FrontOffice/Booking Engine), dove Kross
+    // è l'unica fonte possibile.
+    if (dati.canale === 'Diretta') {
+      var mTot = corpo.match(/totale tariffa:\s*(?:euro|eur|€)\s*([0-9.,]+)/i);
+      if (mTot) {
+        var nTot = parseFloat(mTot[1].replace(/\./g,'').replace(',','.'));
+        if (!isNaN(nTot) && nTot > 0) dati.importo = nTot;
+      }
     }
     // Le email Kross di prenotazione non contengono il compenso co-host:
     // azzeriamo il valore "indovinato" (era la commissione, es. EUR 6.18).
@@ -607,12 +620,11 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     // Se il check-out "indovinato" prima non è oltre il check-in vero, scartalo.
     if (dati.checkin && dati.checkout && dati.checkout <= dati.checkin) dati.checkout = null;
 
-    // Importo ospite (lordo): etichetta "Totale (EUR)" delle email Airbnb.
-    var mTotAir = corpo.match(/totale\s*\((?:eur|€)\)[^0-9]*([0-9][0-9.,]*)/i);
-    if (mTotAir) {
-      var nTA = parseFloat(mTotAir[1].replace(/\./g, '').replace(',', '.'));
-      if (!isNaN(nTA) && nTA > 0) dati.importo = nTA;
-    }
+    // Importo: NON lo indoviniamo dall'email Airbnb. Le etichette degli importi
+    // (totale ospite vs payout host al netto delle commissioni) sono ambigue e un
+    // numero sbagliato è peggio di un campo vuoto. L'importo resta vuoto e l'app lo
+    // segnala "da verificare": lo confermi tu con la tariffa esatta che vedi su Airbnb.
+    // (Per attivarne la lettura automatica serve un'email Airbnb reale di esempio.)
   }
 
   return dati;
