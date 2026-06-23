@@ -159,9 +159,10 @@ function completaDatiMancanti() {
       if (manca(t.ospite) && info.ospite) patch.ospite = info.ospite;
       if (t.tipo !== 'alloggiati' && manca(t.importo) && info.importo) patch.importo = info.importo;
 
-      // Date sbagliate (es. check-out indovinato male dall'email Airbnb): correggi
-      // solo se Kross dà le date precise e sono diverse da quelle salvate nella nota.
-      if (info.fonte === 'kross' && info.checkin) {
+      // Date sbagliate (es. check-in preso dalla data dell'email invece che dall'arrivo
+      // reale): correggi quando una fonte riconosciuta dà una data diversa da quella
+      // salvata nella nota. Kross/Airbnb/Booking estraggono le date in modo esplicito.
+      if (info.fonte && info.checkin) {
         var coOK = info.checkout && (t.note || '').indexOf(_ggmm(info.checkout)) >= 0;
         var ciOK = (t.note || '').indexOf(_ggmm(info.checkin)) >= 0;
         if (!ciOK || (info.checkout && !coOK)) {
@@ -561,6 +562,57 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     var ciB = _dataBk('check-in'), coB = _dataBk('check-out');
     if (ciB) dati.checkin = ciB;
     if (coB) dati.checkout = coB;
+  }
+
+  // ── AIRBNB — intestazione "Nuova prenotazione confermata! NOME arriverà il GG mese".
+  // Per le case Host gestite direttamente su Airbnb (non passano da Kross) questa email
+  // è l'UNICA fonte affidabile: leggiamo nome e date in modo esplicito invece di
+  // indovinare. Senza questo, veniva preso come check-in la DATA DELL'EMAIL (giorno della
+  // prenotazione) e non la data di arrivo reale — la prenotazione sembrava già scaduta.
+  if (piattaforma === 'airbnb') {
+    var MESI_RE = MESI_IT.concat(MESI_IT_SHORT).join('|');
+    var _meseNum = function(s) {
+      s = s.toLowerCase();
+      var i = MESI_IT.indexOf(s); if (i >= 0) return i + 1;
+      i = MESI_IT_SHORT.indexOf(s.slice(0, 3)); return i >= 0 ? i + 1 : 0;
+    };
+    var _dataAir = function(gg, meseStr, anno) {
+      var m = _meseNum(meseStr); if (!m) return null;
+      var a;
+      if (anno) a = parseInt(anno, 10);
+      else {
+        // Senza anno: se il mese è già passato rispetto alla prenotazione, è dell'anno
+        // dopo (es. prenoti a dicembre per gennaio).
+        var by = dati.prenotato ? parseInt(dati.prenotato.slice(0, 4), 10) : 2026;
+        var bm = dati.prenotato ? parseInt(dati.prenotato.slice(5, 7), 10) : 1;
+        a = (m < bm) ? by + 1 : by;
+      }
+      return a + '-' + String(m).padStart(2, '0') + '-' + String(gg).padStart(2, '0');
+    };
+
+    // Nome ospite dall'intestazione (anche un solo nome di battesimo, es. "Edris").
+    var mNomeAir = testo.match(new RegExp('confermat[ao]!?\\s+([A-ZÀ-Þ][A-Za-zÀ-ÿ\'’.\\- ]*?)\\s+(?:arriver|arriva|è in arrivo)', 'i'));
+    if (mNomeAir && mNomeAir[1]) dati.ospite = mNomeAir[1].trim();
+
+    // Check-in: "arriverà il 21 ago" (intestazione) oppure etichetta "Check-in" nel corpo.
+    var mCiAir = testo.match(new RegExp('arriver[àa]\\s+(?:il\\s+)?(\\d{1,2})\\s+(' + MESI_RE + ')(?:\\s+(\\d{4}))?', 'i'))
+              || corpo.match(new RegExp('check[\\s\\-]?in[^0-9]{0,40}?(\\d{1,2})\\s+(' + MESI_RE + ')(?:\\s+(\\d{4}))?', 'i'));
+    if (mCiAir) { var ciA = _dataAir(mCiAir[1], mCiAir[2], mCiAir[3]); if (ciA) dati.checkin = ciA; }
+
+    // Check-out: etichetta "Check-out" nel corpo, oppure "riparte/parte il ...".
+    var mCoAir = corpo.match(new RegExp('check[\\s\\-]?out[^0-9]{0,40}?(\\d{1,2})\\s+(' + MESI_RE + ')(?:\\s+(\\d{4}))?', 'i'))
+              || corpo.match(new RegExp('(?:riparte|parte|se ne va)\\s+(?:il\\s+)?(\\d{1,2})\\s+(' + MESI_RE + ')(?:\\s+(\\d{4}))?', 'i'));
+    if (mCoAir) { var coA = _dataAir(mCoAir[1], mCoAir[2], mCoAir[3]); if (coA) dati.checkout = coA; }
+
+    // Se il check-out "indovinato" prima non è oltre il check-in vero, scartalo.
+    if (dati.checkin && dati.checkout && dati.checkout <= dati.checkin) dati.checkout = null;
+
+    // Importo ospite (lordo): etichetta "Totale (EUR)" delle email Airbnb.
+    var mTotAir = corpo.match(/totale\s*\((?:eur|€)\)[^0-9]*([0-9][0-9.,]*)/i);
+    if (mTotAir) {
+      var nTA = parseFloat(mTotAir[1].replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(nTA) && nTA > 0) dati.importo = nTA;
+    }
   }
 
   return dati;
