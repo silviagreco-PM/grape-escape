@@ -115,9 +115,9 @@ function riconciliaPrenotazioni() {
  * AUTO-CORREZIONE — completa da sola i task con dati incompleti.
  * Trova scontrini/alloggiati/fatture senza nome ospite (o senza importo se è una
  * DIRETTA) e li completa rileggendo le email Gmail della STESSA prenotazione, dando
- * priorità a Kross per nome e date (Riferimento, Arrivo/Partenza). L'IMPORTO delle
- * prenotazioni OTA NON viene preso da Kross (tariffa non affidabile): resta vuoto e
- * lo confermi tu con la cifra esatta di Airbnb/Booking.
+ * priorità a Kross per nome e date (Riferimento, Arrivo/Partenza). L'IMPORTO si prende
+ * da Airbnb ("Totale (EUR)") o dalle Dirette (Kross); per Booking lo confermi tu. Se è
+ * una casa propria, crea anche l'autofattura TD17 mancante con la commissione Airbnb.
  * Serve perché spesso l'email Airbnb arriva per prima e crea il task con dati
  * incompleti; quando poi arriva l'email Kross (completa) viene saltata come
  * doppione, quindi i suoi dati non venivano mai scritti. Qui li recuperiamo.
@@ -140,10 +140,10 @@ function completaDatiMancanti() {
   var incompleti = tasks.filter(function(t) {
     if (!t.codice) return false;
     var noNome = manca(t.ospite);
-    // L'importo si può recuperare in automatico SOLO per le DIRETTE (da Kross). Per le
-    // OTA la tariffa esatta la confermi tu (Kross non è affidabile sull'importo): non
-    // rileggiamo Gmail all'infinito per un campo che non possiamo riempire.
-    var noImp  = (t.tipo !== 'alloggiati') && manca(t.importo) && t.canale === 'Diretta';
+    // L'importo si recupera da Airbnb ("Totale (EUR)") e dalle Dirette (Kross). Per
+    // Booking non abbiamo ancora il formato dell'importo, quindi non rileggiamo Gmail
+    // all'infinito: quel campo lo confermi tu.
+    var noImp  = (t.tipo !== 'alloggiati') && manca(t.importo) && t.canale !== 'Booking';
     return noNome || noImp;
   });
   if (!incompleti.length) { Logger.log('completaDati: niente da completare'); return 0; }
@@ -186,6 +186,28 @@ function completaDatiMancanti() {
 
       if (Object.keys(patch).length) { _aggiornaCampo(t.id, patch); fatti++; }
     });
+
+    // AUTOFATTURA TD17 mancante: se è una casa propria (host) e l'email Airbnb ha la
+    // commissione, crea l'autofattura della prenotazione se non esiste ancora. Copre i
+    // casi già in archivio (es. prenotazione creata prima di questa funzione).
+    var casaG = perCodice[base][0].casa;
+    if (info.commissione && casaG && CASE_HOST.indexOf(casaG) >= 0) {
+      var id_afG = _idTask(base, 'af');
+      var baseAfG = info.prenotato || info.checkin;
+      if (baseAfG && !_esistePerCodice(base + '_af', id_afG)) {
+        var dAfG = new Date(baseAfG + 'T12:00:00Z');
+        var scadAfG = new Date(Date.UTC(dAfG.getUTCFullYear(), dAfG.getUTCMonth() + 1, 15)).toISOString().slice(0, 10);
+        _salvaTask({
+          id: id_afG, tipo: 'autofattura', casa: casaG, ospite: info.ospite || '—',
+          canale: 'Airbnb', scadenza: scadAfG, codice: base + '_af',
+          importo: info.commissione, cohost: null, data_doc: _ggmmaaaa(baseAfG),
+          note: 'Autofattura TD17 — commissione Airbnb ' + info.commissione.toFixed(2).replace('.', ',')
+              + ' € (servizio host). Numero e data esatti dalla fattura IVA Airbnb del mese.',
+          completato: false, completato_il: null, completato_alle: null, creato_il: new Date().toISOString(),
+        });
+        fatti++;
+      }
+    }
   });
 
   if (fatti > 0) {
@@ -211,7 +233,7 @@ function _datiDaGmail(codice) {
     return (/kross/i.test(a.getFrom()) ? 0 : 1) - (/kross/i.test(b.getFrom()) ? 0 : 1);
   });
 
-  var best = { ospite: null, importo: null, checkin: null, checkout: null, fonte: null };
+  var best = { ospite: null, importo: null, commissione: null, checkin: null, checkout: null, prenotato: null, fonte: null };
   for (var k = 0; k < msgs.length; k++) {
     var msg = msgs[k];
     var mit = msg.getFrom().toLowerCase();
@@ -224,14 +246,16 @@ function _datiDaGmail(codice) {
     var d = _analizzaEmail(msg.getSubject(), corpo, piatt, msg.getDate());
     if (!d) continue;
     if (!best.ospite && d.ospite) best.ospite = d.ospite;
-    // L'importo arriva solo dalle DIRETTE (Kross); per le OTA d.importo è vuoto di
-    // proposito, perché la tariffa di Kross non è affidabile e quella esatta la metti tu.
+    // L'importo arriva da Airbnb ("Totale (EUR)") o dalle Dirette (Kross). Per Booking
+    // d.importo resta vuoto (formato non ancora gestito) e lo confermi tu.
     if (!best.importo && d.importo) best.importo = d.importo;
+    if (!best.commissione && d.commissione) best.commissione = d.commissione; // servizio host Airbnb
+    if (!best.prenotato && d.prenotato) best.prenotato = d.prenotato;
     // Kross sovrascrive le date (precise); le altre fonti solo se mancano.
     if (piatt === 'kross' && d.checkin) { best.checkin = d.checkin; best.checkout = d.checkout; best.fonte = 'kross'; }
     else if (!best.checkin && d.checkin) { best.checkin = d.checkin; best.checkout = d.checkout; best.fonte = piatt; }
   }
-  return (best.ospite || best.importo || best.checkin) ? best : null;
+  return (best.ospite || best.importo || best.checkin || best.commissione) ? best : null;
 }
 
 // ═══ ELABORAZIONE EMAIL ═══════════════════════════════════════════════════════
@@ -366,6 +390,7 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     codice: null,
     importo: null,
     compenso: null,
+    commissione: null,
     mese_fattura: null,
     prenotato: null
   };
@@ -620,11 +645,22 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     // Se il check-out "indovinato" prima non è oltre il check-in vero, scartalo.
     if (dati.checkin && dati.checkout && dati.checkout <= dati.checkin) dati.checkout = null;
 
-    // Importo: NON lo indoviniamo dall'email Airbnb. Le etichette degli importi
-    // (totale ospite vs payout host al netto delle commissioni) sono ambigue e un
-    // numero sbagliato è peggio di un campo vuoto. L'importo resta vuoto e l'app lo
-    // segnala "da verificare": lo confermi tu con la tariffa esatta che vedi su Airbnb.
-    // (Per attivarne la lettura automatica serve un'email Airbnb reale di esempio.)
+    // Importo LORDO ospite = "Totale (EUR)" (es. 286,10 €). È quello che ha pagato
+    // l'ospite: lo usiamo come importo dello scontrino / della fattura.
+    var mTotAir = corpo.match(/totale\s*\(eur\)[^0-9]{0,20}([0-9][0-9.,]*)/i);
+    if (mTotAir) {
+      var nTA = parseFloat(mTotAir[1].replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(nTA) && nTA > 0) dati.importo = nTA;
+    }
+    // Commissione Airbnb = "Costi del servizio dell'host (15.5%)" (es. -44,35 €). È la
+    // base dell'autofattura TD17 (solo per le case proprie). Il valore è negativo:
+    // prendiamo il modulo. Salta la percentuale tra parentesi prima del numero.
+    var mCommAir = corpo.match(/costi del servizio dell['’]?\s*host\s*\([^)]*\)[^0-9]{0,20}([0-9][0-9.,]*)/i)
+                || corpo.match(/costi del servizio dell['’]?\s*host[^0-9(]{0,20}([0-9][0-9.,]*)/i);
+    if (mCommAir) {
+      var nCA = parseFloat(mCommAir[1].replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(nCA) && nCA > 0) dati.commissione = nCA;
+    }
   }
 
   return dati;
@@ -650,6 +686,13 @@ function _aggiungiGiorni(data, giorni) {
   var d = new Date(data + 'T12:00:00Z');
   d.setUTCDate(d.getUTCDate() + giorni);
   return d.toISOString().slice(0, 10);
+}
+
+// Data ISO (2026-07-10) → "10/07/2026" per il campo data_doc dell'autofattura.
+function _ggmmaaaa(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
 }
 
 // Data ISO (2026-07-10) → "10/07" per le note (stesso formato usato ovunque nell'app)
@@ -778,6 +821,26 @@ function _creaTask(d, storico) {
         completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
+    }
+    // AUTOFATTURA TD17 — commissione Airbnb della prenotazione (SOLO case proprie).
+    // La commissione ("Costi del servizio dell'host") la leggiamo dall'email Airbnb.
+    // Data documento ≈ data prenotazione; scadenza = 15 del mese successivo.
+    if (d.commissione) {
+      var baseAf = d.prenotato || d.checkin;
+      var dAf = new Date(baseAf + 'T12:00:00Z');
+      var scadAf = new Date(Date.UTC(dAf.getUTCFullYear(), dAf.getUTCMonth() + 1, 15)).toISOString().slice(0, 10);
+      var id_af = _idTask(cod, 'af');
+      if (!storico || !_esistePerCodice(cod + '_af', id_af)) {
+        _salvaTask({
+          id: id_af, tipo: 'autofattura', casa: casa, ospite: d.ospite || '—',
+          canale: canale, scadenza: scadAf, codice: cod + '_af',
+          importo: d.commissione, cohost: null, data_doc: _ggmmaaaa(baseAf),
+          note: 'Autofattura TD17 — commissione Airbnb ' + d.commissione.toFixed(2).replace('.', ',')
+              + ' € (servizio host). ' + nota + ' Numero e data esatti dalla fattura IVA Airbnb del mese.',
+          completato: false, completato_il: null, completato_alle: null, creato_il: ora,
+        });
+        creati++;
+      }
     }
   } else {
     // FATTURA AL PROPRIETARIO
