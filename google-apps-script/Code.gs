@@ -140,10 +140,9 @@ function completaDatiMancanti() {
   var incompleti = tasks.filter(function(t) {
     if (!t.codice) return false;
     var noNome = manca(t.ospite);
-    // L'importo si recupera da Airbnb ("Totale (EUR)") e dalle Dirette (Kross). Per
-    // Booking non abbiamo ancora il formato dell'importo, quindi non rileggiamo Gmail
-    // all'infinito: quel campo lo confermi tu.
-    var noImp  = (t.tipo !== 'alloggiati') && manca(t.importo) && t.canale !== 'Booking';
+    // L'importo si recupera da Airbnb ("Totale (EUR)", ufficiale) e da Kross ("Totale
+    // tariffa", per Booking/Dirette). Quello Kross viene marcato "da verificare".
+    var noImp  = (t.tipo !== 'alloggiati') && manca(t.importo);
     return noNome || noImp;
   });
   if (!incompleti.length) { Logger.log('completaDati: niente da completare'); return 0; }
@@ -162,7 +161,14 @@ function completaDatiMancanti() {
     perCodice[base].forEach(function(t) {
       var patch = {};
       if (manca(t.ospite) && info.ospite) patch.ospite = info.ospite;
-      if (t.tipo !== 'alloggiati' && manca(t.importo) && info.importo) patch.importo = info.importo;
+      if (t.tipo !== 'alloggiati' && manca(t.importo) && info.importo) {
+        patch.importo = info.importo;
+        // Importo da Kross → marca "da verificare" nella nota (se non c'è già).
+        if (info.importoFonte === 'kross') {
+          var nB = (patch.note != null ? patch.note : (t.note || ''));
+          if (!/\[importo:\s*kross\]/i.test(nB)) patch.note = (nB + ' [importo: Kross]').trim();
+        }
+      }
 
       // Date sbagliate (es. check-in preso dalla data dell'email invece che dall'arrivo
       // reale): correggi quando una fonte riconosciuta dà una data diversa da quella
@@ -233,7 +239,7 @@ function _datiDaGmail(codice) {
     return (/kross/i.test(a.getFrom()) ? 0 : 1) - (/kross/i.test(b.getFrom()) ? 0 : 1);
   });
 
-  var best = { ospite: null, importo: null, commissione: null, checkin: null, checkout: null, prenotato: null, fonte: null };
+  var best = { ospite: null, importo: null, importoFonte: null, commissione: null, checkin: null, checkout: null, prenotato: null, fonte: null };
   for (var k = 0; k < msgs.length; k++) {
     var msg = msgs[k];
     var mit = msg.getFrom().toLowerCase();
@@ -246,9 +252,9 @@ function _datiDaGmail(codice) {
     var d = _analizzaEmail(msg.getSubject(), corpo, piatt, msg.getDate());
     if (!d) continue;
     if (!best.ospite && d.ospite) best.ospite = d.ospite;
-    // L'importo arriva da Airbnb ("Totale (EUR)") o dalle Dirette (Kross). Per Booking
-    // d.importo resta vuoto (formato non ancora gestito) e lo confermi tu.
-    if (!best.importo && d.importo) best.importo = d.importo;
+    // Importo: Airbnb ("Totale (EUR)", ufficiale) oppure Kross ("Totale tariffa", per
+    // Booking/Dirette). Teniamo traccia della fonte per il badge "verificato/da verificare".
+    if (!best.importo && d.importo) { best.importo = d.importo; best.importoFonte = d.importoFonte; }
     if (!best.commissione && d.commissione) best.commissione = d.commissione; // servizio host Airbnb
     if (!best.prenotato && d.prenotato) best.prenotato = d.prenotato;
     // Kross sovrascrive le date (precise); le altre fonti solo se mancano.
@@ -389,6 +395,7 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     notti: null,
     codice: null,
     importo: null,
+    importoFonte: null,
     compenso: null,
     commissione: null,
     mese_fattura: null,
@@ -556,16 +563,16 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     if (mArr) dati.checkin  = mArr[3] + '-' + mArr[2].padStart(2,'0') + '-' + mArr[1].padStart(2,'0');
     if (mPar) dati.checkout = mPar[3] + '-' + mPar[2].padStart(2,'0') + '-' + mPar[1].padStart(2,'0');
 
-    // Importo ospite: "Totale tariffa: Euro 412,43".
-    // ⚠️ La tariffa di Kross NON sempre coincide con quella esatta di Airbnb/Booking.
-    // Per le prenotazioni OTA l'importo va preso dall'email del canale (esatta), MAI da
-    // Kross. Qui lo usiamo SOLO per le DIRETTE (FrontOffice/Booking Engine), dove Kross
-    // è l'unica fonte possibile.
-    if (dati.canale === 'Diretta') {
+    // Importo ospite: "Totale tariffa: Euro 412,43". Lo usiamo per BOOKING (che non
+    // manda email dirette: Kross è l'unica fonte) e per le DIRETTE. Per Airbnb NO:
+    // lì l'importo ufficiale arriva dall'email Airbnb ("Totale (EUR)"). Marchiamo la
+    // fonte come 'kross' così l'app segnala "da verificare" (la tariffa Kross non
+    // sempre coincide con quella ufficiale).
+    if (dati.canale !== 'Airbnb') {
       var mTot = corpo.match(/totale tariffa:\s*(?:euro|eur|€)\s*([0-9.,]+)/i);
       if (mTot) {
         var nTot = parseFloat(mTot[1].replace(/\./g,'').replace(',','.'));
-        if (!isNaN(nTot) && nTot > 0) dati.importo = nTot;
+        if (!isNaN(nTot) && nTot > 0) { dati.importo = nTot; dati.importoFonte = 'kross'; }
       }
     }
     // Le email Kross di prenotazione non contengono il compenso co-host:
@@ -650,7 +657,7 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     var mTotAir = corpo.match(/totale\s*\(eur\)[^0-9]{0,20}([0-9][0-9.,]*)/i);
     if (mTotAir) {
       var nTA = parseFloat(mTotAir[1].replace(/\./g, '').replace(',', '.'));
-      if (!isNaN(nTA) && nTA > 0) dati.importo = nTA;
+      if (!isNaN(nTA) && nTA > 0) { dati.importo = nTA; dati.importoFonte = 'airbnb'; } // ufficiale
     }
     // Commissione Airbnb = "Costi del servizio dell'host (15.5%)" (es. -44,35 €). È la
     // base dell'autofattura TD17 (solo per le case proprie). Il valore è negativo:
@@ -798,6 +805,9 @@ function _creaTask(d, storico) {
       + '.'
     : '';
   var nota      = (notaPren + notaSogg).trim();
+  // Marcatore di provenienza dell'importo: se viene da Kross (Booking/Diretta) lo
+  // segnaliamo, così l'app mostra "da verificare". Airbnb = ufficiale = niente marcatore.
+  var notaImp   = nota + (d.importo != null && d.importoFonte === 'kross' ? ' [importo: Kross]' : '');
 
   if (isHost) {
     // SCONTRINO — il giorno del check-in
@@ -806,7 +816,7 @@ function _creaTask(d, storico) {
       _salvaTask({
         id: id_sc, tipo: 'scontrino', casa: casa, ospite: d.ospite || '—',
         canale: canale, scadenza: d.checkin, codice: cod + '_sc',
-        importo: d.importo || null, cohost: null, note: nota,
+        importo: d.importo || null, cohost: null, note: notaImp,
         completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
@@ -850,7 +860,7 @@ function _creaTask(d, storico) {
       _salvaTask({
         id: id_fp, tipo: 'fattura-pm', casa: casa, ospite: d.ospite || '—',
         canale: canale, scadenza: scadenza, codice: cod,
-        importo: d.importo || null, cohost: d.compenso || null, note: nota,
+        importo: d.importo || null, cohost: d.compenso || null, note: notaImp,
         completato: false, completato_il: null, completato_alle: null, creato_il: ora,
       });
       creati++;
