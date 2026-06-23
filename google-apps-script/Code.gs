@@ -55,7 +55,8 @@ function impostaTrigger() {
   ScriptApp.newTrigger('controllaEmailNuove').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('inviaRecapGiornaliero').timeBased().everyDays(1).atHour(7).create();
   ScriptApp.newTrigger('riconciliaPrenotazioni').timeBased().everyDays(1).atHour(6).create();
-  Logger.log('✅ Fatto! Controllo email ogni 5 minuti + recap alle 7 + riconciliazione alle 6.');
+  ScriptApp.newTrigger('completaDatiMancanti').timeBased().everyDays(1).atHour(6).create();
+  Logger.log('✅ Fatto! Email ogni 5 min + recap alle 7 + riconciliazione e auto-correzione alle 6.');
 }
 
 /**
@@ -76,6 +77,9 @@ function controllaEmailNuove() {
     'from:(airbnb.com OR booking.com OR kross) -label:' + LABEL_OK + ' newer_than:3d',
     false
   );
+  // Subito dopo: completa da sola i dati mancanti (es. l'email Kross arrivata dopo
+  // quella Airbnb, che riempie nome ospite/importo/date precise).
+  completaDatiMancanti();
 }
 
 /**
@@ -105,6 +109,121 @@ function riconciliaPrenotazioni() {
               'Una prenotazione che mancava è stata aggiunta in automatico — apri l\'app.');
   }
   Logger.log('Riconciliazione: ' + creati + ' task creati');
+}
+
+/**
+ * AUTO-CORREZIONE — completa da sola i task con dati incompleti.
+ * Trova scontrini/alloggiati/fatture senza nome ospite o senza importo e li
+ * completa rileggendo le email Gmail della STESSA prenotazione, dando priorità a
+ * Kross (che ha i campi precisi: Riferimento, Totale tariffa, Arrivo/Partenza).
+ * Serve perché spesso l'email Airbnb arriva per prima e crea il task con dati
+ * incompleti; quando poi arriva l'email Kross (completa) viene saltata come
+ * doppione, quindi i suoi dati non venivano mai scritti. Qui li recuperiamo.
+ * Riempie SOLO i campi vuoti — non tocca mai i valori già presenti (le correzioni
+ * manuali restano al sicuro). Gira da sola dopo ogni controllo email e ogni
+ * mattina. Sicura da rieseguire quanto si vuole.
+ */
+function completaDatiMancanti() {
+  var tasks;
+  try {
+    var q = 'tasks?select=id,codice,tipo,canale,ospite,importo,note,scadenza'
+      + '&user_id=eq.' + CFG.SUPABASE_USER_ID
+      + '&completato=eq.false'
+      + '&tipo=in.(scontrino,alloggiati,fattura-pm)'
+      + '&order=creato_il.desc&limit=400';
+    tasks = JSON.parse(_db(q).getContentText()) || [];
+  } catch (e) { Logger.log('completaDati: lettura DB fallita — ' + e); return 0; }
+
+  var manca = function(v) { return v === null || v === undefined || v === '' || v === '—' || v === '-'; };
+  var incompleti = tasks.filter(function(t) {
+    if (!t.codice) return false;
+    var noNome = manca(t.ospite);
+    var noImp  = (t.tipo !== 'alloggiati') && manca(t.importo);
+    return noNome || noImp;
+  });
+  if (!incompleti.length) { Logger.log('completaDati: niente da completare'); return 0; }
+
+  // Raggruppa per codice prenotazione base (toglie i suffissi _sc / _al).
+  var perCodice = {};
+  incompleti.forEach(function(t) {
+    var base = String(t.codice).replace(/_(sc|al|st)$/i, '');
+    (perCodice[base] = perCodice[base] || []).push(t);
+  });
+
+  var fatti = 0;
+  Object.keys(perCodice).forEach(function(base) {
+    var info = _datiDaGmail(base);
+    if (!info) return;
+    perCodice[base].forEach(function(t) {
+      var patch = {};
+      if (manca(t.ospite) && info.ospite) patch.ospite = info.ospite;
+      if (t.tipo !== 'alloggiati' && manca(t.importo) && info.importo) patch.importo = info.importo;
+
+      // Date sbagliate (es. check-out indovinato male dall'email Airbnb): correggi
+      // solo se Kross dà le date precise e sono diverse da quelle salvate nella nota.
+      if (info.fonte === 'kross' && info.checkin) {
+        var coOK = info.checkout && (t.note || '').indexOf(_ggmm(info.checkout)) >= 0;
+        var ciOK = (t.note || '').indexOf(_ggmm(info.checkin)) >= 0;
+        if (!ciOK || (info.checkout && !coOK)) {
+          var pre = ((t.note || '').match(/^comunicazione alloggiati web[^.]*\.\s*/i)
+                  || (t.note || '').match(/^.*?prenotato il[^.]*\.\s*/i) || [''])[0];
+          patch.note = (pre + 'Check-in ' + _ggmm(info.checkin)
+            + (info.checkout ? ', check-out ' + _ggmm(info.checkout) : '') + '.').trim();
+          if (t.tipo === 'scontrino')  patch.scadenza = info.checkin;
+          if (t.tipo === 'alloggiati') patch.scadenza = _aggiungiGiorni(info.checkin, 1);
+          if (t.tipo === 'fattura-pm') {
+            var sc = (t.canale === 'Booking') ? _scadenzaBooking(info.checkout) : _aggiungiGiorni(info.checkin, 12);
+            if (sc) patch.scadenza = sc;
+          }
+        }
+      }
+
+      if (Object.keys(patch).length) { _aggiornaCampo(t.id, patch); fatti++; }
+    });
+  });
+
+  if (fatti > 0) {
+    _notifica('✅ ' + fatti + (fatti === 1 ? ' dato completato' : ' dati completati'),
+              'Ho ritrovato e inserito da solo i dati mancanti di alcune prenotazioni — apri l\'app.');
+  }
+  Logger.log('completaDati: ' + fatti + ' campi completati');
+  return fatti;
+}
+
+// Rilegge le email Gmail di una prenotazione (cercata per codice) e restituisce i
+// dati migliori disponibili. Priorità a Kross: ospite, importo e date precise.
+function _datiDaGmail(codice) {
+  var threads = GmailApp.search('"' + codice + '" from:(airbnb.com OR booking.com OR kross) newer_than:180d', 0, 20);
+  if (!threads.length) return null;
+  var msgs = [];
+  for (var i = 0; i < threads.length; i++) {
+    var ms = threads[i].getMessages();
+    for (var j = 0; j < ms.length; j++) msgs.push(ms[j]);
+  }
+  // Kross prima (fonte affidabile), poi le altre email.
+  msgs.sort(function(a, b) {
+    return (/kross/i.test(a.getFrom()) ? 0 : 1) - (/kross/i.test(b.getFrom()) ? 0 : 1);
+  });
+
+  var best = { ospite: null, importo: null, checkin: null, checkout: null, fonte: null };
+  for (var k = 0; k < msgs.length; k++) {
+    var msg = msgs[k];
+    var mit = msg.getFrom().toLowerCase();
+    var piatt = mit.indexOf('airbnb') >= 0 ? 'airbnb'
+              : mit.indexOf('booking') >= 0 ? 'booking'
+              : mit.indexOf('kross') >= 0 ? 'kross' : null;
+    if (!piatt) continue;
+    var corpo = msg.getPlainBody();
+    if (corpo.indexOf(codice) < 0 && msg.getSubject().indexOf(codice) < 0) continue;
+    var d = _analizzaEmail(msg.getSubject(), corpo, piatt, msg.getDate());
+    if (!d) continue;
+    if (!best.ospite && d.ospite) best.ospite = d.ospite;
+    if (!best.importo && d.importo) best.importo = d.importo; // l'importo lo dà solo Kross
+    // Kross sovrascrive le date (precise); le altre fonti solo se mancano.
+    if (piatt === 'kross' && d.checkin) { best.checkin = d.checkin; best.checkout = d.checkout; best.fonte = 'kross'; }
+    else if (!best.checkin && d.checkin) { best.checkin = d.checkin; best.checkout = d.checkout; best.fonte = piatt; }
+  }
+  return (best.ospite || best.importo || best.checkin) ? best : null;
 }
 
 // ═══ ELABORAZIONE EMAIL ═══════════════════════════════════════════════════════
@@ -328,18 +447,22 @@ function _analizzaEmail(oggetto, corpo, piattaforma, data) {
     dati.checkin = tutteDate[0];
   }
 
-  // Nome ospite (cerca pattern comuni)
+  // Nome ospite (cerca pattern comuni). NOME = una o due-tre parole con iniziale
+  // maiuscola, anche accentate o con apostrofo/trattino (es. "D'Angelo", "Müller").
+  var NM = "([A-ZÀ-Þ][a-zà-ÿ'’.\\-]+(?:\\s+[A-ZÀ-Þ][a-zà-ÿ'’.\\-]+){1,2})";
   var patOspite = [
-    /ospite:\s*([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+)/i,
-    /guest:\s*([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+)/i,
-    /nome:\s*([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+)/i,
-    /prenotazione di ([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+)/i,
-    /([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+) ha prenotato/i,
-    /([A-Z][a-zÀ-ú]+ [A-Z][a-zÀ-ú]+) has requested/i,
+    new RegExp("ospite[:\\s]+" + NM, "i"),
+    new RegExp("guest[:\\s]+" + NM, "i"),
+    new RegExp("nome dell['’]ospite[:\\s]+" + NM, "i"),
+    new RegExp("nome[:\\s]+" + NM, "i"),
+    new RegExp("prenotazione di " + NM, "i"),
+    new RegExp("conferm(?:ata|ato)[:\\s-]+" + NM, "i"),
+    new RegExp("reservation (?:for|by|with)[:\\s]+" + NM, "i"),
+    new RegExp(NM + "\\s+(?:ha prenotato|has booked|has requested|arriva|arrives|è in arrivo)", "i"),
   ];
   for (var p = 0; p < patOspite.length; p++) {
     var m2 = testo.match(patOspite[p]);
-    if (m2 && m2[1]) { dati.ospite = m2[1]; break; }
+    if (m2 && m2[1]) { dati.ospite = m2[1].trim(); break; }
   }
 
   // Importo (cerca simbolo € o EUR)
