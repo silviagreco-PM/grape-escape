@@ -830,7 +830,9 @@ async function applyMigrations() {
     // arrivo è la data finita per errore come "check-out": raddrizza nota e scadenza.
     if (!_ciTrue) {
       const _gi = _ncDateInfo(x.note);
-      if (_gi.pren && _gi.ci && _gi.pren === _gi.ci && _gi.co) {
+      // Firma sicura del bug: soggiorno > 30 giorni (un affitto breve è ≤ 30 gg per legge,
+      // quindi uno span così è SEMPRE un errore di lettura, non una prenotazione vera).
+      if (_gi.ci && _gi.co) {
         const _yr = parseInt(String(x.scadenza||today()).slice(0,4),10) || 2026;
         const _mk = s => { const m=/^(\d{1,2})\/(\d{1,2})$/.exec(s); return m ? _yr+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : null; };
         let _ciI=_mk(_gi.ci), _coI=_mk(_gi.co);
@@ -873,11 +875,14 @@ async function applyMigrations() {
 
   // 3) elimina doppioni: stesso tipo+casa+scadenza+ospite → tieni il più completo (e non-gas)
   const _delIds = TASKS.filter(x => x.tipo === 'arrivo' && _isGas(x)).map(x => x.id);
-  // 3a) spazzatura del vecchio script: task prenotazione SENZA nome e SENZA codice valido
-  //     (es. codice "_sc"/"_al" o vuoto) → non identificabili, da rimuovere
+  // 3a) spazzatura del vecchio script: task prenotazione SENZA codice valido e con nome
+  //     vuoto o "spazzatura" — es. "PRENOTAZIONE PER", "HA PAGATO": testo preso a caso da
+  //     email che NON erano conferme (richieste, promemoria, pagamenti). Fantasmi → via.
+  const _nomeSpazzatura = o => _vuoto(o) ||
+    /^\s*(prenotazione per|ha pagato|richiesta|promemoria|recensione|nuovo messaggio)\b/i.test(String(o));
   TASKS.filter(x => _isGas(x) &&
-    ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) &&
-    _vuoto(x.ospite) && _baseCod(x.codice) === ''
+    ['fattura-pm','alloggiati','scontrino','autofattura'].includes(x.tipo) &&
+    _nomeSpazzatura(x.ospite) && _baseCod(x.codice) === ''
   ).forEach(x => _delIds.push(x.id));
   const _grp = {};
   TASKS.filter(x => ['fattura-pm','alloggiati','scontrino'].includes(x.tipo) && !_vuoto(x.ospite)).forEach(x => {
