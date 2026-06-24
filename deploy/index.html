@@ -316,6 +316,9 @@
   .oggi-header .cnt{margin-left:auto;background:#D40F46;color:#fff;border-radius:999px;min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
   .oggi-header.bloc-buro{background:#FFF1DC;color:#B8460A;box-shadow:inset 0 0 0 1.5px #F3C79B;animation:none}
   .oggi-header.bloc-buro .cnt{background:#B8460A}
+  .nc-s-verifica{background:#FFF1DC;color:#B8460A;box-shadow:inset 0 0 0 1.5px #F3C79B}
+  .oggi-header.bloc-verifica{background:#FFF6E6;color:#B8460A;box-shadow:inset 0 0 0 1.5px #F3C79B;animation:none}
+  .oggi-header.bloc-verifica .cnt{background:#B8460A}
   .bloc-sub{font-size:11.5px;color:var(--grigio);margin:-7px 4px 10px;line-height:1.4}
   .oriz-box{background:#fff;border:1px solid #E6E8EB;border-radius:14px;padding:12px 14px;margin:8px 2px 13px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.04)}
   .oriz-now{font-size:14px;font-weight:700;color:#16181D}
@@ -1387,12 +1390,16 @@ function renderOggi() {
   const t = today(), w = inDays(7);
 
   const SOGLIA_BATCH = 7; // giorni — entro 1 settimana = in evidenza; oltre = "Da recuperare"
-  const scadutiTutti = tasks.filter(x => !x.completato && x.scadenza && x.scadenza < t);
+  // RETE DI SICUREZZA: i task con date impossibili NON entrano negli allarmi (niente
+  // falso "IN RITARDO"): vanno in una sezione "Da verificare" a parte.
+  const sospette     = tasks.filter(x => !x.completato && _dateSospette(x));
+  const ok           = x => !x.completato && !_dateSospette(x);
+  const scadutiTutti = tasks.filter(x => ok(x) && x.scadenza && x.scadenza < t);
   const scaduti      = scadutiTutti.filter(x => x.inBatch !== true  && Math.abs(daysDiff(x.scadenza)) <= SOGLIA_BATCH);
   const daRecuperare = scadutiTutti.filter(x => x.inBatch === true  || Math.abs(daysDiff(x.scadenza)) > SOGLIA_BATCH);
-  const urgenti      = tasks.filter(x => !x.completato && x.scadenza === t);
-  const settimana    = tasks.filter(x => !x.completato && x.scadenza > t && x.scadenza <= w);
-  const prossimamente= tasks.filter(x => !x.completato && x.scadenza > w);
+  const urgenti      = tasks.filter(x => ok(x) && x.scadenza === t);
+  const settimana    = tasks.filter(x => ok(x) && x.scadenza > t && x.scadenza <= w);
+  const prossimamente= tasks.filter(x => ok(x) && x.scadenza > w);
   const fatti        = tasks.filter(x => x.completato && x.completatoIl === t && !isCancellata(x));
 
   document.getElementById('header-date').textContent = formatLong(t);
@@ -1421,6 +1428,13 @@ function renderOggi() {
   const inCasa = ospitiInCasaHTML(tasks);
   if (inCasa.n > 0) pillsEl.innerHTML += `<div class="pill pill-incasa" style="cursor:pointer" onclick="toggleInCasa()"><div class="pill-dot"></div>🏠 ${inCasa.n} in casa</div>`;
   html += inCasa.html;
+
+  // ── RETE DI SICUREZZA: date sospette (probabile errore di lettura) — NON sono scadenze vere ──
+  if (sospette.length > 0) {
+    html += `<div class="oggi-header bloc-verifica" id="sec-verifica">⚠️ Date da verificare<span class="cnt">${sospette.length}</span></div>`;
+    html += `<div class="bloc-sub">Date strane (forse lette male dall'email): <b>non sono scadenze reali</b>, non rischi multe. Controlla la prenotazione e correggi la data.</div>`;
+    html += renderCardsGrouped([...sospette].sort((a,b)=>(a.scadenza||'').localeCompare(b.scadenza||'')), false, false, false);
+  }
 
   // ── ADESSO, diviso per CONSEGUENZA (richiesta Silvia): prima il rischio, poi il resto ──
   // Tutto ciò che è da fare ORA = scadenze di oggi + in ritardo recenti.
@@ -1488,7 +1502,7 @@ function renderOggi() {
     html += `</div>`;
   }
 
-  if (adesso.length===0 && settimana.length===0 && prossimamente.length===0 && daRecuperare.length===0 && fatti.length===0) {
+  if (adesso.length===0 && settimana.length===0 && prossimamente.length===0 && daRecuperare.length===0 && fatti.length===0 && sospette.length===0) {
     html += `<div class="empty"><div class="empty-icon">🍇</div><div class="empty-text">Nessun task per oggi.<br>Aggiungi qualcosa con il +</div></div>`;
   }
 
@@ -1795,6 +1809,27 @@ function _ncDateInfo(note){
   m=note.match(/[Cc]heck-?out\s+(\d{1,2})\/(\d{2})/); if(m) out.co=fmt(m[1],m[2]);
   return out;
 }
+// RETE DI SICUREZZA — riconosce date "impossibili" (probabile errore di lettura email),
+// così l'app non grida mai "IN RITARDO" per una scadenza falsa. Segnali:
+//  • check-in = giorno della prenotazione (si prenota in anticipo → quasi sempre un bug)
+//  • soggiorno > 25 giorni o negativo (gli affitti brevi durano pochi giorni)
+function _dateSospette(task){
+  if(!task || !task.note) return false;
+  const i=_ncDateInfo(task.note);
+  if(!i.ci) return false;
+  if(i.pren && i.pren===i.ci) return true;
+  if(i.co){
+    const yr=parseInt(String(task.scadenza||today()).slice(0,4),10)||2026;
+    const mk=s=>{const m=/^(\d{1,2})\/(\d{1,2})$/.exec(s);return m?yr+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):null;};
+    let ci=mk(i.ci), co=mk(i.co);
+    if(ci&&co){
+      if(co<ci) co=(yr+1)+co.slice(4);
+      const span=Math.round((Date.parse(co+'T12:00:00Z')-Date.parse(ci+'T12:00:00Z'))/86400000);
+      if(span>25 || span<0) return true;
+    }
+  }
+  return false;
+}
 // Provenienza dell'importo: Airbnb/manuale = ufficiale (✓ verificato); Kross = da
 // verificare (la sua tariffa non sempre coincide con quella ufficiale di Booking).
 function _impBadge(task){
@@ -1829,7 +1864,10 @@ function taskCardHTML(task, urgent, done, isBatch, hideScad) {
       +'</div></div>';
   }
 
-  const sc=_ncScad(task.scadenza), scls=sc[0], slab=sc[1], isUrg=sc[2];
+  let sc=_ncScad(task.scadenza);
+  // Rete di sicurezza: se le date sono impossibili, niente "IN RITARDO" — solo "da verificare".
+  if(_dateSospette(task)) sc=['nc-s-verifica','⚠️ Data da verificare — non è una scadenza vera',false];
+  const scls=sc[0], slab=sc[1], isUrg=sc[2];
   // info prenotazione (prenotazione · arrivo · partenza): comuni a tutta la prenotazione → identiche in ogni card
   const soggBlocco=soggiornoBloccoHTML(task);
   const isPM=task.tipo==='fattura-pm', isAirbnb=task.canale==='Airbnb', isBooking=task.canale==='Booking';
