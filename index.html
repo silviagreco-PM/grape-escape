@@ -807,6 +807,23 @@ async function applyMigrations() {
       const ci = CODICE_CHECKIN[_bc];
       if (ci && x.scadenza !== ci) { x.scadenza = ci; cambiato = true; }
     }
+    // Correzione date su FATTURE e nelle NOTE: lo script vecchio metteva come check-in
+    // la data di prenotazione (→ falsi "in ritardo"/"da verificare"). Usa il check-in vero.
+    const _ciTrue = CODICE_CHECKIN[_bc];
+    if (_ciTrue) {
+      const _ciGGMM = _ciTrue.slice(8,10)+'/'+_ciTrue.slice(5,7); // "2026-07-04" → "04/07"
+      const _ni = _ncDateInfo(x.note);
+      if (_ni.ci && _ni.ci !== _ciGGMM) {
+        const _pre = ((x.note||'').match(/^comunicazione alloggiati web[^.]*\.\s*/i)
+                   || (x.note||'').match(/^.*?prenotato il[^.]*\.\s*/i) || [''])[0];
+        x.note = (_pre + 'Check-in ' + _ciGGMM + '.').trim();
+        cambiato = true;
+      }
+      if (x.tipo === 'fattura-pm' && /^HM/i.test(_bc)) {
+        const _scad = addDays(_ciTrue, 12); // Airbnb: fattura entro 12 gg dal check-in
+        if (_scad && x.scadenza !== _scad) { x.scadenza = _scad; cambiato = true; }
+      }
+    }
     // canale corretto dal prefisso del codice: i codici "HM..." sono Airbnb
     // (lo script vecchio li segnava come Booking)
     if (_bc && /^HM/i.test(_bc) && x.canale !== 'Airbnb') { x.canale = 'Airbnb'; cambiato = true; }
