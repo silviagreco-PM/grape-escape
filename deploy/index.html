@@ -824,6 +824,31 @@ async function applyMigrations() {
         if (_scad && x.scadenza !== _scad) { x.scadenza = _scad; cambiato = true; }
       }
     }
+    // Correzione GENERALE (anche prenotazioni non in elenco): lo script vecchio metteva
+    // come check-in la data di PRENOTAZIONE. Firma sicura del bug: Prenotato == Check-in
+    // E soggiorno > 30 giorni (impossibile per un affitto breve). In quel caso il vero
+    // arrivo è la data finita per errore come "check-out": raddrizza nota e scadenza.
+    if (!_ciTrue) {
+      const _gi = _ncDateInfo(x.note);
+      if (_gi.pren && _gi.ci && _gi.pren === _gi.ci && _gi.co) {
+        const _yr = parseInt(String(x.scadenza||today()).slice(0,4),10) || 2026;
+        const _mk = s => { const m=/^(\d{1,2})\/(\d{1,2})$/.exec(s); return m ? _yr+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : null; };
+        let _ciI=_mk(_gi.ci), _coI=_mk(_gi.co);
+        if (_ciI && _coI) {
+          if (_coI < _ciI) _coI=(_yr+1)+_coI.slice(4);
+          const _span=Math.round((Date.parse(_coI+'T12:00:00Z')-Date.parse(_ciI+'T12:00:00Z'))/86400000);
+          if (_span > 30) {
+            const _pre = ((x.note||'').match(/^comunicazione alloggiati web[^.]*\.\s*/i)
+                       || (x.note||'').match(/^.*?prenotato il[^.]*\.\s*/i) || [''])[0];
+            x.note = (_pre + 'Check-in ' + _gi.co + '.').trim(); // il vero arrivo era il "check-out"
+            if (x.tipo === 'scontrino')       x.scadenza = _coI;
+            else if (x.tipo === 'alloggiati') x.scadenza = addDays(_coI, 1);
+            else if (x.tipo === 'fattura-pm' && /^HM/i.test(_bc)) x.scadenza = addDays(_coI, 12);
+            cambiato = true;
+          }
+        }
+      }
+    }
     // canale corretto dal prefisso del codice: i codici "HM..." sono Airbnb
     // (lo script vecchio li segnava come Booking)
     if (_bc && /^HM/i.test(_bc) && x.canale !== 'Airbnb') { x.canale = 'Airbnb'; cambiato = true; }
