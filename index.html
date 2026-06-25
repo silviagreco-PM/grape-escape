@@ -805,7 +805,12 @@ async function applyMigrations() {
     }
     if ((x.tipo === 'scontrino' || x.tipo === 'alloggiati')) {
       const ci = CODICE_CHECKIN[_bc];
-      if (ci && x.scadenza !== ci) { x.scadenza = ci; cambiato = true; }
+      // Scontrino = giorno del check-in. Alloggiati = entro 24h dall'arrivo → check-in + 1
+      // (così due alloggiati con lo stesso arrivo dicono la stessa cosa).
+      if (ci) {
+        const giusta = x.tipo === 'alloggiati' ? addDays(ci, 1) : ci;
+        if (x.scadenza !== giusta) { x.scadenza = giusta; cambiato = true; }
+      }
     }
     // Correzione date su FATTURE e nelle NOTE: lo script vecchio metteva come check-in
     // la data di prenotazione (→ falsi "in ritardo"/"da verificare"). Usa il check-in vero.
