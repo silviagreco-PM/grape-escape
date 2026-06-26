@@ -67,6 +67,8 @@ Mittenti noti:
 | Prenotazione OTA confermata | Autofattura TD17 sulla commissione | Il giorno stesso della conferma, anche per soggiorni futuri lontani |
 | Check-in (qualsiasi canale, dirette incluse) | Scontrino fiscale via ADE, importo lordo ospite pulizie incluse | Il giorno stesso del check-in |
 | Cancellazione | Autofattura di storno, stesso importo con segno negativo | Il giorno stesso della cancellazione |
+
+> **Cancellazione prima del check-in (case proprie).** L'autofattura sulla commissione è dovuta **comunque**, perché la commissione è stata addebitata alla conferma: si emette l'autofattura **originale con la data di conferma** e **poi** l'autofattura di **storno con la data di cancellazione**. Sono **2 documenti**, di **competenza del mese della conferma** (es. conferma a giugno → entrambi entro il 15 luglio), anche se la disdetta arriva prima della scadenza e non avevi ancora emesso nulla. Lo **scontrino** e l'**Alloggiati** invece **non** sono dovuti (il soggiorno non è avvenuto). [Confermato dal commercialista, 26/06/2026]
 | Modifica prenotazione (date/importo) | Autofattura integrativa sulla differenza di commissione | Il giorno stesso della modifica |
 | Check-in (tutte le case) | Alloggiati Web | Entro 24 ore dall'arrivo |
 

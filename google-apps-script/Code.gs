@@ -741,7 +741,12 @@ function _creaTask(d, storico) {
   if (d.tipo === 'cancellazione') {
     _annullaTask(d.codice, casa, d.ospite);
     if (casa && CASE_HOST.indexOf(casa) >= 0) {
-      var oggiC = new Date().toISOString().slice(0, 10);
+      var oggiC = new Date().toISOString().slice(0, 10);   // data documento dello storno
+      // Scadenza di trasmissione: 15 del mese successivo alla data dello storno
+      // (stessa competenza dell'autofattura). NON "oggi": il termine è il 15.
+      var dC = new Date(oggiC + 'T12:00:00Z');
+      var scadStorno = new Date(Date.UTC(dC.getUTCFullYear(), dC.getUTCMonth() + 1, 15))
+        .toISOString().slice(0, 10);
       var id_st = _idTask(d.codice || casa, 'st');
       if (!_esiste(id_st)) {
         // Importo dello storno: se la mail di cancellazione non porta la commissione
@@ -751,9 +756,13 @@ function _creaTask(d, storico) {
         _salvaTask({
           id: id_st, tipo: 'autofattura', casa: casa,
           ospite: 'Storno autofattura' + (d.ospite ? ' — ' + d.ospite : ''),
-          canale: d.canale || 'Airbnb', scadenza: oggiC, codice: (d.codice || '') + '_st',
+          canale: d.canale || 'Airbnb', scadenza: scadStorno, data_doc: oggiC,
+          codice: (d.codice || '') + '_st',
           importo: impStorno || null, cohost: null,
-          note: 'Autofattura di STORNO (prenotazione cancellata). Emetti lo storno con data odierna; l\'autofattura originale resta valida.',
+          note: 'Autofattura di STORNO (prenotazione cancellata). Servono 2 documenti: '
+              + 'l\'autofattura ORIGINALE con la data di conferma (se non l\'hai ancora emessa) '
+              + 'e questo STORNO con la data della cancellazione. Stesso importo, stessa '
+              + 'competenza (entro il 15 del mese successivo).',
           completato: false, completato_il: null, completato_alle: null, creato_il: ora,
         });
         creati++;
