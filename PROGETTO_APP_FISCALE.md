@@ -45,9 +45,9 @@ Formula base fee PM: (lordo OTA + pulizie − commissioni OTA) × % PM, più gli
 
 | Casa | Avvio | Scadenza/rinnovo | Preavviso recesso | Note |
 |---|---|---|---|---|
-| Palio | 07/04/2025 | 07/07/2026, poi rinnovo annuale | 15 giorni | penale: gestione PM o 50% commissione su prenotazioni confermate |
+| Palio | 07/04/2025 | 07/07/2027, poi rinnovo annuale (rinnovato il 07/07/2026) | 15 giorni | penale: gestione PM o 50% commissione su prenotazioni confermate |
 | Casa Amalia | 01/03/2026 | 28/02/2027, rinnovo automatico 12 mesi | 30 giorni | recesso anticipato proprietaria: 500 € |
-| Tana del Tasso | ~01/04/2026 | ~01/04/2027, rinnovo automatico annuale | 60 giorni | recesso solo senza prenotazioni future; compensi maturati sempre dovuti |
+| Tana del Tasso | 01/04/2026 | 01/04/2027, rinnovo automatico annuale | 60 giorni | recesso solo senza prenotazioni future; compensi maturati sempre dovuti |
 | Mulino | 25/02/2025 | 25/02/2027, rinnovo automatico | 3 mesi | penale: gestione PM o 50% commissione su prenotazioni confermate |
 | Villa Omedè | 15/05/2026 | 30/09/2026, incarico stagionale | 15 giorni, solo senza prenotazioni confermate | recesso illegittimo: 1.000 € + compensi prenotazioni attive + 300 €/soggiorno |
 
