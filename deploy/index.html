@@ -2130,7 +2130,9 @@ function _carGgmm(iso){ const p=String(iso).split('-'); return p.length===3 ? p[
 function renderArchivio() {
   const tasks = loadTasks();
   buildSoggMap();
-  const tuttiFatti = tasks.filter(x => x.completato);
+  // Escludi i task annullati: non sono documenti emessi, non vanno mostrati
+  // tra i "fatti" (coerente con il report per il commercialista).
+  const tuttiFatti = tasks.filter(x => x.completato && !isCancellata(x));
   const main = document.getElementById('main-archivio');
 
   if (tuttiFatti.length === 0) {
