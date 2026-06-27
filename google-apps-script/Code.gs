@@ -739,17 +739,30 @@ function _creaTask(d, storico) {
   // Per le case PROPRIE (host) serve anche un'AUTOFATTURA DI STORNO (data cancellazione):
   // l'autofattura originale resta emessa, lo storno la annulla fiscalmente.
   if (d.tipo === 'cancellazione') {
-    if (d.codice) _annullaTask(d.codice);
+    _annullaTask(d.codice, casa, d.ospite);
     if (casa && CASE_HOST.indexOf(casa) >= 0) {
-      var oggiC = new Date().toISOString().slice(0, 10);
+      var oggiC = new Date().toISOString().slice(0, 10);   // data documento dello storno
+      // Scadenza di trasmissione: 15 del mese successivo alla data dello storno
+      // (stessa competenza dell'autofattura). NON "oggi": il termine è il 15.
+      var dC = new Date(oggiC + 'T12:00:00Z');
+      var scadStorno = new Date(Date.UTC(dC.getUTCFullYear(), dC.getUTCMonth() + 1, 15))
+        .toISOString().slice(0, 10);
       var id_st = _idTask(d.codice || casa, 'st');
       if (!_esiste(id_st)) {
+        // Importo dello storno: se la mail di cancellazione non porta la commissione
+        // (Airbnb di solito non la scrive), riprendila dall'autofattura originale —
+        // così la card mostra l'importo invece di restare vuota.
+        var impStorno = d.compenso || _importoAutofatturaOriginale(d.codice, casa, d.ospite);
         _salvaTask({
           id: id_st, tipo: 'autofattura', casa: casa,
           ospite: 'Storno autofattura' + (d.ospite ? ' — ' + d.ospite : ''),
-          canale: d.canale || 'Airbnb', scadenza: oggiC, codice: (d.codice || '') + '_st',
-          importo: d.compenso || null, cohost: null,
-          note: 'Autofattura di STORNO (prenotazione cancellata). Emetti lo storno con data odierna; l\'autofattura originale resta valida.',
+          canale: d.canale || 'Airbnb', scadenza: scadStorno, data_doc: oggiC,
+          codice: (d.codice || '') + '_st',
+          importo: impStorno || null, cohost: null,
+          note: 'Autofattura di STORNO (prenotazione cancellata). Servono 2 documenti: '
+              + 'l\'autofattura ORIGINALE con la data di conferma (se non l\'hai ancora emessa) '
+              + 'e questo STORNO con la data della cancellazione. Stesso importo, stessa '
+              + 'competenza (entro il 15 del mese successivo).',
           completato: false, completato_il: null, completato_alle: null, creato_il: ora,
         });
         creati++;
@@ -962,12 +975,47 @@ function _esistePerCodice(codice, id) {
   } catch(e) { return false; }
 }
 
-function _annullaTask(codice) {
+function _annullaTask(codice, casa, ospite) {
   var oggi = new Date().toISOString().slice(0, 10);
   var dati = { note: '❌ Prenotazione cancellata.', completato: true, completato_il: oggi };
   // Solo i task derivati da QUESTA prenotazione (scontrino, alloggiati, fattura PM).
-  // NON facciamo un patch globale per codice: le autofatture IVA restano dovute.
-  ['sc','al','fp'].forEach(function(s) { _aggiornaCampo(_idTask(codice, s), dati); });
+  // NON tocchiamo l'autofattura: le autofatture IVA restano dovute (c'è lo storno).
+  var tipi = 'tipo=in.(scontrino,alloggiati,fattura-pm)';
+  var base = '&user_id=eq.' + CFG.SUPABASE_USER_ID + '&completato=eq.false';
+  // Match per CODICE (robusto rispetto all'id del task, anche se inserito a mano).
+  if (codice) {
+    _db('tasks?codice=eq.' + encodeURIComponent(codice) + '&' + tipi + base,
+        { metodo: 'patch', dati: dati });
+  }
+  // Match anche per CASA+OSPITE: cattura i task con id manuale o quelli in cui Airbnb
+  // ha scritto il codice in modo diverso (es. due lettere invertite), così la
+  // cancellazione non resta orfana.
+  if (casa && ospite) {
+    _db('tasks?casa=eq.' + encodeURIComponent(casa)
+        + '&ospite=eq.' + encodeURIComponent(ospite) + '&' + tipi + base,
+        { metodo: 'patch', dati: dati });
+  }
+}
+
+// Importo dell'autofattura originale di una prenotazione (per compilare lo storno).
+// Cerca prima per codice, poi per casa+ospite (così regge anche i refusi nel codice).
+// Esclude gli storni stessi (ospite "Storno…") e prende solo importi già valorizzati.
+function _importoAutofatturaOriginale(codice, casa, ospite) {
+  function cerca(filtro) {
+    try {
+      var r = JSON.parse(_db('tasks?' + filtro
+        + '&tipo=eq.autofattura&importo=not.is.null'
+        + '&user_id=eq.' + CFG.SUPABASE_USER_ID + '&select=importo&limit=1'
+      ).getContentText());
+      return r.length ? r[0].importo : null;
+    } catch (e) { return null; }
+  }
+  var imp = codice ? cerca('codice=eq.' + encodeURIComponent(codice)) : null;
+  if (imp == null && casa && ospite) {
+    imp = cerca('casa=eq.' + encodeURIComponent(casa)
+        + '&ospite=eq.' + encodeURIComponent(ospite));
+  }
+  return imp;
 }
 
 // ═══ NOTIFICA PUSH ════════════════════════════════════════════════════════════

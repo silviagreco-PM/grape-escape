@@ -45,9 +45,9 @@ Formula base fee PM: (lordo OTA + pulizie − commissioni OTA) × % PM, più gli
 
 | Casa | Avvio | Scadenza/rinnovo | Preavviso recesso | Note |
 |---|---|---|---|---|
-| Palio | 07/04/2025 | 07/07/2026, poi rinnovo annuale | 15 giorni | penale: gestione PM o 50% commissione su prenotazioni confermate |
+| Palio | 07/04/2025 | 07/07/2027, poi rinnovo annuale (rinnovato il 07/07/2026) | 15 giorni | penale: gestione PM o 50% commissione su prenotazioni confermate |
 | Casa Amalia | 01/03/2026 | 28/02/2027, rinnovo automatico 12 mesi | 30 giorni | recesso anticipato proprietaria: 500 € |
-| Tana del Tasso | ~01/04/2026 | ~01/04/2027, rinnovo automatico annuale | 60 giorni | recesso solo senza prenotazioni future; compensi maturati sempre dovuti |
+| Tana del Tasso | 01/04/2026 | 01/04/2027, rinnovo automatico annuale | 60 giorni | recesso solo senza prenotazioni future; compensi maturati sempre dovuti |
 | Mulino | 25/02/2025 | 25/02/2027, rinnovo automatico | 3 mesi | penale: gestione PM o 50% commissione su prenotazioni confermate |
 | Villa Omedè | 15/05/2026 | 30/09/2026, incarico stagionale | 15 giorni, solo senza prenotazioni confermate | recesso illegittimo: 1.000 € + compensi prenotazioni attive + 300 €/soggiorno |
 
@@ -67,6 +67,8 @@ Mittenti noti:
 | Prenotazione OTA confermata | Autofattura TD17 sulla commissione | Il giorno stesso della conferma, anche per soggiorni futuri lontani |
 | Check-in (qualsiasi canale, dirette incluse) | Scontrino fiscale via ADE, importo lordo ospite pulizie incluse | Il giorno stesso del check-in |
 | Cancellazione | Autofattura di storno, stesso importo con segno negativo | Il giorno stesso della cancellazione |
+
+> **Cancellazione prima del check-in (case proprie).** L'autofattura sulla commissione è dovuta **comunque**, perché la commissione è stata addebitata alla conferma: si emette l'autofattura **originale con la data di conferma** e **poi** l'autofattura di **storno con la data di cancellazione**. Sono **2 documenti**, di **competenza del mese della conferma** (es. conferma a giugno → entrambi entro il 15 luglio), anche se la disdetta arriva prima della scadenza e non avevi ancora emesso nulla. Lo **scontrino** e l'**Alloggiati** invece **non** sono dovuti (il soggiorno non è avvenuto). [Confermato dal commercialista, 26/06/2026]
 | Modifica prenotazione (date/importo) | Autofattura integrativa sulla differenza di commissione | Il giorno stesso della modifica |
 | Check-in (tutte le case) | Alloggiati Web | Entro 24 ore dall'arrivo |
 

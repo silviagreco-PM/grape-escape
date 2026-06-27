@@ -2130,7 +2130,9 @@ function _carGgmm(iso){ const p=String(iso).split('-'); return p.length===3 ? p[
 function renderArchivio() {
   const tasks = loadTasks();
   buildSoggMap();
-  const tuttiFatti = tasks.filter(x => x.completato);
+  // Escludi i task annullati: non sono documenti emessi, non vanno mostrati
+  // tra i "fatti" (coerente con il report per il commercialista).
+  const tuttiFatti = tasks.filter(x => x.completato && !isCancellata(x));
   const main = document.getElementById('main-archivio');
 
   if (tuttiFatti.length === 0) {
@@ -3151,7 +3153,7 @@ const SOGLIE_FISCALI = [
 // Contratti di gestione: data di rinnovo + giorni di preavviso per la disdetta.
 // Da questi l'app calcola "disdetta entro" e avvisa per tempo (le penali sono pesanti).
 const CONTRATTI = {
-  'Appartamento del Palio': { rinnovo:'2026-07-07', preavviso:15, auto:true },
+  'Appartamento del Palio': { rinnovo:'2027-07-07', preavviso:15, auto:true },
   'Casa Amalia':            { rinnovo:'2027-02-28', preavviso:30, auto:true },
   'La Tana del Tasso':      { rinnovo:'2027-04-01', preavviso:60, auto:true },
   'Tenuta del Mulino':      { rinnovo:'2027-02-25', preavviso:90, auto:true },
@@ -3171,9 +3173,9 @@ function _prossimaDisdetta(casa){
   return { rinnovo:rinStr, disdetta:dis, giorni:giorni, auto:c.auto };
 }
 const CASE_GESTIONE = [
-  { casa:'Appartamento del Palio', luogo:'Palio', prop:'Ana Krapovickas', feeOTA:'20%', feePropDir:'20%', feePMDir:'30%', extra:'PriceLabs €15/mese', avvio:'07/04/2025', scadenza:'07/07/2026, poi rinnovo annuale', recesso:'preavviso 15 giorni', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
+  { casa:'Appartamento del Palio', luogo:'Palio', prop:'Ana Krapovickas', feeOTA:'20%', feePropDir:'20%', feePMDir:'30%', extra:'PriceLabs €15/mese', avvio:'07/04/2025', scadenza:'07/07/2027, poi rinnovo annuale (rinnovato il 07/07/2026)', recesso:'preavviso 15 giorni', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
   { casa:'Casa Amalia', luogo:'Viarigi', prop:'Paola Conti', feeOTA:'25%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'01/03/2026', scadenza:'28/02/2027, poi rinnovo automatico 12 mesi', recesso:'preavviso 30 giorni', penale:'Recesso anticipato della proprietaria: €500' },
-  { casa:'La Tana del Tasso', luogo:'Callianetto', prop:'Saba Sarfraz', feeOTA:'26%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'~01/04/2026', scadenza:'~01/04/2027, rinnovo automatico annuale', recesso:'preavviso 60 giorni', penale:'Recesso solo se non ci sono prenotazioni future; compensi maturati sempre dovuti' },
+  { casa:'La Tana del Tasso', luogo:'Callianetto', prop:'Saba Sarfraz', feeOTA:'26%', feePropDir:'20%', feePMDir:'30%', extra:'—', avvio:'01/04/2026', scadenza:'01/04/2027, rinnovo automatico annuale', recesso:'preavviso 60 giorni', penale:'Recesso solo se non ci sono prenotazioni future; compensi maturati sempre dovuti' },
   { casa:'Tenuta del Mulino', luogo:'Montemagno', prop:'Umberto Di Capua', feeOTA:'20%', feePropDir:'20%', feePMDir:'25%', extra:'Check-in €15 per soggiorni sotto 7 notti', avvio:'25/02/2025', scadenza:'25/02/2027, rinnovo automatico', recesso:'preavviso 3 mesi', penale:'Su prenotazioni confermate: gestione PM oppure 50% commissione' },
   { casa:'Villa Omedè', luogo:'Omedè', prop:'Andrea Grosso', feeOTA:'30%', feePropDir:'25%', feePMDir:'35%', extra:'Pulizie/lavanderia €300/soggiorno (le anticipi tu)', avvio:'15/05/2026', scadenza:'30/09/2026 (incarico stagionale)', recesso:'preavviso 15 giorni, solo se senza prenotazioni confermate', penale:'Recesso illegittimo: €1.000 + compensi prenotazioni attive + €300/soggiorno' },
 ];
@@ -3319,9 +3321,6 @@ function SEED_TASKS() {
 
     // ── FATTURA FEE PM — Iselin Stundal, Villa Omedè, check-in 14/06 ──
     { id:'f5',  tipo:'fattura-pm',  casa:'Villa Omedè',          ospite:'Iselin Stundal',             canale:'Airbnb',  importo:null,    cohost:895.11, codice:'HMQ8F5A5S3',  scadenza:'2026-06-26', link:'',          note:'', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
-
-    // ── CONTRATTO PALIO — scadenza 07/07/2026 (rinnovo automatico se non disdici) ──
-    { id:'cp1', tipo:'manuale',     casa:'Appartamento del Palio',ospite:'⚠ Contratto in scadenza — decide entro il 22 giu', canale:'—', importo:null, cohost:null, codice:'', scadenza:'2026-07-07', link:'', note:'Rinnovo automatico per 1 anno il 07/07 se non disdici. Preavviso 15 giorni → disdetta entro il 22/06/2026. Penale recesso anticipato: gestione PM o 50% commissioni prenotazioni confermate.', completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
 
     // ── ALLOGGIATI WEB — check-in recenti ──
     { id:'a1',  tipo:'alloggiati',  casa:'La Ciucarina',         ospite:'Angel Lamar Oliveras',       canale:'Airbnb',  importo:null,    cohost:null, codice:'',            scadenza:'2026-06-12', link:'',          note:'Check-in 11/06.',  completato:false, completatoIl:null, completatoAlle:null, creatoIl:now },
